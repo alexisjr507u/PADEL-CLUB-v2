@@ -41,6 +41,11 @@ unset($_SESSION['datos_registro']);
 
     <link
         rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+    <link
+        rel="stylesheet"
         href="css/style.css"
     >
 
@@ -66,7 +71,7 @@ unset($_SESSION['datos_registro']);
 
         <div class="mensaje-error-registro">
 
-            <?= htmlspecialchars($error) ?>
+            <i class="bi bi-exclamation-circle-fill"></i> <?= htmlspecialchars($error) ?>
 
         </div>
 
@@ -613,8 +618,8 @@ unset($_SESSION['datos_registro']);
 <!-- ========================================= -->
 <!-- DATOS RECUPERADOS PARA JAVASCRIPT -->
 <!-- ========================================= -->
-<script src="js/padel.js"></script>
-<script src="js/organizador.js"></script>
+<script src="js/padel.js?v=2"></script>
+<script src="js/organizador.js?v=2"></script>
 
 
 </body>

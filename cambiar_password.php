@@ -135,7 +135,7 @@ if (!isset($_SESSION['id_usuario'])) {
 
     </div>
 
-    <script src="js/padel.js"></script>
+    <script src="js/padel.js?v=2"></script>
 
 </body>
 

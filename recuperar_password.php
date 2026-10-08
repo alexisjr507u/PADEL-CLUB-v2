@@ -57,6 +57,6 @@ include("config/no_cache.php");
     </div>
 
 </div>
-<script src="js/padel.js"></script>
+<script src="js/padel.js?v=2"></script>
 </body>
 </html>

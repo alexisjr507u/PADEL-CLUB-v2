@@ -11,6 +11,7 @@ include("config/no_cache.php");
 
     <title>Registro - The Bull Padel Club</title>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="CSS/style.css">
 
 </head>
@@ -29,14 +30,14 @@ include("config/no_cache.php");
             <?php if(isset($_GET['error']) && $_GET['error'] == 'email'){ ?>
 
 <div id="mensajeError" class="mensaje-error">
-     Este correo ya está registrado.
+     <i class="bi bi-exclamation-circle-fill"></i> Este correo ya está registrado.
 </div>
 
 <?php } ?>
               <?php if(isset($_GET['error']) && $_GET['error'] == 'telefono'){ ?>
 
 <div id="mensajeError" class="mensaje-error">
-     Este número de teléfono ya está registrado.
+     <i class="bi bi-exclamation-circle-fill"></i> Este número de teléfono ya está registrado.
 </div>
 
 <?php } ?>
@@ -125,7 +126,7 @@ include("config/no_cache.php");
         </div>
 
     </div>
-<script src="js/padel.js"></script>
+<script src="js/padel.js?v=2"></script>
 </body>
 
 </html>

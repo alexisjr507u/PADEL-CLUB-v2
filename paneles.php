@@ -4931,7 +4931,7 @@ $canchasNoDisponibles =
 <?php } ?>
 
 
-<script src="js/padel.js"></script>
+<script src="js/padel.js?v=2"></script>
 
 <!-- =========================================================
      MODAL MENSAJE DE ÉXITO
