@@ -1,0 +1,886 @@
+/* =========================================================
+   VER TORNEO (PANEL ORGANIZADOR) — TEMA OSCURO
+   Misma paleta que el sidebar: #00152b / #001d3d / #003566
+   Texto claro, tarjetas oscuras (sin blanco), acento celeste.
+   ========================================================= */
+
+.panel.vt-panel-oscuro {
+
+    background:
+        radial-gradient(
+            circle at top right,
+            #04274a,
+            #00152b 62%
+        );
+
+}
+
+.vt-panel-oscuro .contenido {
+
+    color: #e7edf5;
+
+}
+
+.vt-panel-oscuro .sidebar i {
+
+    width: 18px;
+
+    text-align: center;
+
+    margin-right: 6px;
+
+}
+
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.vt-topbar {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    flex-wrap: wrap;
+
+    gap: 16px;
+
+    margin-bottom: 30px;
+
+}
+
+.vt-estado-badge {
+
+    display: inline-block;
+
+    background: #2f7bff;
+
+    color: white;
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 1.5px;
+
+    padding: 6px 12px;
+
+    border-radius: 20px;
+
+    margin-bottom: 10px;
+
+}
+
+.vt-topbar h1 {
+
+    color: white;
+
+    font-size: 30px;
+
+    text-transform: capitalize;
+
+}
+
+.vt-topbar p {
+
+    color: #9fb3c8;
+
+    margin-top: 4px;
+
+}
+
+.vt-volver {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    color: white;
+
+    text-decoration: none;
+
+    font-weight: bold;
+
+    font-size: 14px;
+
+    background: #003566;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+
+    padding: 10px 16px;
+
+    border-radius: 10px;
+
+    transition: 0.3s;
+
+}
+
+.vt-volver:hover {
+
+    background: #2f7bff;
+
+}
+
+
+/* =========================================================
+   TARJETAS DE INFO (CATEGORÍA / FECHA / HORARIO / ESTADO)
+   ========================================================= */
+
+.vt-info-cards {
+
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 18px;
+
+    margin-bottom: 40px;
+
+}
+
+
+
+   .vt-info-card {
+    background: #052B47;
+    border: 1px solid #0A4568;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+}
+
+.vt-info-icono {
+
+    width: 44px;
+
+    height: 44px;
+
+    min-width: 44px;
+
+    border-radius: 12px;
+
+    color: white;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 18px;
+
+}
+
+.vt-info-icono.categoria {
+    background: linear-gradient(135deg, #17b6a4, #0d8c7f);
+}
+
+.vt-info-icono.fecha {
+    background: linear-gradient(135deg, #2f7bff, #1c56c7);
+}
+
+.vt-info-icono.horario {
+    background: linear-gradient(135deg, #ff7a59, #ff4f81);
+}
+
+.vt-info-icono.estado {
+    background: linear-gradient(135deg, #8b6bff, #5b3fd6);
+}
+
+.vt-info-card span {
+
+    display: block;
+
+    color: #92a2b6;
+
+    font-size: 12px;
+
+    margin-bottom: 3px;
+
+}
+
+.vt-info-card strong {
+
+    display: block;
+
+    color: white;
+
+    font-size: 15px;
+
+}
+
+
+/* =========================================================
+   ENCABEZADOS DE SECCIÓN
+   ========================================================= */
+
+.vt-eyebrow {
+
+    color: #2f7bff;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    letter-spacing: 1.5px;
+
+}
+
+.vt-seccion-titulo h2 {
+
+    color: white;
+
+    font-size: 24px;
+
+    margin: 6px 0 4px;
+
+}
+
+.vt-seccion-titulo p {
+
+    color: #92a2b6;
+
+    font-size: 14px;
+
+}
+
+.vt-seccion-titulo {
+
+    margin-bottom: 18px;
+
+}
+
+
+/* =========================================================
+   FASE DE GRUPOS + RANKING (DOS COLUMNAS)
+   ========================================================= */
+
+.vt-dos-columnas {
+
+    display: grid;
+
+    grid-template-columns: 1.3fr 1fr;
+
+    gap: 24px;
+
+    margin-bottom: 45px;
+
+    align-items: start;
+
+}
+
+
+
+    .vt-card {
+    background: #03243D;
+    border: 1px solid #0A4568;
+
+    border-radius: 18px;
+
+    padding: 24px;
+
+}
+
+.vt-card-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 18px;
+
+}
+
+.vt-grupo-nombre {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+.vt-grupo-letra {
+
+    width: 38px;
+
+    height: 38px;
+
+    border-radius: 10px;
+
+    background: #2f7bff;
+
+    color: white;
+
+    font-weight: bold;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+.vt-grupo-nombre strong {
+
+    display: block;
+
+    color: white;
+
+    font-size: 15px;
+
+}
+
+.vt-grupo-nombre span {
+
+    color: #92a2b6;
+
+    font-size: 13px;
+
+}
+
+.vt-grupo-nav {
+
+    display: flex;
+
+    gap: 8px;
+
+}
+
+.vt-grupo-nav button {
+
+    width: 34px;
+
+    height: 34px;
+
+    border-radius: 50%;
+
+    border: 1px solid #0A4568;
+    background: #052B47;
+
+    color: white;
+
+    cursor: pointer;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    transition: 0.3s;
+
+    font-size: 14px;
+
+}
+
+.vt-grupo-nav button:hover {
+
+    background: #2f7bff;
+
+    border-color: #2f7bff;
+
+}
+
+.vt-grupo-nav button:disabled {
+
+    opacity: 0.3;
+
+    cursor: default;
+
+}
+
+.vt-grupo-nav button:disabled:hover {
+    background: #052B47;
+    border-color: #0A4568;
+}
+
+.vt-tabla-grupo {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+}
+
+.vt-tabla-grupo th {
+
+    text-align: left;
+
+    color: #7c8ba0;
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+
+    padding: 0 8px 10px;
+
+}
+
+.vt-tabla-grupo th:not(:first-child),
+.vt-tabla-grupo td:not(:first-child) {
+
+    text-align: center;
+
+}
+
+.vt-tabla-grupo td {
+
+    padding: 10px 8px;
+
+    border-top: 1px solid #0A4568;
+
+}
+
+.vt-pareja-fila {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+.vt-avatar {
+
+    width: 34px;
+
+    height: 34px;
+
+    min-width: 34px;
+
+    border-radius: 50%;
+
+    background: #0A4568;
+
+    color: #cfe0f5;
+
+    font-weight: bold;
+
+    font-size: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+.vt-pareja-nombres strong {
+
+    display: block;
+
+    color: white;
+
+    font-size: 13.5px;
+
+}
+
+.vt-pareja-nombres span {
+
+    color: #92a2b6;
+
+    font-size: 12px;
+
+}
+
+.vt-tabla-grupo td strong {
+
+    color: #2f7bff;
+
+    font-size: 15px;
+
+}
+
+
+/* =========================================================
+   RANKING DEL TORNEO
+   ========================================================= */
+
+.vt-ranking-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 11px 0;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+}
+
+.vt-ranking-item:first-child {
+
+    border-top: none;
+
+}
+
+.vt-ranking-puesto {
+
+    width: 18px;
+
+    color: #7c8ba0;
+
+    font-weight: bold;
+
+    font-size: 13px;
+
+}
+
+.vt-ranking-datos {
+
+    flex: 1;
+
+}
+
+.vt-ranking-datos strong {
+
+    display: block;
+
+    color: white;
+
+    font-size: 14px;
+
+}
+
+.vt-ranking-datos span {
+
+    color: #92a2b6;
+
+    font-size: 12px;
+
+}
+
+.vt-corona {
+
+    color: #f2a900;
+
+    font-size: 17px;
+
+}
+
+
+/* =========================================================
+   CRUCES DEL TORNEO (CUADRO ELIMINATORIO)
+   ========================================================= */
+
+.vt-bracket-card .vt-card-header h3 {
+
+    color: white;
+
+    font-size: 18px;
+
+}
+
+.vt-bracket-card .vt-card-header p {
+
+    color: #92a2b6;
+
+    font-size: 13px;
+
+    margin-top: 2px;
+
+}
+
+.vt-badge-pill {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    background: rgba(47, 123, 255, 0.15);
+
+    color: #6ea3ff;
+
+    font-weight: bold;
+
+    font-size: 13px;
+
+    padding: 9px 16px;
+
+    border-radius: 20px;
+
+}
+
+.vt-bracket {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 26px;
+
+    margin-top: 10px;
+
+}
+
+.vt-bracket-col-titulo {
+
+    color: #7c8ba0;
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 14px;
+
+}
+
+.vt-bracket-col.semis {
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: space-around;
+
+    padding: 40px 0;
+
+}
+
+.vt-bracket-col.semis .vt-bracket-col-titulo {
+
+    margin-top: -40px;
+
+}
+
+.vt-bracket-col.final {
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    padding: 60px 0;
+
+    gap: 20px;
+
+}
+
+.vt-bracket-col.final .vt-bracket-col-titulo {
+
+    margin-top: -60px;
+
+}
+
+
+
+    .vt-match {
+    background: #052B47;
+    border: 1px solid #0A4568;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    margin-bottom: 18px;
+
+}
+
+.vt-bracket-col.semis .vt-match,
+.vt-bracket-col.final .vt-match {
+
+    margin-bottom: 0;
+
+}
+
+.vt-match-fila {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 11px 14px;
+
+    font-size: 13.5px;
+
+    color: #7c8ba0;
+
+}
+
+.vt-match-fila + .vt-match-fila {
+    border-top: 1px solid #0A4568;
+}
+
+.vt-match-fila.gano {
+    background: #07385A;
+
+    color: white;
+
+    font-weight: bold;
+
+}
+
+.vt-match-fila.gano .vt-match-score {
+    color: #0D8FE8;
+}
+
+.vt-match-pendiente .vt-match-fila {
+
+    color: #566276;
+
+}
+
+.vt-campeon {
+    background: #052B47;
+    border: 1px dashed #0D8FE8;
+
+    border-radius: 14px;
+
+    padding: 26px;
+
+    text-align: center;
+
+    color: #7c8ba0;
+
+}
+
+.vt-campeon i {
+
+    font-size: 24px;
+
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #6ea3ff;
+
+}
+
+.vt-campeon strong {
+
+    color: #6ea3ff;
+
+    letter-spacing: 1px;
+
+    font-size: 13px;
+
+}
+
+.vt-nota-datos {
+
+    margin-top: 6px;
+
+    color: #566276;
+
+    font-size: 12px;
+
+    font-style: italic;
+
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .vt-info-cards {
+
+        grid-template-columns: repeat(2, 1fr);
+
+    }
+
+    .vt-dos-columnas {
+
+        grid-template-columns: 1fr;
+
+    }
+
+    .vt-bracket {
+
+        grid-template-columns: 1fr;
+
+    }
+
+    .vt-bracket-col.semis,
+    .vt-bracket-col.final {
+
+        padding: 0;
+
+    }
+
+    .vt-bracket-col.semis .vt-bracket-col-titulo,
+    .vt-bracket-col.final .vt-bracket-col-titulo {
+
+        margin-top: 0;
+
+    }
+
+    .vt-bracket-col.semis .vt-match {
+
+        margin-bottom: 18px;
+
+    }
+
+}
+/* =========================================
+   FASE DE GRUPOS SIN DATOS
+   ========================================= */
+
+.vt-grupos-vacio {
+    min-height: 230px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 35px 25px;
+    box-sizing: border-box;
+}
+
+.vt-grupos-vacio-icono {
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border-radius: 50%;
+    background: #0A4568;
+    color: #0D8FE8;
+    font-size: 25px;
+}
+
+.vt-grupos-vacio h3 {
+    margin: 0 0 8px;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.vt-grupos-vacio p {
+    max-width: 430px;
+    margin: 0;
+    color: #9CB2C5;
+    font-size: 14px;
+    line-height: 1.6;
+}

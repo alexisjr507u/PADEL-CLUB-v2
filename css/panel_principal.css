@@ -1,0 +1,722 @@
+/* =========================================================
+   PANEL PRINCIPAL (LANDING PÚBLICA)
+   Usa la misma paleta que el panel de organizador/admin:
+   #00152b / #001d3d / #003566 / blanco / #f4f6fb
+   ========================================================= */
+
+body.landing-body {
+
+    display: block;
+
+    min-height: 100vh;
+
+    background: #001d3d;
+
+    padding: 0;
+
+}
+
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+.landing-navbar {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 16px 40px;
+
+    background: #001d3d;
+
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.25);
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 100;
+
+}
+
+.landing-marca {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+}
+
+.landing-marca img {
+
+    width: 46px;
+
+    height: 46px;
+
+    object-fit: contain;
+
+    background: white;
+
+    border-radius: 50%;
+
+    padding: 5px;
+
+}
+
+.landing-marca span {
+
+    color: white;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+}
+
+.landing-menu {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    list-style: none;
+
+}
+
+.landing-menu a {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    color: #d9e2ec;
+
+    text-decoration: none;
+
+    font-size: 14px;
+
+    font-weight: bold;
+
+    padding: 10px 16px;
+
+    border-radius: 10px;
+
+    transition: 0.3s;
+
+}
+
+.landing-menu a:hover,
+.landing-menu a.activo {
+
+    background: #003566;
+
+    color: white;
+
+}
+
+.landing-navbar .btn-ingresar {
+
+    width: auto;
+
+    padding: 11px 22px;
+
+    background: white;
+
+    color: #001d3d;
+
+    border-radius: 10px;
+
+    font-weight: bold;
+
+    text-decoration: none;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    transition: 0.3s;
+
+}
+
+.landing-navbar .btn-ingresar:hover {
+
+    background: #dcdcdc;
+
+    transform: scale(1.03);
+
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.landing-hero {
+
+    position: relative;
+
+    min-height: calc(100vh - 78px);
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    padding: 60px 40px;
+
+    background: #001d3d;
+
+    overflow: hidden;
+
+}
+
+.landing-hero-slides {
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 0;
+
+}
+
+.landing-hero-slide {
+
+    position: absolute;
+
+    inset: 0;
+
+    background-size: cover;
+
+    background-position: center;
+
+    opacity: 0;
+
+    transition: opacity 1.4s ease;
+
+}
+
+.landing-hero-slide.activo {
+
+    opacity: 1;
+
+}
+
+.landing-hero::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0, 21, 43, 0.88),
+            rgba(0, 53, 102, 0.72)
+        );
+
+    z-index: 1;
+
+}
+
+.landing-bienvenida,
+.landing-hero-contenido {
+
+    position: relative;
+
+    z-index: 2;
+
+}
+
+.landing-hero-dots {
+
+    position: absolute;
+
+    bottom: 22px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 2;
+
+    display: flex;
+
+    gap: 8px;
+
+}
+
+.landing-hero-dots button {
+
+    width: 9px;
+
+    height: 9px;
+
+    padding: 0;
+
+    border-radius: 50%;
+
+    border: none;
+
+    background: rgba(255, 255, 255, 0.4);
+
+    cursor: pointer;
+
+    transition: 0.3s;
+
+}
+
+.landing-hero-dots button.activo {
+
+    width: 26px;
+
+    border-radius: 5px;
+
+    background: white;
+
+}
+
+.landing-bienvenida {
+
+    display: inline-flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    align-self: flex-start;
+
+    background: rgba(0, 21, 43, 0.55);
+
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    border-radius: 18px;
+
+    padding: 24px 28px;
+
+    max-width: 420px;
+
+    margin-bottom: 60px;
+
+    backdrop-filter: blur(4px);
+
+}
+
+.landing-bienvenida .etiqueta {
+
+    color: #9fb7d4;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    letter-spacing: 2px;
+
+}
+
+.landing-bienvenida h1 {
+
+    color: white;
+
+    font-size: 26px;
+
+}
+
+.landing-bienvenida h1 b {
+
+    color: white;
+
+}
+
+.landing-bienvenida p {
+
+    color: #d9e2ec;
+
+    font-size: 14px;
+
+}
+
+.landing-hero-contenido {
+
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: space-between;
+
+    gap: 40px;
+
+    flex-wrap: wrap;
+
+}
+
+.landing-hero-texto {
+
+    max-width: 620px;
+
+    background: rgba(0, 21, 43, 0.45);
+
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    border-radius: 20px;
+
+    padding: 36px;
+
+    backdrop-filter: blur(4px);
+
+}
+
+.landing-hero-texto .etiqueta {
+
+    color: #9fb7d4;
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    letter-spacing: 3px;
+
+    margin-bottom: 10px;
+
+    display: block;
+
+}
+
+.landing-hero-texto h2 {
+
+    color: white;
+
+    font-size: 42px;
+
+    line-height: 1.2;
+
+    margin-bottom: 18px;
+
+}
+
+.landing-hero-texto p {
+
+    color: #d9e2ec;
+
+    font-size: 15px;
+
+    margin-bottom: 26px;
+
+}
+
+.landing-hero-botones {
+
+    display: flex;
+
+    gap: 14px;
+
+    flex-wrap: wrap;
+
+}
+
+.landing-hero-botones a {
+
+    width: auto;
+
+    text-decoration: none;
+
+    padding: 13px 24px;
+
+    border-radius: 10px;
+
+    font-weight: bold;
+
+    font-size: 15px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    transition: 0.3s;
+
+}
+
+.btn-landing-primario {
+
+    background: white;
+
+    color: #001d3d;
+
+}
+
+.btn-landing-primario:hover {
+
+    background: #dcdcdc;
+
+    transform: scale(1.03);
+
+}
+
+.btn-landing-secundario {
+
+    background: transparent;
+
+    color: white;
+
+    border: 2px solid rgba(255, 255, 255, 0.6);
+
+}
+
+.btn-landing-secundario:hover {
+
+    background: rgba(255, 255, 255, 0.12);
+
+    transform: scale(1.03);
+
+}
+
+
+/* =========================================================
+   RANKING (TARJETA FLOTANTE)
+   ========================================================= */
+
+.landing-ranking {
+
+    background: rgba(0, 21, 43, 0.55);
+
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    border-radius: 20px;
+
+    padding: 24px;
+
+    width: 320px;
+
+    backdrop-filter: blur(4px);
+
+}
+
+.landing-ranking-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 16px;
+
+}
+
+.landing-ranking-header div .etiqueta {
+
+    color: #9fb7d4;
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 2px;
+
+}
+
+.landing-ranking-header h3 {
+
+    color: white;
+
+    font-size: 22px;
+
+}
+
+.landing-ranking-header a {
+
+    color: white;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    text-decoration: none;
+
+    background: rgba(255, 255, 255, 0.12);
+
+    padding: 7px 12px;
+
+    border-radius: 8px;
+
+    transition: 0.3s;
+
+}
+
+.landing-ranking-header a:hover {
+
+    background: rgba(255, 255, 255, 0.25);
+
+}
+
+.landing-ranking-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 10px 0;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+}
+
+.landing-ranking-item:last-child {
+
+    border-bottom: none;
+
+}
+
+.landing-ranking-puesto {
+
+    width: 24px;
+
+    color: #9fb7d4;
+
+    font-weight: bold;
+
+    font-size: 15px;
+
+}
+
+.landing-ranking-avatar {
+
+    width: 38px;
+
+    height: 38px;
+
+    border-radius: 50%;
+
+    background: #003566;
+
+    color: white;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-weight: bold;
+
+    font-size: 13px;
+
+}
+
+.landing-ranking-datos {
+
+    flex: 1;
+
+}
+
+.landing-ranking-datos strong {
+
+    display: block;
+
+    color: white;
+
+    font-size: 14px;
+
+}
+
+.landing-ranking-datos span {
+
+    color: #9fb7d4;
+
+    font-size: 12px;
+
+}
+
+.landing-ranking-vacio {
+
+    color: #d9e2ec;
+
+    font-size: 13px;
+
+    text-align: center;
+
+    padding: 10px 0;
+
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .landing-menu {
+
+        display: none;
+
+    }
+
+    .landing-hero-contenido {
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+    }
+
+    .landing-ranking {
+
+        width: 100%;
+
+    }
+
+}
+
+@media (max-width: 560px) {
+
+    .landing-navbar {
+
+        padding: 14px 18px;
+
+    }
+
+    .landing-hero {
+
+        padding: 40px 18px;
+
+    }
+
+    .landing-hero-texto h2 {
+
+        font-size: 30px;
+
+    }
+
+    .landing-bienvenida {
+
+        max-width: 100%;
+
+    }
+
+}

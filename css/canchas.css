@@ -1,0 +1,2743 @@
+/* =========================================
+   CANCHAS - ORGANIZADOR
+========================================= */
+
+.mis-canchas {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+    margin-top: 25px;
+}
+
+
+/* =========================================
+   TARJETA DE CANCHA
+========================================= */
+
+.cancha-card {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 35, 70, 0.12);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 20, 50, 0.12);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cancha-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 15px 35px rgba(0, 20, 50, 0.20);
+}
+
+
+/* =========================================
+   IMAGEN
+========================================= */
+
+.cancha-card img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+}
+
+
+/* =========================================
+   NOMBRE
+========================================= */
+
+.cancha-card h3 {
+    margin: 18px 20px 8px;
+    color: #071f3d;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+
+/* =========================================
+   ESTADO
+========================================= */
+
+.cancha-card span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    margin: 0 20px 20px;
+    padding: 7px 13px;
+
+    border-radius: 20px;
+
+    background: rgba(30, 190, 100, 0.12);
+    color: #159447;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.cancha-card span::before {
+    content: "";
+
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #20b866;
+
+    box-shadow: 0 0 7px rgba(32, 184, 102, 0.55);
+}
+
+
+/* =========================================
+   CUANDO NO HAY CANCHAS
+========================================= */
+
+.mis-canchas > p {
+    grid-column: 1 / -1;
+
+    padding: 50px;
+
+    text-align: center;
+
+    background: rgba(255, 255, 255, 0.85);
+
+    border-radius: 18px;
+
+    color: #555;
+
+    font-size: 16px;
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 800px) {
+
+    .mis-canchas {
+        grid-template-columns: 1fr;
+    }
+
+    .cancha-card img {
+        height: 210px;
+    }
+
+}
+/* =========================================
+   PÁGINA CANCHAS
+========================================= */
+
+.canchas-pagina {
+    width: 100%;
+    padding-bottom: 40px;
+}
+
+
+/* =========================================
+   ENCABEZADO
+========================================= */
+
+.canchas-header {
+    margin-bottom: 25px;
+}
+
+.canchas-titulo {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.canchas-icono {
+    width: 82px;
+    height: 82px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(100, 180, 255, 0.55);
+    border-radius: 15px;
+
+    background: rgba(10, 40, 70, 0.55);
+
+    font-size: 38px;
+
+    box-shadow:
+        0 0 20px rgba(0, 120, 255, 0.10);
+}
+
+.canchas-titulo h1 {
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 34px;
+}
+
+.canchas-titulo p {
+    margin: 5px 0 0;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 15px;
+}
+
+
+/* =========================================
+   ESTADÍSTICAS
+========================================= */
+
+.canchas-estadisticas {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 14px;
+
+    margin-bottom: 22px;
+}
+
+.estadistica-cancha {
+    min-height: 105px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 17px;
+
+    padding: 18px;
+
+    border-radius: 15px;
+
+    border: 1px solid rgba(120, 190, 255, 0.28);
+
+    background:
+        rgba(8, 35, 60, 0.52);
+
+    backdrop-filter: blur(12px);
+
+    color: #ffffff;
+}
+
+.estadistica-icono {
+    width: 58px;
+    height: 58px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    font-size: 27px;
+}
+
+.estadistica-icono.azul {
+    background: rgba(40, 120, 220, 0.22);
+}
+
+.estadistica-icono.verde {
+    background: rgba(30, 200, 120, 0.20);
+}
+
+.estadistica-icono.amarillo {
+    background: rgba(240, 190, 30, 0.20);
+}
+
+.estadistica-icono.rojo {
+    background: rgba(230, 70, 80, 0.20);
+}
+
+.estadistica-cancha span {
+    display: block;
+
+    color: rgba(255, 255, 255, 0.75);
+
+    font-size: 14px;
+}
+
+.estadistica-cancha strong {
+    display: block;
+
+    margin: 5px 0;
+
+    font-size: 26px;
+}
+
+.estadistica-cancha small {
+    color: rgba(255, 255, 255, 0.60);
+
+    font-size: 13px;
+}
+
+
+/* =========================================
+   PANEL MIS CANCHAS
+========================================= */
+
+.mis-canchas-panel {
+
+    padding: 20px 25px 30px;
+
+    border-radius: 17px;
+
+    border: 1px solid rgba(120, 190, 255, 0.30);
+
+    background:
+        rgba(8, 30, 52, 0.48);
+
+    backdrop-filter: blur(12px);
+}
+
+
+/* =========================================
+   CABECERA
+========================================= */
+
+.mis-canchas-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 18px;
+}
+
+.mis-canchas-header h2 {
+
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 27px;
+}
+
+
+/* =========================================
+   BOTÓN AGREGAR
+========================================= */
+
+.btn-agregar-cancha {
+
+    border: 1px solid #008cff;
+
+    background:
+        linear-gradient(
+            135deg,
+            #087de5,
+            #0758c9
+        );
+
+    color: #ffffff;
+
+    padding: 12px 20px;
+
+    border-radius: 12px;
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 15px rgba(0, 100, 255, 0.20);
+
+    transition: 0.2s ease;
+}
+
+.btn-agregar-cancha:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 8px 20px rgba(0, 120, 255, 0.35);
+}
+
+
+/* =========================================
+   FILTROS
+========================================= */
+
+.canchas-filtros {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+
+    margin-bottom: 25px;
+}
+
+.buscador-cancha {
+
+    width: 390px;
+
+    height: 47px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 0 15px;
+
+    border: 1px solid rgba(130, 190, 240, 0.40);
+
+    border-radius: 11px;
+
+    background:
+        rgba(5, 25, 45, 0.55);
+}
+
+.buscador-cancha span {
+
+    color: #ffffff;
+
+    font-size: 25px;
+}
+
+.buscador-cancha input {
+
+    width: 100%;
+
+    border: none;
+
+    outline: none;
+
+    background: transparent;
+
+    color: #ffffff;
+
+    font-size: 14px;
+}
+
+.buscador-cancha input::placeholder {
+
+    color: rgba(255, 255, 255, 0.55);
+}
+
+
+.filtro-estado {
+
+    height: 47px;
+
+    min-width: 200px;
+
+    margin-left: auto;
+
+    padding: 0 15px;
+
+    border: 1px solid rgba(130, 190, 240, 0.40);
+
+    border-radius: 11px;
+
+    background: #102d47;
+
+    color: #ffffff;
+
+    outline: none;
+
+    font-size: 14px;
+}
+
+
+/* =========================================
+   BOTONES DE VISTA
+========================================= */
+
+.vista-botones {
+
+    display: flex;
+
+    height: 47px;
+
+    border: 1px solid rgba(130, 190, 240, 0.40);
+
+    border-radius: 11px;
+
+    overflow: hidden;
+}
+
+.vista-botones button {
+
+    width: 53px;
+
+    border: none;
+
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.70);
+
+    font-size: 21px;
+
+    cursor: pointer;
+}
+
+.vista-botones button.vista-activa {
+
+    background: #087fe9;
+
+    color: #ffffff;
+}
+
+
+/* =========================================
+   GRID DE CANCHAS
+========================================= */
+
+.mis-canchas {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(280px, 1fr));
+
+    gap: 18px;
+
+    margin-top: 5px;
+}
+
+
+/* =========================================
+   TARJETA
+========================================= */
+
+.cancha-card {
+
+    overflow: hidden;
+
+    border-radius: 15px;
+
+    border: 1px solid rgba(50, 160, 255, 0.70);
+
+    background:
+        rgba(5, 30, 55, 0.72);
+
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.25);
+
+    backdrop-filter: blur(10px);
+
+    transition: 0.25s ease;
+}
+
+.cancha-card:hover {
+
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 15px 30px rgba(0, 0, 0, 0.35);
+}
+
+
+/* =========================================
+   IMAGEN
+========================================= */
+
+.cancha-card-imagen {
+
+    height: 205px;
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+.cancha-card-imagen img {
+
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: cover;
+
+    display: block;
+}
+
+
+/* =========================================
+   ESTADO SOBRE IMAGEN
+========================================= */
+
+.estado-cancha {
+
+    position: absolute;
+
+    top: 12px;
+
+    right: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 8px 13px;
+
+    border-radius: 20px;
+
+    color: #05240f;
+
+    background: #45f087;
+
+    font-size: 13px;
+
+    font-weight: 700;
+}
+
+.estado-punto {
+
+    width: 9px;
+
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: #0a8e39;
+}
+
+
+/* =========================================
+   CONTENIDO
+========================================= */
+
+.cancha-card-contenido {
+
+    padding: 14px 17px 15px;
+}
+
+.cancha-card-contenido h3 {
+
+    margin: 0 0 6px;
+
+    color: #ffffff;
+
+    font-size: 21px;
+}
+
+.cancha-ubicacion {
+
+    margin: 0 0 15px;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 13px;
+}
+
+
+/* =========================================
+   ACCIONES
+========================================= */
+
+.cancha-acciones {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 8px;
+}
+
+.btn-cancha {
+
+    min-height: 58px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 4px;
+
+    border-radius: 9px;
+
+    background: rgba(10, 35, 60, 0.60);
+
+    font-size: 20px;
+
+    cursor: pointer;
+}
+
+.btn-cancha span {
+
+    font-size: 12px;
+
+    font-weight: 600;
+}
+
+.btn-cancha.detalles {
+
+    border: 1px solid #008cff;
+
+    color: #159cff;
+}
+
+.btn-cancha.estado {
+
+    border: 1px solid #19c85d;
+
+    color: #35e875;
+}
+
+.btn-cancha.editar {
+
+    border: 1px solid #9555ff;
+
+    color: #b17aff;
+}
+
+.btn-cancha:hover {
+
+    background: rgba(255, 255, 255, 0.08);
+}
+
+
+/* =========================================
+   SIN CANCHAS
+========================================= */
+
+.canchas-vacio {
+
+    grid-column: 1 / -1;
+
+    padding: 60px;
+
+    text-align: center;
+
+    color: #ffffff;
+}
+
+.canchas-vacio > div {
+
+    font-size: 55px;
+
+    margin-bottom: 10px;
+}
+
+.canchas-vacio h3 {
+
+    margin: 0 0 8px;
+}
+
+.canchas-vacio p {
+
+    margin: 0;
+
+    color: rgba(255, 255, 255, 0.60);
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1100px) {
+
+    .canchas-estadisticas {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .mis-canchas {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+
+    .canchas-estadisticas {
+
+        grid-template-columns: 1fr;
+    }
+
+    .canchas-filtros {
+
+        flex-wrap: wrap;
+    }
+
+    .buscador-cancha {
+
+        width: 100%;
+    }
+
+    .filtro-estado {
+
+        margin-left: 0;
+    }
+
+    .mis-canchas {
+
+        grid-template-columns: 1fr;
+    }
+
+}
+/* =========================================
+   FONDO DE CANCHAS
+========================================= */
+
+.contenido-canchas {
+    position: relative;
+
+    background-image:
+        linear-gradient(
+            rgba(2, 20, 38, 0.72),
+            rgba(2, 20, 38, 0.72)
+        ),
+        url("../img/fondo-canchas.png");
+
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+
+    min-height: 100vh;
+}
+/* ==========================================================
+   CORRECCIONES VISTA CANCHAS - ORGANIZADOR
+   ========================================================== */
+
+
+/* ==========================================================
+   BUSCADOR
+   Quitar el mini rectángulo interno del input
+   ========================================================== */
+
+.buscador-cancha {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    height: 58px;
+    padding: 0 16px;
+
+    background: rgba(4, 24, 45, 0.85) !important;
+
+    border: 1px solid rgba(72, 157, 221, 0.45) !important;
+    border-radius: 12px;
+
+    box-shadow: none !important;
+}
+
+.buscador-cancha > span {
+    display: block;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+
+    color: #d9e8f5 !important;
+
+    font-size: 22px;
+}
+
+.buscador-cancha input {
+    width: 100% !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border: none !important;
+    outline: none !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+
+    color: #ffffff !important;
+
+    font-size: 15px;
+}
+
+.buscador-cancha input::placeholder {
+    color: rgba(255, 255, 255, 0.60);
+}
+
+.buscador-cancha input:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   QUITAR LOS DOS BOTONES DE VISTA
+   (cuadrícula y lista)
+   ========================================================== */
+
+.vista-botones {
+    display: none !important;
+}
+
+
+/* ==========================================================
+   BOTONES DE CADA CANCHA
+   ========================================================== */
+
+.cancha-acciones {
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 8px;
+
+    margin-top: 18px;
+}
+
+
+/* Botón base */
+
+.cancha-acciones .btn-cancha {
+    width: 100% !important;
+    min-height: 78px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    padding: 10px !important;
+
+    border-radius: 10px !important;
+
+    background: rgba(3, 25, 48, 0.95) !important;
+
+    color: #ffffff !important;
+
+    font-size: 14px;
+
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+
+    box-shadow: none !important;
+
+    transform: none !important;
+
+    transition:
+        background 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.25s ease;
+}
+
+
+/* Quitar completamente el estilo verde
+   que heredaba de .cancha-card span */
+
+.cancha-acciones .btn-cancha span {
+    display: inline !important;
+
+    width: auto !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+
+    border: none !important;
+    border-radius: 0 !important;
+
+    color: inherit !important;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    box-shadow: none !important;
+}
+
+
+/* Quitar el punto verde que agregaba
+   .cancha-card span::before */
+
+.cancha-acciones .btn-cancha span::before {
+    content: none !important;
+
+    display: none !important;
+}
+
+
+/* ==========================================================
+   VER DETALLES
+   ========================================================== */
+
+.cancha-acciones .btn-cancha.detalles {
+    border-color: rgba(0, 145, 255, 0.65) !important;
+}
+
+.cancha-acciones .btn-cancha.detalles:hover {
+    background: rgba(0, 91, 150, 0.90) !important;
+
+    border-color: #159cff !important;
+
+    transform: translateY(-2px) !important;
+}
+
+
+/* ==========================================================
+   CAMBIAR ESTADO
+   ========================================================== */
+
+.cancha-acciones .btn-cancha.estado {
+    border-color: rgba(30, 210, 120, 0.65) !important;
+}
+
+.cancha-acciones .btn-cancha.estado:hover {
+    background: rgba(0, 105, 70, 0.90) !important;
+
+    border-color: #20d982 !important;
+
+    transform: translateY(-2px) !important;
+}
+
+
+/* ==========================================================
+   EDITAR
+   ========================================================== */
+
+.cancha-acciones .btn-cancha.editar {
+    border-color: rgba(160, 100, 255, 0.70) !important;
+}
+
+.cancha-acciones .btn-cancha.editar:hover {
+    background: rgba(75, 45, 125, 0.90) !important;
+
+    border-color: #a970ff !important;
+
+    transform: translateY(-2px) !important;
+}
+
+
+/* ==========================================================
+   ICONOS DE LOS BOTONES
+   ========================================================== */
+
+.cancha-acciones .btn-cancha.detalles {
+    color: #2aa8ff !important;
+}
+
+.cancha-acciones .btn-cancha.estado {
+    color: #32e58b !important;
+}
+
+.cancha-acciones .btn-cancha.editar {
+    color: #b276ff !important;
+}
+
+
+/* El texto también mantiene el color del botón */
+
+.cancha-acciones .btn-cancha.detalles span {
+    color: #ffffff !important;
+}
+
+.cancha-acciones .btn-cancha.estado span {
+    color: #ffffff !important;
+}
+
+.cancha-acciones .btn-cancha.editar span {
+    color: #ffffff !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 650px) {
+
+    .cancha-acciones {
+        grid-template-columns: 1fr;
+    }
+
+    .cancha-acciones .btn-cancha {
+        min-height: 60px;
+        flex-direction: row;
+    }
+
+}
+/* ==========================================
+   MODAL AGREGAR CANCHA
+========================================== */
+
+.modal-cancha {
+    position: fixed;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 10, 25, 0.78);
+
+    backdrop-filter: blur(8px);
+
+    opacity: 0;
+    visibility: hidden;
+
+    transition: 0.25s ease;
+
+    z-index: 9999;
+}
+
+
+.modal-cancha.mostrar {
+    opacity: 1;
+    visibility: visible;
+}
+
+
+/* ==========================================
+   CONTENIDO
+========================================== */
+
+.modal-cancha-contenido {
+
+    position: relative;
+
+    width: 520px;
+    max-width: calc(100% - 40px);
+
+    padding: 32px;
+
+    background: rgba(5, 28, 52, 0.98);
+
+    border: 1px solid rgba(40, 150, 255, 0.45);
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(0, 130, 255, 0.12);
+
+    transform: translateY(25px) scale(0.96);
+
+    transition: 0.25s ease;
+}
+
+
+.modal-cancha.mostrar
+.modal-cancha-contenido {
+
+    transform: translateY(0) scale(1);
+
+}
+
+
+/* ==========================================
+   BOTÓN CERRAR
+========================================== */
+
+.modal-cancha-cerrar {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    margin: 0;
+
+    border-radius: 10px;
+
+    font-size: 25px;
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+
+.modal-cancha-cerrar:hover {
+
+    background: rgba(255, 70, 70, 0.25);
+
+    border-color: rgba(255, 80, 80, 0.5);
+
+}
+
+
+/* ==========================================
+   ENCABEZADO
+========================================== */
+
+.modal-cancha-header {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 16px;
+
+    margin-bottom: 28px;
+}
+
+
+.modal-cancha-icono {
+
+    width: 58px;
+    height: 58px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 15px;
+
+    background: rgba(0, 132, 255, 0.15);
+
+    border: 1px solid rgba(0, 145, 255, 0.35);
+
+    font-size: 27px;
+}
+
+
+.modal-cancha-header h2 {
+
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 25px;
+}
+
+
+.modal-cancha-header p {
+
+    margin: 5px 0 0;
+
+    color: #8fa7bd;
+
+    font-size: 14px;
+}
+
+
+/* ==========================================
+   CAMPOS
+========================================== */
+
+.campo-cancha {
+
+    margin-bottom: 22px;
+}
+
+
+.campo-cancha label {
+
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #dce9f5;
+
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+
+.campo-cancha input[type="text"] {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 14px 15px;
+
+    border-radius: 11px;
+
+    border: 1px solid #245276;
+
+    background: #071d32;
+
+    color: #ffffff;
+
+    outline: none;
+
+    font-size: 14px;
+
+    transition: 0.2s;
+}
+
+
+.campo-cancha input[type="text"]:focus {
+
+    border-color: #168cff;
+
+    box-shadow:
+        0 0 0 3px rgba(22, 140, 255, 0.12);
+}
+
+
+.campo-cancha input::placeholder {
+
+    color: #668198;
+}
+
+
+/* ==========================================
+   SUBIR IMAGEN
+========================================== */
+
+.subir-imagen-cancha {
+
+    position: relative;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 7px;
+
+    min-height: 150px;
+
+    padding: 20px;
+
+    border: 1px dashed #326484;
+
+    border-radius: 13px;
+
+    background: rgba(3, 20, 36, 0.7);
+
+    cursor: pointer;
+
+    transition: 0.2s;
+
+    text-align: center;
+}
+
+
+.subir-imagen-cancha:hover {
+
+    border-color: #168cff;
+
+    background: rgba(0, 110, 210, 0.08);
+}
+
+
+.subir-imagen-icono {
+
+    font-size: 30px;
+}
+
+
+.subir-imagen-cancha strong {
+
+    color: #ffffff;
+
+    font-size: 14px;
+}
+
+
+.subir-imagen-cancha span {
+
+    color: #718ba1;
+
+    font-size: 12px;
+}
+
+
+.subir-imagen-cancha input[type="file"] {
+
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    opacity: 0;
+
+    cursor: pointer;
+}
+
+
+/* ==========================================
+   PREVIEW
+========================================== */
+
+.preview-cancha {
+
+    margin-top: 12px;
+
+    display: flex;
+
+    justify-content: center;
+}
+
+
+.preview-cancha img {
+
+    width: 100%;
+
+    max-height: 180px;
+
+    object-fit: cover;
+
+    border-radius: 12px;
+
+    border: 1px solid #245276;
+}
+
+
+/* ==========================================
+   AVISO
+========================================== */
+
+.aviso-cancha {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 12px 14px;
+
+    margin-bottom: 24px;
+
+    border-radius: 10px;
+
+    background: rgba(0, 190, 110, 0.08);
+
+    border: 1px solid rgba(0, 220, 130, 0.2);
+}
+
+
+.aviso-cancha span {
+
+    color: #35e58a;
+
+    font-size: 18px;
+}
+
+
+.aviso-cancha p {
+
+    margin: 0;
+
+    color: #9db5c8;
+
+    font-size: 12px;
+}
+
+
+.aviso-cancha strong {
+
+    color: #35e58a;
+}
+
+
+/* ==========================================
+   BOTONES
+========================================== */
+
+.modal-cancha-acciones {
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 12px;
+}
+
+
+.btn-cancelar-cancha,
+.btn-guardar-cancha {
+
+    padding: 12px 20px;
+
+    border-radius: 10px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+
+.btn-cancelar-cancha {
+
+    background: #0b2238;
+
+    border: 1px solid #2b4e69;
+
+    color: #a8bfd1;
+}
+
+
+.btn-cancelar-cancha:hover {
+
+    background: #102e48;
+
+    color: #ffffff;
+}
+
+
+.btn-guardar-cancha {
+
+    background: #087fe8;
+
+    border: 1px solid #1995ff;
+
+    color: #ffffff;
+
+    box-shadow:
+        0 5px 18px rgba(0, 125, 240, 0.25);
+}
+
+
+.btn-guardar-cancha:hover {
+
+    background: #0990ff;
+
+    transform: translateY(-1px);
+}
+
+
+/* ==========================================
+   BLOQUEAR SCROLL
+========================================== */
+
+body.modal-abierto {
+
+    overflow: hidden;
+}
+/* BOTONES DE LAS CANCHAS */
+.cancha-acciones {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.btn-cancha {
+    width: 135px;
+    min-height: 58px;
+}
+.btn-cancha {
+    width: 145px;
+    min-height: 58px;
+}
+/* ==========================================
+   ESTADO DE LAS CANCHAS
+   ========================================== */
+
+.estado-cancha {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 8px;
+
+    background: rgba(3, 18, 35, 0.94) !important;
+    color: #ffffff !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 10px;
+
+    padding: 8px 14px;
+    min-height: 34px;
+
+    font-weight: 700;
+    line-height: 1;
+
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Eliminar el punto antiguo que genera el CSS anterior */
+.estado-cancha::before {
+    content: none !important;
+}
+
+/* Punto de estado */
+.estado-cancha .cancha-estado {
+    display: inline-block !important;
+
+    width: 10px !important;
+    height: 10px !important;
+
+    min-width: 10px;
+    min-height: 10px;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border-radius: 50%;
+
+    flex-shrink: 0;
+}
+
+/* Disponible */
+.estado-cancha.disponible .cancha-estado {
+    background: #22c55e !important;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+}
+
+/* No disponible */
+.estado-cancha.no-disponible .cancha-estado {
+    background: #ef4444 !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+}
+
+/* ==========================================
+   BARRA LATERAL FIJA
+   ========================================== */
+
+.panel .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+
+    width: 245px;
+    height: 100vh;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    z-index: 1000;
+}
+
+/* El contenido deja espacio para la barra */
+.panel .contenido {
+    margin-left: 245px;
+}
+/* =========================================
+   MODAL ELIMINAR CANCHA
+   ========================================= */
+
+.modal-eliminar-cancha {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(0, 8, 18, 0.78);
+
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+}
+
+.modal-eliminar-cancha.mostrar {
+    display: flex;
+}
+
+
+/* CONTENEDOR */
+
+.modal-eliminar-contenido {
+    position: relative;
+
+    width: min(520px, 100%);
+
+    padding: 42px 42px 34px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(5, 28, 52, 0.98),
+            rgba(2, 17, 34, 0.98)
+        );
+
+    border: 1px solid rgba(0, 157, 255, 0.55);
+
+    border-radius: 22px;
+
+    box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.65),
+        0 0 35px rgba(0, 145, 255, 0.10);
+
+    text-align: center;
+
+    animation: aparecerModalEliminar 0.22s ease-out;
+}
+
+
+/* ANIMACIÓN */
+
+@keyframes aparecerModalEliminar {
+
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+}
+
+
+/* BOTÓN X */
+
+.modal-eliminar-cerrar {
+    position: absolute;
+
+    top: 17px;
+    right: 18px;
+
+    width: 40px;
+    height: 40px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 29px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.modal-eliminar-cerrar:hover {
+    color: #ffffff;
+
+    background: rgba(255, 255, 255, 0.08);
+
+    transform: rotate(5deg);
+}
+
+
+/* ICONO */
+
+.modal-eliminar-icono {
+    width: 105px;
+    height: 105px;
+
+    margin: 0 auto 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    border: 3px solid #ff4356;
+
+    background: rgba(255, 49, 73, 0.08);
+
+    color: #ff4356;
+
+    font-size: 43px;
+
+    box-shadow:
+        0 0 25px rgba(255, 55, 75, 0.25),
+        inset 0 0 20px rgba(255, 55, 75, 0.08);
+}
+
+
+/* TITULO */
+
+.modal-eliminar-contenido h2 {
+    margin: 0 0 17px;
+
+    color: #ffffff;
+
+    font-size: 30px;
+    font-weight: 800;
+
+    letter-spacing: -0.5px;
+}
+
+.modal-eliminar-contenido h2 span {
+    color: #ff4356;
+}
+
+
+/* TEXTO */
+
+.modal-eliminar-texto {
+    margin: 0 auto;
+
+    max-width: 420px;
+
+    color: rgba(255, 255, 255, 0.82);
+
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.modal-eliminar-texto strong {
+    display: inline-block;
+
+    margin: 4px 3px;
+    padding: 5px 12px;
+
+    border-radius: 9px;
+
+    background: rgba(255, 55, 80, 0.13);
+
+    color: #ff5365;
+
+    font-weight: 800;
+}
+
+
+/* AVISO */
+
+.modal-eliminar-aviso {
+    margin: 16px 0 24px;
+
+    color: rgba(255, 255, 255, 0.48);
+
+    font-size: 14px;
+}
+
+
+/* CAJA DE ADVERTENCIA */
+
+.modal-eliminar-advertencia {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    margin-bottom: 28px;
+
+    padding: 16px 18px;
+
+    text-align: left;
+
+    border: 1px solid rgba(255, 55, 80, 0.55);
+
+    border-radius: 14px;
+
+    background: rgba(255, 45, 70, 0.07);
+}
+
+.modal-eliminar-advertencia-icono {
+    flex-shrink: 0;
+
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: #ff4356;
+
+    color: #ffffff;
+
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.modal-eliminar-advertencia p {
+    margin: 0;
+
+    color: rgba(255, 255, 255, 0.72);
+
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+
+/* BOTONES */
+
+.modal-eliminar-acciones {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 14px;
+}
+
+
+/* CANCELAR */
+
+.btn-modal-cancelar,
+.btn-modal-eliminar {
+    min-height: 58px;
+
+    border-radius: 13px;
+
+    font-size: 15px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.btn-modal-cancelar {
+    border: 1px solid rgba(100, 180, 240, 0.55);
+
+    background: rgba(4, 28, 50, 0.75);
+
+    color: #ffffff;
+}
+
+.btn-modal-cancelar:hover {
+    background: rgba(15, 55, 85, 0.85);
+
+    border-color: #55b8ff;
+
+    transform: translateY(-2px);
+}
+
+.btn-modal-cancelar span {
+    margin-right: 7px;
+
+    font-size: 20px;
+}
+
+
+/* ELIMINAR */
+
+.btn-modal-eliminar {
+    border: 1px solid #ff4356;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ff4659,
+            #df243d
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        0 8px 22px rgba(255, 45, 70, 0.22);
+}
+
+.btn-modal-eliminar:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #ff5969,
+            #ef3047
+        );
+
+    box-shadow:
+        0 10px 28px rgba(255, 45, 70, 0.35);
+
+    transform: translateY(-2px);
+}
+
+.btn-modal-eliminar span {
+    margin-right: 7px;
+
+    font-size: 16px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 600px) {
+
+    .modal-eliminar-contenido {
+        padding: 35px 22px 25px;
+    }
+
+    .modal-eliminar-icono {
+        width: 85px;
+        height: 85px;
+
+        font-size: 34px;
+    }
+
+    .modal-eliminar-contenido h2 {
+        font-size: 25px;
+    }
+
+    .modal-eliminar-acciones {
+        grid-template-columns: 1fr;
+    }
+
+}
+/* =========================================
+   AJUSTES MODAL ELIMINAR
+   ========================================= */
+
+/* X DE CERRAR */
+
+.modal-eliminar-cerrar {
+    position: absolute;
+
+    top: 22px;
+    right: 22px;
+
+    width: 50px;
+    height: 50px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    margin: 0;
+
+    border: 1px solid rgba(0, 157, 255, 0.7);
+    border-radius: 12px;
+
+    background: #0787e8;
+
+    color: #ffffff;
+
+    font-size: 28px;
+    font-family: Arial, sans-serif;
+    font-weight: 700;
+
+    line-height: 1;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    transition: all 0.2s ease;
+}
+
+.modal-eliminar-cerrar:hover {
+    background: #0b98ff;
+
+    border-color: #3bb4ff;
+
+    transform: scale(1.05);
+}
+
+
+/* =========================================
+   BOTÓN SÍ, ELIMINAR
+   ========================================= */
+
+.btn-modal-eliminar {
+    min-height: 58px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    border: 1px solid #ff4356 !important;
+    border-radius: 13px;
+
+    background: linear-gradient(
+        135deg,
+        #ff4659,
+        #df243d
+    ) !important;
+
+    color: #ffffff !important;
+
+    font-size: 15px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 22px rgba(255, 45, 70, 0.22);
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/* AL PASAR EL MOUSE */
+
+.btn-modal-eliminar:hover {
+    background: linear-gradient(
+        135deg,
+        #ff1f3d,
+        #c9152d
+    ) !important;
+
+    border-color: #ff6575 !important;
+
+    color: #ffffff !important;
+
+    box-shadow:
+        0 0 25px rgba(255, 45, 70, 0.45),
+        0 10px 30px rgba(255, 45, 70, 0.30);
+
+    transform: translateY(-2px);
+}
+
+
+/* ICONO DEL BOTÓN */
+
+.btn-modal-eliminar span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 0;
+
+    color: #ffffff !important;
+
+    font-size: 16px;
+
+    line-height: 1;
+}
+/* =========================================
+   BOTÓN ELIMINAR CANCHA
+   ========================================= */
+
+.btn-cancha.eliminar {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(3, 22, 40, 0.85);
+    color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+/* AL PASAR EL MOUSE */
+
+.btn-cancha.eliminar:hover {
+    background: linear-gradient(
+        135deg,
+        #ff4659,
+        #d9233d
+    ) !important;
+
+    border-color: #ff4356 !important;
+
+    color: #ffffff !important;
+
+    box-shadow:
+        0 0 18px rgba(255, 45, 70, 0.35),
+        0 8px 20px rgba(255, 45, 70, 0.20);
+
+    transform: translateY(-2px);
+}
+
+/* ICONO */
+
+.btn-cancha.eliminar:hover span {
+    color: #ffffff;
+}
+
+/* =========================================
+   ELIMINAR - HOVER IGUAL AL RESTO
+   ========================================= */
+
+.btn-cancha.eliminar {
+    background: rgba(3, 22, 40, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+
+    box-shadow: none !important;
+
+    transform: translateY(0);
+
+    transition:
+        background 0.25s ease,
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+}
+
+
+/* HOVER */
+
+.btn-cancha.eliminar:hover {
+    background: rgba(130, 42, 58, 0.60) !important;
+
+    border-color: rgba(255, 75, 95, 0.85) !important;
+
+    color: #ffffff !important;
+
+    box-shadow:
+        0 8px 18px rgba(255, 45, 70, 0.16) !important;
+
+    transform: translateY(-3px) !important;
+}
+
+
+/* ICONO Y TEXTO */
+
+.btn-cancha.eliminar:hover,
+.btn-cancha.eliminar:hover span {
+    color: #ffffff !important;
+}
+/* =========================================================
+   MENSAJE CANCHA REPETIDA
+   ========================================================= */
+
+.mensaje-cancha-error {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 14px 18px;
+
+    margin-bottom: 18px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(110, 35, 50, 0.35);
+
+    border:
+        1px solid rgba(255, 75, 95, 0.55);
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.18);
+
+    color: #ffffff;
+}
+
+.mensaje-cancha-error-icono {
+    width: 34px;
+    height: 34px;
+
+    min-width: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255, 65, 85, 0.18);
+
+    border:
+        1px solid rgba(255, 85, 105, 0.50);
+
+    color: #ff7180;
+
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.mensaje-cancha-error strong {
+    display: block;
+
+    margin-bottom: 3px;
+
+    font-size: 13px;
+}
+
+.mensaje-cancha-error p {
+    margin: 0;
+
+    font-size: 12px;
+
+    color:
+        rgba(255, 255, 255, 0.60);
+}
+
+.mensaje-cancha-error-cerrar {
+    width: 30px;
+    height: 30px;
+
+    margin-left: auto;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border: none;
+
+    background: transparent;
+
+    color:
+        rgba(255, 255, 255, 0.55);
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        background 0.2s ease;
+}
+
+.mensaje-cancha-error-cerrar:hover {
+    color: #ffffff;
+
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    border-radius: 7px;
+}
+/* =========================================================
+   MENSAJE CANCHA REPETIDA
+   ========================================================= */
+
+.mensaje-cancha-error {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 14px 18px;
+
+    margin-bottom: 18px;
+
+    border-radius: 12px;
+
+    background: rgba(110, 35, 50, 0.35);
+
+    border: 1px solid rgba(255, 75, 95, 0.55);
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.18);
+
+    color: #ffffff;
+}
+
+.mensaje-cancha-error-icono {
+    width: 34px;
+    height: 34px;
+
+    min-width: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255, 65, 85, 0.18);
+
+    border:
+        1px solid rgba(255, 85, 105, 0.50);
+
+    color: #ff7180;
+
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.mensaje-cancha-error-contenido {
+    min-width: 0;
+}
+
+.mensaje-cancha-error-contenido strong {
+    display: block;
+
+    margin-bottom: 3px;
+
+    font-size: 13px;
+}
+
+.mensaje-cancha-error-contenido p {
+    margin: 0;
+
+    font-size: 12px;
+
+    color:
+        rgba(255, 255, 255, 0.60);
+}
+
+.mensaje-cancha-error-cerrar {
+    width: 30px;
+    height: 30px;
+
+    margin-left: auto;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background: transparent;
+
+    color:
+        rgba(255, 255, 255, 0.55);
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        background 0.2s ease;
+}
+
+.mensaje-cancha-error-cerrar:hover {
+    color: #ffffff;
+
+    background:
+        rgba(255, 255, 255, 0.08);
+}
+/* =========================================================
+   MODAL ERROR - NOMBRE DE CANCHA REPETIDO
+   ========================================================= */
+
+.modal-error-cancha {
+    position: fixed;
+    inset: 0;
+
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(0, 8, 20, 0.78);
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    animation: aparecerErrorCancha 0.20s ease-out;
+}
+
+
+/* CONTENIDO */
+
+.modal-error-cancha-contenido {
+    position: relative;
+
+    width: min(560px, 100%);
+
+    padding: 48px 42px 40px;
+
+    text-align: center;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(5, 30, 55, 0.98),
+            rgba(2, 18, 35, 0.98)
+        );
+
+    border: 1px solid rgba(255, 65, 85, 0.75);
+
+    border-radius: 22px;
+
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.70),
+        0 0 35px rgba(255, 55, 75, 0.16);
+
+    animation: aparecerContenidoError 0.25s ease-out;
+}
+
+
+/* ICONO */
+
+.modal-error-cancha-icono {
+    width: 82px;
+    height: 82px;
+
+    margin: 0 auto 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    border: 2px solid #ff4356;
+
+    background: rgba(255, 55, 75, 0.10);
+
+    color: #ff5365;
+
+    font-size: 42px;
+    font-weight: 800;
+
+    box-shadow:
+        0 0 25px rgba(255, 55, 75, 0.25),
+        inset 0 0 18px rgba(255, 55, 75, 0.08);
+}
+
+
+/* TITULO */
+
+.modal-error-cancha-contenido h2 {
+    margin: 0 0 15px;
+
+    color: #ffffff;
+
+    font-size: 28px;
+    font-weight: 800;
+}
+
+
+/* TEXTO */
+
+.modal-error-cancha-contenido p {
+    margin: 0 auto 28px;
+
+    color: rgba(255, 255, 255, 0.72);
+
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+
+/* BOTÓN ACEPTAR */
+
+.modal-error-cancha-aceptar {
+    min-width: 180px;
+    min-height: 52px;
+
+    padding: 12px 25px;
+
+    border: 1px solid #ff4356;
+
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ff4659,
+            #df243d
+        );
+
+    color: #ffffff;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 22px rgba(255, 45, 70, 0.22);
+
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.modal-error-cancha-aceptar:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #ff5969,
+            #ef3047
+        );
+
+    box-shadow:
+        0 0 25px rgba(255, 45, 70, 0.40),
+        0 10px 28px rgba(255, 45, 70, 0.25);
+
+    transform: translateY(-2px);
+}
+
+
+/* BOTÓN X */
+
+.modal-error-cancha-cerrar {
+    position: absolute;
+
+    top: 17px;
+    right: 18px;
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 9px;
+
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.55);
+
+    font-size: 25px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.modal-error-cancha-cerrar:hover {
+    color: #ffffff;
+
+    background: rgba(255, 255, 255, 0.08);
+}
+
+
+/* ANIMACIONES */
+
+@keyframes aparecerErrorCancha {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+@keyframes aparecerContenidoError {
+
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 600px) {
+
+    .modal-error-cancha-contenido {
+        padding: 40px 25px 30px;
+    }
+
+    .modal-error-cancha-contenido h2 {
+        font-size: 23px;
+    }
+
+    .modal-error-cancha-contenido p {
+        font-size: 14px;
+    }
+
+}
+/* BOTÓN ACEPTAR */
+
+.modal-error-cancha-aceptar {
+    width: 180px;
+    min-height: 48px;
+
+    padding: 10px 20px;
+
+    border: 1px solid #ff4356;
+
+    border-radius: 10px;
+
+    background: linear-gradient(
+        135deg,
+        #ff4659,
+        #df243d
+    );
+
+    color: #ffffff;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 22px rgba(255, 45, 70, 0.22);
+
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.modal-error-cancha-aceptar:hover {
+    background: linear-gradient(
+        135deg,
+        #ff5969,
+        #ef3047
+    );
+
+    box-shadow:
+        0 0 25px rgba(255, 45, 70, 0.40),
+        0 10px 28px rgba(255, 45, 70, 0.25);
+
+    transform: translateY(-2px);
+}
+.modal-error-cancha-aceptar {
+    width: 180px;
+    min-height: 48px;
+
+    padding: 10px 20px;
+
+    border: 1px solid #ff4356;
+    border-radius: 10px;
+
+    background: #ff4356 !important;
+
+    color: #ffffff;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 22px rgba(255, 45, 70, 0.22);
+
+    transition: 0.2s ease;
+}
+
+.modal-error-cancha-aceptar:hover {
+    background: #df243d !important;
+
+    border-color: #ff5969;
+
+    box-shadow:
+        0 0 25px rgba(255, 45, 70, 0.40);
+
+    transform: translateY(-2px);
+}
