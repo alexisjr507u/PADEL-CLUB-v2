@@ -70,6 +70,64 @@ mysqli_stmt_bind_param(
 
 if (mysqli_stmt_execute($stmt)) {
 
+    $id_usuario_nuevo = mysqli_insert_id($conexion);
+
+    // Vincular invitaciones pendientes que esperaban este correo.
+    // El email ya pasó por el flujo de verificación con código,
+    // así que esto es seguro: nadie puede "robar" una invitación
+    // con un correo que no controla.
+    $stmtInvitacionesPendientes = mysqli_prepare(
+        $conexion,
+        "SELECT i.id_invitacion, i.id_torneo, i.id_inscripcion_invita, t.nombre AS nombre_torneo,
+                u.nombre AS nombre_invita, u.apellido AS apellido_invita
+         FROM invitacion i
+         INNER JOIN torneos t ON t.id_torneo = i.id_torneo
+         INNER JOIN inscripcion insc ON insc.id_inscripcion = i.id_inscripcion_invita
+         INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
+         WHERE i.email_invitado = ?
+           AND i.estado = 'Pendiente'
+           AND i.id_usuario_invitado IS NULL"
+    );
+    mysqli_stmt_bind_param($stmtInvitacionesPendientes, "s", $email);
+    mysqli_stmt_execute($stmtInvitacionesPendientes);
+    $invitacionesPendientes = mysqli_stmt_get_result($stmtInvitacionesPendientes);
+
+    while ($invitacionPendiente = mysqli_fetch_assoc($invitacionesPendientes)) {
+
+        $stmtVincular = mysqli_prepare(
+            $conexion,
+            "UPDATE invitacion SET id_usuario_invitado = ? WHERE id_invitacion = ?"
+        );
+        mysqli_stmt_bind_param(
+            $stmtVincular,
+            "ii",
+            $id_usuario_nuevo,
+            $invitacionPendiente['id_invitacion']
+        );
+        mysqli_stmt_execute($stmtVincular);
+
+        $mensajeNotificacion =
+            $invitacionPendiente['nombre_invita'] . ' ' . $invitacionPendiente['apellido_invita'] .
+            ' te invita a formar pareja para participar en el torneo ' .
+            $invitacionPendiente['nombre_torneo'] . ' de The Bull Padel Club.';
+
+        $stmtNotifNueva = mysqli_prepare(
+            $conexion,
+            "INSERT INTO notificacion (id_usuario_destino, tipo, mensaje, id_torneo, id_invitacion)
+             VALUES (?, 'invitacion_pendiente', ?, ?, ?)"
+        );
+        mysqli_stmt_bind_param(
+            $stmtNotifNueva,
+            "isii",
+            $id_usuario_nuevo,
+            $mensajeNotificacion,
+            $invitacionPendiente['id_torneo'],
+            $invitacionPendiente['id_invitacion']
+        );
+        mysqli_stmt_execute($stmtNotifNueva);
+
+    }
+
     session_unset();
     session_destroy();
 

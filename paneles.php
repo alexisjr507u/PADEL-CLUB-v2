@@ -153,8 +153,9 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
     <title>Paneles</title>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet"
-          href="css/style.css"> 
+          href="css/style.css">
           <link rel="stylesheet" href="css/canchas.css">
 
 </head>
@@ -1710,6 +1711,35 @@ if ($id_club_torneos > 0) {
 
 
 /* =========================================================
+   PARTICIPANTES CONFIRMADOS POR TORNEO
+   (una sola consulta para todos los torneos del club,
+   para no consultar adentro del bucle que arma las tarjetas)
+   ========================================================= */
+
+$conteosConfirmados = [];
+
+if ($id_club_torneos > 0) {
+
+    $stmtConteos = mysqli_prepare(
+        $conexion,
+        "SELECT insc.id_torneo, COUNT(*) AS n
+         FROM inscripcion insc
+         INNER JOIN torneos t ON t.id_torneo = insc.id_torneo
+         WHERE t.id_club = ? AND insc.estado = 'Confirmada'
+         GROUP BY insc.id_torneo"
+    );
+    mysqli_stmt_bind_param($stmtConteos, "i", $id_club_torneos);
+    mysqli_stmt_execute($stmtConteos);
+    $resultadoConteos = mysqli_stmt_get_result($stmtConteos);
+
+    while ($filaConteo = mysqli_fetch_assoc($resultadoConteos)) {
+        $conteosConfirmados[(int) $filaConteo['id_torneo']] = (int) $filaConteo['n'];
+    }
+
+}
+
+
+/* =========================================================
    ESTADÍSTICAS
    ========================================================= */
 
@@ -2582,7 +2612,8 @@ $horaFin = date(
                         </svg>
 
                         <span>
-                            0 /
+                            <?php echo (int) ($conteosConfirmados[(int) $torneo['id_torneo']] ?? 0); ?>
+                            /
                             <?php echo intval(
                                 $torneo['max_participantes']
                             ); ?>
@@ -2634,6 +2665,14 @@ $horaFin = date(
                             </span>
 
                         </button>
+
+                        <a
+                            href="gestionar_participantes.php?id_torneo=<?php echo intval($torneo['id_torneo']); ?>"
+                            class="btn-torneo participantes"
+                        >
+                            <i class="bi bi-people-fill"></i>
+                            <span>Participantes</span>
+                        </a>
 
 
                         <button
@@ -4435,6 +4474,22 @@ $canchasNoDisponibles =
     <!-- PARTICIPANTE -->
     <!-- ========================================= -->
 
+    <?php
+
+    $totalNotificacionesSinLeer = 0;
+
+    $stmtContarNoLeidas = mysqli_prepare(
+        $conexion,
+        "SELECT COUNT(*) AS n FROM notificacion WHERE id_usuario_destino = ? AND leida = 0"
+    );
+    mysqli_stmt_bind_param($stmtContarNoLeidas, "i", $_SESSION['id_usuario']);
+    mysqli_stmt_execute($stmtContarNoLeidas);
+    $totalNotificacionesSinLeer = (int) mysqli_fetch_assoc(
+        mysqli_stmt_get_result($stmtContarNoLeidas)
+    )['n'];
+
+    ?>
+
     <div class="panel">
 
         <!-- SIDEBAR -->
@@ -4460,11 +4515,11 @@ $canchasNoDisponibles =
 
                 <!-- TORNEOS -->
 
-                <li class="activo">
+                <li class="<?php echo ($seccion !== 'mis_inscripciones' && $seccion !== 'notificaciones') ? 'activo' : ''; ?>">
 
                     <a href="paneles.php">
 
-                        🏆 Torneos
+                        <i class="bi bi-trophy-fill"></i> Torneos
 
                     </a>
 
@@ -4473,11 +4528,11 @@ $canchasNoDisponibles =
 
                 <!-- MIS INSCRIPCIONES -->
 
-                <li>
+                <li class="<?php echo ($seccion === 'mis_inscripciones') ? 'activo' : ''; ?>">
 
                     <a href="paneles.php?seccion=mis_inscripciones">
 
-                        📋 Mis inscripciones
+                        <i class="bi bi-clipboard-check-fill"></i> Mis inscripciones
 
                     </a>
 
@@ -4490,7 +4545,7 @@ $canchasNoDisponibles =
 
                     <a href="paneles.php?seccion=ranking">
 
-                        📊 Ranking
+                        <i class="bi bi-bar-chart-fill"></i> Ranking
 
                     </a>
 
@@ -4499,11 +4554,15 @@ $canchasNoDisponibles =
 
                 <!-- NOTIFICACIONES -->
 
-                <li>
+                <li class="<?php echo ($seccion === 'notificaciones') ? 'activo' : ''; ?>">
 
                     <a href="paneles.php?seccion=notificaciones">
 
-                        📢 Notificaciones
+                        <i class="bi bi-bell-fill"></i> Notificaciones
+
+                        <?php if ($totalNotificacionesSinLeer > 0) { ?>
+                            <span class="notificacion-menu"><?php echo $totalNotificacionesSinLeer; ?></span>
+                        <?php } ?>
 
                     </a>
 
@@ -4516,7 +4575,7 @@ $canchasNoDisponibles =
 
                     <a href="funciones/logout.php">
 
-                        🚪 Cerrar sesión
+                        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
 
                     </a>
 
@@ -4586,6 +4645,7 @@ $canchasNoDisponibles =
 
             </div>
 
+            <?php if ($seccion !== 'mis_inscripciones' && $seccion !== 'notificaciones') { ?>
 
             <!-- ENCABEZADO + FILTROS -->
 
@@ -4652,6 +4712,40 @@ $canchasNoDisponibles =
 
             </div>
 
+            <?php
+
+            $erroresInscripcion = [
+                'token'                          => 'Tu sesión expiró, volvé a intentarlo.',
+                'cerrado'                        => 'Ese torneo ya no admite inscripciones.',
+                'no_individual'                  => 'La inscripción a torneos de parejas/mixto todavía no está disponible.',
+                'ya_inscripto'                   => 'Ya estás inscripto a ese torneo.',
+                'cupo_completo'                  => 'Ese torneo ya no tiene cupos disponibles.',
+                'error_bd'                       => 'Ocurrió un error al inscribirte. Intentá nuevamente.',
+                'email_invalido'                 => 'Ingresá un correo válido para tu compañero.',
+                'invitacion_a_si_mismo'          => 'No podés invitarte a vos mismo.',
+                'tipo_invalido'                  => 'Ese torneo no admite invitación de compañero.',
+                'categoria_incompatible'         => 'No jugás en la categoría de ese torneo.',
+                'companero_categoria_incompatible' => 'Tu compañero no juega en la categoría de ese torneo.',
+                'companero_ya_inscripto'         => 'Tu compañero ya tiene una inscripción relacionada con ese torneo.',
+                'invitacion_duplicada'           => 'Ya tenés una invitación pendiente para ese torneo.',
+            ];
+
+            if (isset($_GET['error']) && isset($erroresInscripcion[$_GET['error']])) {
+                echo '<div id="mensajeError" class="mensaje-error mensaje-error-compacto">'
+                    . '<i class="bi bi-exclamation-circle-fill"></i> '
+                    . htmlspecialchars($erroresInscripcion[$_GET['error']])
+                    . '</div>';
+            }
+
+            if (isset($_GET['invitacion']) && $_GET['invitacion'] === 'guardada_sin_mail') {
+                echo '<div id="mensajeError" class="mensaje-error mensaje-error-compacto">'
+                    . '<i class="bi bi-exclamation-triangle-fill"></i> '
+                    . 'Guardamos la invitación, pero no pudimos enviarle el correo a tu compañero. '
+                    . 'Avisale directamente para que se registre en The Bull Padel Club.'
+                    . '</div>';
+            }
+            ?>
+
 
             <!-- ========================================= -->
             <!-- TORNEOS -->
@@ -4660,6 +4754,22 @@ $canchasNoDisponibles =
             <section class="torneos-participante">
 
                 <?php
+
+                // Participantes confirmados por torneo, en una sola consulta
+                // para no consultar adentro del bucle de tarjetas.
+                $conteosConfirmadosParticipante = [];
+
+                $resultadoConteosParticipante = mysqli_query(
+                    $conexion,
+                    "SELECT id_torneo, COUNT(*) AS n
+                     FROM inscripcion
+                     WHERE estado = 'Confirmada'
+                     GROUP BY id_torneo"
+                );
+
+                while ($filaConteoP = mysqli_fetch_assoc($resultadoConteosParticipante)) {
+                    $conteosConfirmadosParticipante[(int) $filaConteoP['id_torneo']] = (int) $filaConteoP['n'];
+                }
 
                 $sqlTorneosParticipante = "
                     SELECT
@@ -4852,7 +4962,8 @@ $canchasNoDisponibles =
                                 </span>
 
                                 <span>
-                                    0 /
+                                    <?php echo (int) ($conteosConfirmadosParticipante[(int) $torneo['id_torneo']] ?? 0); ?>
+                                    /
                                     <?php echo intval(
                                         $torneo['max_participantes']
                                     ); ?>
@@ -4905,6 +5016,11 @@ $canchasNoDisponibles =
                                         ); ?>"
                                         data-nombre="<?php echo htmlspecialchars(
                                             $torneo['nombre'],
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ); ?>"
+                                        data-tipo="<?php echo htmlspecialchars(
+                                            $torneo['tipo'],
                                             ENT_QUOTES,
                                             'UTF-8'
                                         ); ?>"
@@ -4964,6 +5080,333 @@ $canchasNoDisponibles =
 
             </section>
 
+            <?php } ?>
+
+            <?php if ($seccion === 'mis_inscripciones') { ?>
+
+            <section class="mis-inscripciones-participante">
+
+                <div class="cabecera-torneos-participante">
+
+                    <div>
+
+                        <h1>Mis inscripciones</h1>
+
+                        <p>Torneos en los que participás y el estado de cada inscripción.</p>
+
+                    </div>
+
+                </div>
+
+                <?php
+
+                $stmtInvPendientesAviso = mysqli_prepare(
+                    $conexion,
+                    "SELECT COUNT(*) AS n FROM invitacion WHERE id_usuario_invitado = ? AND estado = 'Pendiente'"
+                );
+                mysqli_stmt_bind_param($stmtInvPendientesAviso, "i", $_SESSION['id_usuario']);
+                mysqli_stmt_execute($stmtInvPendientesAviso);
+                $totalInvPendientesAviso = (int) mysqli_fetch_assoc(
+                    mysqli_stmt_get_result($stmtInvPendientesAviso)
+                )['n'];
+
+                ?>
+
+                <?php if ($totalInvPendientesAviso > 0) { ?>
+
+                    <a href="paneles.php?seccion=notificaciones" class="aviso-invitaciones-pendientes">
+                        <i class="bi bi-bell-fill"></i>
+                        Tenés <?php echo $totalInvPendientesAviso; ?>
+                        invitación<?php echo $totalInvPendientesAviso > 1 ? 'es' : ''; ?> de pareja pendiente<?php echo $totalInvPendientesAviso > 1 ? 's' : ''; ?>.
+                        Respondela en Notificaciones
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+
+                <?php } ?>
+
+                <h2 class="subtitulo-mis-inscripciones">Mis torneos</h2>
+
+                <?php
+
+                $stmtMisInscripciones = mysqli_prepare(
+                    $conexion,
+                    "SELECT insc.id_inscripcion, insc.estado, t.nombre AS nombre_torneo,
+                            t.tipo, t.fecha_inicio, cat.nombre AS categoria
+                     FROM inscripcion insc
+                     INNER JOIN torneos t ON t.id_torneo = insc.id_torneo
+                     INNER JOIN categoria cat ON cat.id_categoria = t.id_categoria
+                     WHERE insc.id_usuario = ?
+                     ORDER BY t.fecha_inicio ASC"
+                );
+                mysqli_stmt_bind_param($stmtMisInscripciones, "i", $_SESSION['id_usuario']);
+                mysqli_stmt_execute($stmtMisInscripciones);
+                $resultadoMisInscripciones = mysqli_stmt_get_result($stmtMisInscripciones);
+
+                ?>
+
+                <?php if (mysqli_num_rows($resultadoMisInscripciones) === 0) { ?>
+
+                    <p class="sin-inscripciones">Todavía no te inscribiste a ningún torneo.</p>
+
+                <?php } else { ?>
+
+                    <div class="lista-mis-inscripciones">
+
+                        <?php while ($mi = mysqli_fetch_assoc($resultadoMisInscripciones)) { ?>
+
+                            <?php
+
+                            $nombreCompanero = null;
+
+                            if (in_array($mi['tipo'], ['Parejas', 'Mixto'], true) && $mi['estado'] === 'Confirmada') {
+
+                                $idIns = (int) $mi['id_inscripcion'];
+
+                                $stmtCompanero = mysqli_prepare(
+                                    $conexion,
+                                    "SELECT u.nombre, u.apellido
+                                     FROM pareja p
+                                     INNER JOIN inscripcion insc2
+                                        ON insc2.id_inscripcion = IF(p.id_inscripcion_1 = ?, p.id_inscripcion_2, p.id_inscripcion_1)
+                                     INNER JOIN usuario u ON u.id_usuario = insc2.id_usuario
+                                     WHERE p.id_inscripcion_1 = ? OR p.id_inscripcion_2 = ?"
+                                );
+                                mysqli_stmt_bind_param($stmtCompanero, "iii", $idIns, $idIns, $idIns);
+                                mysqli_stmt_execute($stmtCompanero);
+                                $companero = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCompanero));
+
+                                if ($companero) {
+                                    $nombreCompanero = $companero['nombre'] . ' ' . $companero['apellido'];
+                                }
+
+                            }
+
+                            $estadoLegible = [
+                                'Pendiente'  => 'Esperando a tu compañero',
+                                'Confirmada' => 'Confirmada',
+                                'Cancelada'  => 'Cancelada',
+                            ];
+
+                            ?>
+
+                            <div class="tarjeta-mi-inscripcion">
+
+                                <div>
+
+                                    <strong><?php echo htmlspecialchars($mi['nombre_torneo']); ?></strong>
+
+                                    <div class="detalle-invitacion-recibida">
+                                        <?php echo htmlspecialchars($mi['tipo']); ?> ·
+                                        <?php echo htmlspecialchars($mi['categoria']); ?> ·
+                                        <?php echo date('d/m/Y', strtotime($mi['fecha_inicio'])); ?>
+                                    </div>
+
+                                    <?php if ($nombreCompanero) { ?>
+                                        <div class="detalle-invitacion-recibida">
+                                            Pareja: <?php echo htmlspecialchars($nombreCompanero); ?>
+                                        </div>
+                                    <?php } ?>
+
+                                </div>
+
+                                <span class="estado-mi-inscripcion estado-<?php echo strtolower($mi['estado']); ?>">
+                                    <?php echo htmlspecialchars($estadoLegible[$mi['estado']] ?? $mi['estado']); ?>
+                                </span>
+
+                            </div>
+
+                        <?php } ?>
+
+                    </div>
+
+                <?php } ?>
+
+            </section>
+
+            <?php } ?>
+
+            <?php if ($seccion === 'notificaciones') { ?>
+
+            <section class="notificaciones-participante">
+
+                <div class="cabecera-torneos-participante">
+
+                    <div>
+
+                        <h1>Notificaciones</h1>
+
+                        <p>Avisos del sistema e invitaciones de pareja.</p>
+
+                    </div>
+
+                </div>
+
+                <?php
+
+                $erroresInvitacion = [
+                    'token'                   => 'Tu sesión expiró, volvé a intentarlo.',
+                    'no_existe'               => 'Esa invitación no existe.',
+                    'no_autorizado'           => 'Esa invitación no te corresponde.',
+                    'invitacion_no_pendiente' => 'Esa invitación ya fue respondida.',
+                    'invitacion_vencida'      => 'Esa invitación venció.',
+                    'cerrado'                 => 'Ese torneo ya no admite inscripciones.',
+                    'categoria_incompatible'  => 'No jugás en la categoría de ese torneo.',
+                    'ya_inscripto'            => 'Ya estás inscripto a ese torneo.',
+                    'cupo_completo'           => 'Ese torneo ya no tiene cupos disponibles para la pareja.',
+                    'pareja_incompatible'     => 'No se pudo formar la pareja.',
+                ];
+
+                if (isset($_GET['error']) && isset($erroresInvitacion[$_GET['error']])) {
+                    echo '<div id="mensajeError" class="mensaje-error mensaje-error-compacto">'
+                        . '<i class="bi bi-exclamation-circle-fill"></i> '
+                        . htmlspecialchars($erroresInvitacion[$_GET['error']])
+                        . '</div>';
+                }
+
+                if (isset($_GET['invitacion']) && $_GET['invitacion'] === 'aceptada') {
+                    echo '<div id="mensajeExito" class="mensaje-exito mensaje-error-compacto">'
+                        . '<i class="bi bi-check-circle-fill"></i> Aceptaste la invitación. Ya están anotados como pareja.'
+                        . '</div>';
+                }
+
+                if (isset($_GET['invitacion']) && $_GET['invitacion'] === 'rechazada') {
+                    echo '<div id="mensajeExito" class="mensaje-exito mensaje-error-compacto">'
+                        . '<i class="bi bi-check-circle-fill"></i> Rechazaste la invitación.'
+                        . '</div>';
+                }
+
+
+                // ==========================================
+                // TRAER TODAS LAS NOTIFICACIONES DEL USUARIO
+                // (se capturan en un array ANTES de marcarlas
+                // como leídas, para poder mostrar cuáles
+                // llegaban sin leer en esta misma carga)
+                // ==========================================
+
+                $stmtNotificaciones = mysqli_prepare(
+                    $conexion,
+                    "SELECT n.id_notificacion, n.tipo, n.mensaje, n.leida, n.fecha_creacion, n.id_invitacion,
+                            inv.estado AS estado_invitacion, inv.fecha_vencimiento
+                     FROM notificacion n
+                     LEFT JOIN invitacion inv ON inv.id_invitacion = n.id_invitacion
+                     WHERE n.id_usuario_destino = ?
+                     ORDER BY n.fecha_creacion DESC"
+                );
+                mysqli_stmt_bind_param($stmtNotificaciones, "i", $_SESSION['id_usuario']);
+                mysqli_stmt_execute($stmtNotificaciones);
+                $notificacionesUsuario = mysqli_fetch_all(
+                    mysqli_stmt_get_result($stmtNotificaciones),
+                    MYSQLI_ASSOC
+                );
+
+                $iconosNotificacion = [
+                    'invitacion_pendiente'  => 'bi-person-plus-fill',
+                    'invitacion_aceptada'   => 'bi-check-circle-fill',
+                    'invitacion_rechazada'  => 'bi-x-circle-fill',
+                    'invitacion_vencida'    => 'bi-clock-history',
+                ];
+
+                $estadoInvitacionLegible = [
+                    'Aceptada'  => 'Ya respondida: la aceptaste',
+                    'Rechazada' => 'Ya respondida: la rechazaste',
+                    'Vencida'   => 'Esta invitación venció',
+                ];
+
+                ?>
+
+                <?php if (empty($notificacionesUsuario)) { ?>
+
+                    <p class="sin-inscripciones">Todavía no tenés notificaciones.</p>
+
+                <?php } else { ?>
+
+                    <div class="lista-notificaciones">
+
+                        <?php foreach ($notificacionesUsuario as $notif) { ?>
+
+                            <?php
+
+                            $icono = $iconosNotificacion[$notif['tipo']] ?? 'bi-bell-fill';
+
+                            $esAccionable =
+                                $notif['tipo'] === 'invitacion_pendiente' &&
+                                !empty($notif['id_invitacion']) &&
+                                $notif['estado_invitacion'] === 'Pendiente' &&
+                                !empty($notif['fecha_vencimiento']) &&
+                                strtotime($notif['fecha_vencimiento']) >= time();
+
+                            ?>
+
+                            <div class="tarjeta-notificacion <?php echo $notif['leida'] ? '' : 'notificacion-no-leida'; ?>">
+
+                                <div class="notificacion-icono">
+                                    <i class="bi <?php echo htmlspecialchars($icono); ?>"></i>
+                                </div>
+
+                                <div class="notificacion-cuerpo">
+
+                                    <p><?php echo htmlspecialchars($notif['mensaje']); ?></p>
+
+                                    <span class="notificacion-fecha">
+                                        <?php echo date('d/m/Y H:i', strtotime($notif['fecha_creacion'])); ?>
+                                    </span>
+
+                                    <?php if ($esAccionable) { ?>
+
+                                        <div class="acciones-invitacion-recibida">
+
+                                            <form action="funciones/responder_invitacion.php" method="POST" data-loader="Procesando...">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                <input type="hidden" name="id_invitacion" value="<?php echo (int) $notif['id_invitacion']; ?>">
+                                                <input type="hidden" name="accion" value="aceptar">
+                                                <button type="submit" class="btn-confirmar-inscripcion">Aceptar invitación</button>
+                                            </form>
+
+                                            <form action="funciones/responder_invitacion.php" method="POST" data-loader="Procesando...">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                <input type="hidden" name="id_invitacion" value="<?php echo (int) $notif['id_invitacion']; ?>">
+                                                <input type="hidden" name="accion" value="rechazar">
+                                                <button type="submit" class="btn-cancelar-inscripcion">Rechazar invitación</button>
+                                            </form>
+
+                                        </div>
+
+                                    <?php } elseif ($notif['tipo'] === 'invitacion_pendiente' && !empty($notif['id_invitacion'])) { ?>
+
+                                        <span class="estado-mi-inscripcion estado-<?php echo strtolower($notif['estado_invitacion'] ?? ''); ?>">
+                                            <?php echo htmlspecialchars(
+                                                $estadoInvitacionLegible[$notif['estado_invitacion']] ?? ''
+                                            ); ?>
+                                        </span>
+
+                                    <?php } ?>
+
+                                </div>
+
+                            </div>
+
+                        <?php } ?>
+
+                    </div>
+
+                <?php } ?>
+
+                <?php
+
+                // Ahora que ya se mostraron, se marcan como leídas.
+                $stmtMarcarTodasLeidas = mysqli_prepare(
+                    $conexion,
+                    "UPDATE notificacion SET leida = 1 WHERE id_usuario_destino = ? AND leida = 0"
+                );
+                mysqli_stmt_bind_param($stmtMarcarTodasLeidas, "i", $_SESSION['id_usuario']);
+                mysqli_stmt_execute($stmtMarcarTodasLeidas);
+
+                ?>
+
+            </section>
+
+            <?php } ?>
+
         </main>
 
     </div>
@@ -4971,11 +5414,151 @@ $canchasNoDisponibles =
 <?php } ?>
 
 
-<script src="js/padel.js?v=3"></script>
+<script src="js/padel.js?v=6"></script>
 
 <!-- =========================================================
      MODAL MENSAJE DE ÉXITO
      ========================================================= -->
+
+<div class="modal-mensaje-exito" id="modalInvitarCompanero">
+
+    <div class="modal-mensaje-exito-contenido">
+
+        <button
+            type="button"
+            class="modal-mensaje-exito-cerrar"
+            id="cerrarInvitarCompanero"
+        >
+            ×
+        </button>
+
+        <div class="modal-mensaje-exito-icono">
+
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="9" cy="7" r="3.2" stroke="currentColor" stroke-width="2"/>
+                <path d="M19 8v6M22 11h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+
+        </div>
+
+        <h2>Invitá a tu compañero</h2>
+
+        <p id="textoInvitarCompanero">
+            Ingresá el correo de tu compañero para anotarse juntos.
+        </p>
+
+        <div class="invitacion-buscar">
+
+            <input
+                type="email"
+                id="emailCompanero"
+                placeholder="correo@ejemplo.com"
+                autocomplete="off"
+            >
+
+            <button type="button" id="buscarCompaneroBtn" class="btn-buscar-companero">
+                Buscar
+            </button>
+
+        </div>
+
+        <div id="resultadoBusquedaCompanero" class="resultado-busqueda-companero"></div>
+
+        <form
+            action="funciones/invitar_companero.php"
+            method="POST"
+            id="formInvitarCompanero"
+            data-loader="Enviando invitación..."
+        >
+
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" name="id_torneo" id="idTorneoInvitar" value="">
+            <input type="hidden" name="email_companero" id="emailCompaneroOculto" value="">
+
+            <div class="modal-inscripcion-botones">
+
+                <button type="button" class="btn-cancelar-inscripcion" id="cancelarInvitarCompanero">
+                    Cancelar
+                </button>
+
+                <button type="submit" class="btn-confirmar-inscripcion" id="enviarInvitacionBtn" disabled>
+                    Enviar invitación
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<div class="modal-mensaje-exito" id="modalConfirmarInscripcion">
+
+    <div class="modal-mensaje-exito-contenido">
+
+        <button
+            type="button"
+            class="modal-mensaje-exito-cerrar"
+            id="cerrarConfirmarInscripcion"
+        >
+            ×
+        </button>
+
+        <div class="modal-mensaje-exito-icono">
+
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    d="M5 12.5L9.5 17L19 7"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+
+        </div>
+
+        <h2>¿Confirmás tu inscripción?</h2>
+
+        <p id="textoConfirmarInscripcion">
+            ¿Seguro que querés inscribirte a este torneo?
+        </p>
+
+        <form
+            action="funciones/inscribir_torneo.php"
+            method="POST"
+            id="formInscribirTorneo"
+            data-loader="Inscribiendo..."
+        >
+
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" name="id_torneo" id="idTorneoInscribir" value="">
+
+            <div class="modal-inscripcion-botones">
+
+                <button type="button" class="btn-cancelar-inscripcion" id="noInscribirme">
+                    No inscribirme
+                </button>
+
+                <button type="submit" class="btn-confirmar-inscripcion" id="confirmarInscripcionBtn">
+                    Inscribirme
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
 
 <div class="modal-mensaje-exito" id="modalMensajeExito">
 

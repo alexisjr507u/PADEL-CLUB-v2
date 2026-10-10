@@ -130,13 +130,6 @@ $horarioTorneo =
 
 
 /* =========================================================
-   DATOS DE EJEMPLO
-   (fase de grupos, ranking y cruces todavía no tienen
-   una fuente real: faltan las tablas de inscripciones,
-   parejas y resultados de partidos. Se muestran de ejemplo
-   para tener la vista lista en cuanto se carguen datos reales)
-   ========================================================= */
-/* =========================================================
    CONFIGURACIÓN SEGÚN TIPO DE TORNEO
    ========================================================= */
 
@@ -159,53 +152,136 @@ if ($torneo['tipo'] === 'Individual') {
     $textoColumna = 'PAREJA';
 
 }
-$grupos = [
-    [
-        'letra'   => 'A',
-        'nombre'  => 'Grupo A',
-        'parejas' => [
-            ['nombres' => ['Martina Gómez', 'Sofía Ruiz'],     'pj' => 3, 'pg' => 3, 'pts' => 9],
-            ['nombres' => ['Camila Torres', 'Valentina Paz'],  'pj' => 3, 'pg' => 2, 'pts' => 7],
-            ['nombres' => ['Agustina López', 'Julieta Sosa'],  'pj' => 3, 'pg' => 1, 'pts' => 5],
-            ['nombres' => ['Micaela Ortiz', 'Luciana Vega'],   'pj' => 3, 'pg' => 0, 'pts' => 3],
-        ],
-    ],
-    [
-        'letra'   => 'B',
-        'nombre'  => 'Grupo B',
-        'parejas' => [
-            ['nombres' => ['Julián Pérez', 'Tomás Díaz'],       'pj' => 3, 'pg' => 3, 'pts' => 9],
-            ['nombres' => ['Ramiro Sánchez', 'Diego Ruiz'],     'pj' => 3, 'pg' => 2, 'pts' => 7],
-            ['nombres' => ['Lucas Martínez', 'Federico Paz'],   'pj' => 3, 'pg' => 1, 'pts' => 5],
-            ['nombres' => ['Claudio Núñez', 'Mario Torres'],    'pj' => 3, 'pg' => 0, 'pts' => 3],
-        ],
-    ],
-];
 
-$ranking = [
-    ['nombre' => 'Matías Gómez',      'puntos' => 240],
-    ['nombre' => 'Lucas Díaz',        'puntos' => 185],
-    ['nombre' => 'Franco Ruiz',       'puntos' => 160],
-    ['nombre' => 'Agustín González',  'puntos' => 145],
-    ['nombre' => 'Martín Romero',     'puntos' => 130],
-];
 
-$cuartos = [
-    ['a' => ['nombre' => 'Julián Pérez / Tomás Díaz',      'score' => 6, 'gano' => true],  'b' => ['nombre' => 'Ramiro Sánchez / Diego Ruiz',   'score' => 4, 'gano' => false]],
-    ['a' => ['nombre' => 'Lucas Martínez / Federico Paz',  'score' => 6, 'gano' => true],  'b' => ['nombre' => 'Claudio Núñez / Mario Torres',  'score' => 3, 'gano' => false]],
-    ['a' => ['nombre' => 'Franco Ruiz / Agustín López',    'score' => 4, 'gano' => false], 'b' => ['nombre' => 'Martín Romero / Nicolás Díaz',  'score' => 6, 'gano' => true]],
-    ['a' => ['nombre' => 'Mateo Silva / Juan Cruz',        'score' => 6, 'gano' => true],  'b' => ['nombre' => 'Gonzalo Pérez / Alan Torres',   'score' => 2, 'gano' => false]],
-];
+/* =========================================================
+   PARTICIPANTES / PAREJAS REALES (CONFIRMADOS)
+   ========================================================= */
 
-$semis = [
-    ['a' => ['nombre' => 'Julián Pérez / Tomás Díaz',     'score' => 6, 'gano' => true],  'b' => ['nombre' => 'Lucas Martínez / Federico Paz', 'score' => 4, 'gano' => false]],
-    ['a' => ['nombre' => 'Martín Romero / Nicolás Díaz',  'score' => 3, 'gano' => false], 'b' => ['nombre' => 'Mateo Silva / Juan Cruz',       'score' => 6, 'gano' => true]],
-];
+$entradasConfirmadas = [];
+$totalPersonasConfirmadas = 0;
 
-$final = [
-    'a' => 'Julián Pérez / Tomás Díaz',
-    'b' => 'Mateo Silva / Juan Cruz',
-];
+if ($torneo['tipo'] === 'Individual') {
+
+    $stmtEntradas = mysqli_prepare(
+        $conexion,
+        "SELECT u.nombre, u.apellido
+         FROM inscripcion insc
+         INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
+         WHERE insc.id_torneo = ? AND insc.estado = 'Confirmada'
+         ORDER BY insc.id_inscripcion ASC"
+    );
+    mysqli_stmt_bind_param($stmtEntradas, "i", $id_torneo);
+    mysqli_stmt_execute($stmtEntradas);
+    $resultadoEntradas = mysqli_stmt_get_result($stmtEntradas);
+
+    while ($fila = mysqli_fetch_assoc($resultadoEntradas)) {
+
+        $entradasConfirmadas[] = [
+            'nombre' => trim($fila['nombre'] . ' ' . $fila['apellido']),
+        ];
+
+    }
+
+    $totalPersonasConfirmadas = count($entradasConfirmadas);
+
+} else {
+
+    // Parejas y Mixto: cada fila de `pareja` ya representa una
+    // pareja confirmada (solo se crea cuando ambos lados aceptaron).
+    $stmtEntradas = mysqli_prepare(
+        $conexion,
+        "SELECT u1.nombre AS nombre1, u1.apellido AS apellido1,
+                u2.nombre AS nombre2, u2.apellido AS apellido2
+         FROM pareja p
+         INNER JOIN inscripcion i1 ON i1.id_inscripcion = p.id_inscripcion_1
+         INNER JOIN inscripcion i2 ON i2.id_inscripcion = p.id_inscripcion_2
+         INNER JOIN usuario u1 ON u1.id_usuario = i1.id_usuario
+         INNER JOIN usuario u2 ON u2.id_usuario = i2.id_usuario
+         WHERE p.id_torneo = ?
+         ORDER BY p.id_pareja ASC"
+    );
+    mysqli_stmt_bind_param($stmtEntradas, "i", $id_torneo);
+    mysqli_stmt_execute($stmtEntradas);
+    $resultadoEntradas = mysqli_stmt_get_result($stmtEntradas);
+
+    while ($fila = mysqli_fetch_assoc($resultadoEntradas)) {
+
+        $entradasConfirmadas[] = [
+            'nombres' => [
+                trim($fila['nombre1'] . ' ' . $fila['apellido1']),
+                trim($fila['nombre2'] . ' ' . $fila['apellido2']),
+            ],
+        ];
+
+    }
+
+    $totalPersonasConfirmadas = count($entradasConfirmadas) * 2;
+
+}
+
+
+/* =========================================================
+   DISTRIBUCIÓN EN GRUPOS
+   (propuesta calculada en el momento a partir de las
+   inscripciones/parejas confirmadas actuales: no se guarda
+   en la base de datos, así que puede cambiar si se confirman
+   más inscripciones más adelante. No es una fase definitiva.)
+   ========================================================= */
+
+$grupos = [];
+
+$TAMANIO_GRUPO = 4;
+$MINIMO_PARA_AGRUPAR = 5;
+
+if (count($entradasConfirmadas) > 0) {
+
+    if (count($entradasConfirmadas) < $MINIMO_PARA_AGRUPAR) {
+
+        $grupos[] = [
+            'letra'  => '',
+            'nombre' => 'Participantes confirmados',
+        ] + (
+            $torneo['tipo'] === 'Individual'
+                ? ['participantes' => $entradasConfirmadas]
+                : ['parejas' => $entradasConfirmadas]
+        );
+
+    } else {
+
+        $letrasGrupos = range('A', 'Z');
+
+        foreach (array_chunk($entradasConfirmadas, $TAMANIO_GRUPO) as $indice => $bloque) {
+
+            $letra = $letrasGrupos[$indice] ?? ('G' . ($indice + 1));
+
+            $grupos[] = [
+                'letra'  => $letra,
+                'nombre' => 'Grupo ' . $letra,
+            ] + (
+                $torneo['tipo'] === 'Individual'
+                    ? ['participantes' => $bloque]
+                    : ['parejas' => $bloque]
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   RANKING Y CRUCES
+   Todavía no existe ninguna tabla de resultados/partidos en
+   el proyecto, así que no hay datos reales para mostrar acá.
+   No se inventan puntos ni cruces.
+   ========================================================= */
+
+$ranking = [];
+$cuartos = [];
+$semis = [];
+$final = null;
 
 ?>
 <!DOCTYPE html>
@@ -385,8 +461,17 @@ $final = [
                     <div class="vt-seccion-titulo">
                         <span class="vt-eyebrow">COMPETENCIA</span>
                         <h2>Fase de grupos</h2>
-                        <p>Clasificación de las parejas participantes</p>
+                        <p>Distribución propuesta a partir de las inscripciones confirmadas</p>
                     </div>
+
+                    <?php if (empty($grupos)) { ?>
+
+                        <div class="vt-card vt-estado-vacio">
+                            <i class="bi bi-people"></i>
+                            <p>Todavía no hay participantes confirmados para este torneo.</p>
+                        </div>
+
+                    <?php } else { ?>
 
                     <div class="vt-card">
 
@@ -395,13 +480,14 @@ $final = [
                             <div class="vt-grupo-nombre">
 
                                 <div class="vt-grupo-letra" id="vtGrupoLetra">
-                                    <?php echo $grupos[0]['letra']; ?>
+                                    <?php echo htmlspecialchars($grupos[0]['letra'], ENT_QUOTES, 'UTF-8'); ?>
                                 </div>
 
                                 <div>
-                                    <strong id="vtGrupoNombre"><?php echo $grupos[0]['nombre']; ?></strong>
+                                    <strong id="vtGrupoNombre"><?php echo htmlspecialchars($grupos[0]['nombre'], ENT_QUOTES, 'UTF-8'); ?></strong>
                                     <span id="vtGrupoCantidad">
-                                        <?php echo count($grupos[0]['parejas']); ?> parejas
+                                        <?php echo count($grupos[0]['parejas'] ?? $grupos[0]['participantes'] ?? []); ?>
+                                        <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?>
                                     </span>
                                 </div>
 
@@ -410,7 +496,7 @@ $final = [
                             <div class="vt-grupo-nav">
 
                                 <button type="button" id="vtGrupoAnterior" disabled>‹</button>
-                                <button type="button" id="vtGrupoSiguiente">›</button>
+                                <button type="button" id="vtGrupoSiguiente" <?php echo count($grupos) <= 1 ? 'disabled' : ''; ?>>›</button>
 
                             </div>
 
@@ -421,7 +507,7 @@ $final = [
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th style="text-align:left;">PAREJA</th>
+                                    <th style="text-align:left;"><?php echo htmlspecialchars($textoColumna, ENT_QUOTES, 'UTF-8'); ?></th>
                                     <th>PJ</th>
                                     <th>PG</th>
                                     <th>PTS</th>
@@ -432,7 +518,16 @@ $final = [
 
                         </table>
 
+                        <p class="vt-nota-datos">
+                            * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
+                            <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
+                            No es una fase guardada de forma permanente: puede cambiar si se confirman más inscripciones.
+                            Las columnas PJ/PG/PTS están en cero porque todavía no hay partidos cargados.
+                        </p>
+
                     </div>
+
+                    <?php } ?>
 
                 </div>
 
@@ -447,37 +542,9 @@ $final = [
                         <p>Jugadores con mayor cantidad de puntos</p>
                     </div>
 
-                    <div class="vt-card">
-
-                        <?php foreach ($ranking as $indice => $jugador) { ?>
-
-                            <div class="vt-ranking-item">
-
-                                <span class="vt-ranking-puesto"><?php echo $indice + 1; ?></span>
-
-                                <div class="vt-avatar">
-                                    <?php
-                                        $partesNombre = explode(' ', $jugador['nombre']);
-                                        echo strtoupper(
-                                            mb_substr($partesNombre[0], 0, 1) .
-                                            mb_substr(end($partesNombre), 0, 1)
-                                        );
-                                    ?>
-                                </div>
-
-                                <div class="vt-ranking-datos">
-                                    <strong><?php echo htmlspecialchars($jugador['nombre'], ENT_QUOTES, 'UTF-8'); ?></strong>
-                                    <span><?php echo $jugador['puntos']; ?> puntos</span>
-                                </div>
-
-                                <?php if ($indice === 0) { ?>
-                                    <i class="bi bi-award-fill vt-corona"></i>
-                                <?php } ?>
-
-                            </div>
-
-                        <?php } ?>
-
+                    <div class="vt-card vt-estado-vacio">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <p>Todavía no hay resultados cargados para generar el ranking.</p>
                     </div>
 
                 </div>
@@ -493,110 +560,11 @@ $final = [
                 <p>Llaves eliminatorias del campeonato</p>
             </div>
 
-            <div class="vt-card vt-bracket-card">
-
-                <div class="vt-card-header">
-
-                    <div>
-                        <h3>Cuadro eliminatorio</h3>
-                        <p>Fase final del torneo</p>
-                    </div>
-
-                    <span class="vt-badge-pill"><i class="bi bi-trophy-fill"></i> Eliminatorias</span>
-
-                </div>
-
-                <div class="vt-bracket">
-
-                    <!-- CUARTOS DE FINAL -->
-
-                    <div class="vt-bracket-col">
-
-                        <div class="vt-bracket-col-titulo">CUARTOS DE FINAL</div>
-
-                        <?php foreach ($cuartos as $partido) { ?>
-
-                            <div class="vt-match">
-
-                                <div class="vt-match-fila <?php echo $partido['a']['gano'] ? 'gano' : ''; ?>">
-                                    <span><?php echo htmlspecialchars($partido['a']['nombre'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                    <span class="vt-match-score"><?php echo $partido['a']['score']; ?></span>
-                                </div>
-
-                                <div class="vt-match-fila <?php echo $partido['b']['gano'] ? 'gano' : ''; ?>">
-                                    <span><?php echo htmlspecialchars($partido['b']['nombre'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                    <span class="vt-match-score"><?php echo $partido['b']['score']; ?></span>
-                                </div>
-
-                            </div>
-
-                        <?php } ?>
-
-                    </div>
-
-
-                    <!-- SEMIFINALES -->
-
-                    <div class="vt-bracket-col semis">
-
-                        <div class="vt-bracket-col-titulo">SEMIFINALES</div>
-
-                        <?php foreach ($semis as $partido) { ?>
-
-                            <div class="vt-match">
-
-                                <div class="vt-match-fila <?php echo $partido['a']['gano'] ? 'gano' : ''; ?>">
-                                    <span><?php echo htmlspecialchars($partido['a']['nombre'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                    <span class="vt-match-score"><?php echo $partido['a']['score']; ?></span>
-                                </div>
-
-                                <div class="vt-match-fila <?php echo $partido['b']['gano'] ? 'gano' : ''; ?>">
-                                    <span><?php echo htmlspecialchars($partido['b']['nombre'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                    <span class="vt-match-score"><?php echo $partido['b']['score']; ?></span>
-                                </div>
-
-                            </div>
-
-                        <?php } ?>
-
-                    </div>
-
-
-                    <!-- FINAL -->
-
-                    <div class="vt-bracket-col final">
-
-                        <div class="vt-bracket-col-titulo">FINAL</div>
-
-                        <div class="vt-match vt-match-pendiente">
-
-                            <div class="vt-match-fila">
-                                <span><?php echo htmlspecialchars($final['a'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                <span class="vt-match-score">–</span>
-                            </div>
-
-                            <div class="vt-match-fila">
-                                <span><?php echo htmlspecialchars($final['b'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                <span class="vt-match-score">–</span>
-                            </div>
-
-                        </div>
-
-                        <div class="vt-campeon">
-                            <i class="bi bi-trophy-fill"></i>
-                            <strong>CAMPEÓN</strong>
-                        </div>
-
-                    </div>
-
-                </div>
-
+            <div class="vt-card vt-estado-vacio">
+                <i class="bi bi-diagram-3"></i>
+                <p>Todavía no hay cruces generados para este torneo.</p>
             </div>
 
-            <p class="vt-nota-datos">
-                * La fase de grupos, el ranking del torneo y los cruces todavía muestran datos
-                de ejemplo: falta cargar las inscripciones y los resultados reales de los partidos.
-            </p>
 <?php } elseif ($_SESSION['id_rol'] == 3) { ?>
 
     <!-- =========================================
@@ -748,8 +716,17 @@ $final = [
         <div class="vt-seccion-titulo">
             <span class="vt-eyebrow">COMPETENCIA</span>
             <h2>Fase de grupos</h2>
-            <p>Clasificación de las parejas participantes</p>
+            <p>Distribución propuesta a partir de las inscripciones confirmadas</p>
         </div>
+
+        <?php if (empty($grupos)) { ?>
+
+            <div class="vt-card vt-estado-vacio">
+                <i class="bi bi-people"></i>
+                <p>Todavía no hay participantes confirmados para este torneo.</p>
+            </div>
+
+        <?php } else { ?>
 
         <div class="vt-card">
 
@@ -758,16 +735,17 @@ $final = [
                 <div class="vt-grupo-nombre">
 
                     <div class="vt-grupo-letra">
-                        <?php echo $grupos[0]['letra']; ?>
+                        <?php echo htmlspecialchars($grupos[0]['letra'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
 
                     <div>
                         <strong>
-                            <?php echo $grupos[0]['nombre']; ?>
+                            <?php echo htmlspecialchars($grupos[0]['nombre'], ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
-                            <?php echo count($grupos[0]['parejas']); ?> parejas
+                            <?php echo count($grupos[0]['parejas'] ?? $grupos[0]['participantes'] ?? []); ?>
+                            <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
                     </div>
 
@@ -775,7 +753,7 @@ $final = [
 
                 <div class="vt-grupo-nav">
                     <button type="button" id="vtGrupoAnterior" disabled>‹</button>
-                    <button type="button" id="vtGrupoSiguiente">›</button>
+                    <button type="button" id="vtGrupoSiguiente" <?php echo count($grupos) <= 1 ? 'disabled' : ''; ?>>›</button>
                 </div>
 
             </div>
@@ -792,7 +770,7 @@ $final = [
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th style="text-align:left;">PAREJA</th>
+                        <th style="text-align:left;"><?php echo htmlspecialchars($textoColumna, ENT_QUOTES, 'UTF-8'); ?></th>
                         <th>PJ</th>
                         <th>PG</th>
                         <th>PTS</th>
@@ -803,7 +781,15 @@ $final = [
 
             </table>
 
+            <p class="vt-nota-datos">
+                * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
+                <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
+                No es una fase guardada de forma permanente.
+            </p>
+
         </div>
+
+        <?php } ?>
 
     </div>
 
@@ -818,60 +804,9 @@ $final = [
             <p>Jugadores con mayor cantidad de puntos</p>
         </div>
 
-        <div class="vt-card">
-
-            <?php foreach ($ranking as $indice => $jugador) { ?>
-
-                <div class="vt-ranking-item">
-
-                    <span class="vt-ranking-puesto">
-                        <?php echo $indice + 1; ?>
-                    </span>
-
-                    <div class="vt-avatar">
-
-                        <?php
-
-                        $partesNombre = explode(
-                            ' ',
-                            $jugador['nombre']
-                        );
-
-                        echo strtoupper(
-                            mb_substr($partesNombre[0], 0, 1) .
-                            mb_substr(end($partesNombre), 0, 1)
-                        );
-
-                        ?>
-
-                    </div>
-
-                    <div class="vt-ranking-datos">
-
-                        <strong>
-                            <?php echo htmlspecialchars(
-                                $jugador['nombre'],
-                                ENT_QUOTES,
-                                'UTF-8'
-                            ); ?>
-                        </strong>
-
-                        <span>
-                            <?php echo $jugador['puntos']; ?> puntos
-                        </span>
-
-                    </div>
-
-                    <?php if ($indice === 0) { ?>
-
-                        <i class="bi bi-award-fill vt-corona"></i>
-
-                    <?php } ?>
-
-                </div>
-
-            <?php } ?>
-
+        <div class="vt-card vt-estado-vacio">
+            <i class="bi bi-bar-chart-line"></i>
+            <p>Todavía no hay resultados cargados para generar el ranking.</p>
         </div>
 
     </div>
@@ -884,7 +819,7 @@ $final = [
 
 
     </div>
-    <script src="js/padel.js?v=3"></script>
+    <script src="js/padel.js?v=6"></script>
 </body>
 
 </html>

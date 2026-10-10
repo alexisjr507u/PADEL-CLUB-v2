@@ -106,7 +106,7 @@ $csrf_token = generar_csrf_token();
         </div>
 
     </div>
-<script src="js/padel.js?v=3"></script>
+<script src="js/padel.js?v=6"></script>
 </body>
 
 </html>

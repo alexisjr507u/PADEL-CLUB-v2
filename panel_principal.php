@@ -276,7 +276,7 @@ if ($resultadoRanking) {
         </div>
 
     </header>
-    <script src="js/padel.js?v=3"></script>
+    <script src="js/padel.js?v=6"></script>
 </body>
 
 </html>

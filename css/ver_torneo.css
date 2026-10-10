@@ -293,6 +293,39 @@
 
 }
 
+.vt-estado-vacio {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 12px;
+
+    padding: 40px 24px;
+
+    text-align: center;
+
+    color: #9db5c9;
+}
+
+.vt-estado-vacio i {
+
+    font-size: 30px;
+
+    color: #4a7596;
+}
+
+.vt-estado-vacio p {
+
+    margin: 0;
+
+    font-size: 14px;
+}
+
 .vt-card-header {
 
     display: flex;

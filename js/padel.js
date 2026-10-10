@@ -1,3 +1,64 @@
+// ==========================================
+// GESTIONAR PARTICIPANTES - MODAL DE CANCELACIÓN
+// ==========================================
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const botonesCancelar = document.querySelectorAll(".btn-cancelar-gestion");
+
+    if (!botonesCancelar.length) {
+        return;
+    }
+
+    const modal = document.getElementById("modalCancelarParticipante");
+    const texto = document.getElementById("textoCancelarParticipante");
+    const idOculto = document.getElementById("idElementoCancelar");
+    const cerrar = document.getElementById("cerrarCancelarParticipante");
+    const noCancelar = document.getElementById("noCancelarParticipante");
+
+    if (!modal || !texto || !idOculto) {
+        return;
+    }
+
+    function cerrarModalCancelar() {
+
+        modal.classList.remove("mostrar");
+
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+
+    }
+
+    botonesCancelar.forEach(function (boton) {
+
+        boton.addEventListener("click", function () {
+
+            const nombre = boton.dataset.nombre || "esta participación";
+
+            texto.textContent = "¿Seguro que querés cancelar a \"" + nombre + "\"?";
+
+            idOculto.value = boton.dataset.id || "";
+
+            modal.classList.add("mostrar");
+
+            document.documentElement.style.overflow = "hidden";
+            document.body.style.overflow = "hidden";
+
+        });
+
+    });
+
+    if (cerrar) {
+        cerrar.addEventListener("click", cerrarModalCancelar);
+    }
+
+    if (noCancelar) {
+        noCancelar.addEventListener("click", cerrarModalCancelar);
+    }
+
+});
+
+
 //loader "pelota de pádel" al enviar formularios (login, registros, verificar código)
 (function () {
 
@@ -2761,7 +2822,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* ---------------------------------------------
-       INSCRIBIRSE (todavía sin backend real)
+       INSCRIBIRSE
+       Paso 1 (ambas modalidades): modal de confirmación.
+       Individual -> se inscribe directo.
+       Parejas/Mixto -> abre el paso 2 (invitar compañero).
        --------------------------------------------- */
 
     const botonesInscribirse = document.querySelectorAll(
@@ -2777,35 +2841,289 @@ document.addEventListener("DOMContentLoaded", function () {
     const textoMensajeExitoInsc =
         document.getElementById("textoMensajeExito");
 
+    const modalConfirmarInscripcion =
+        document.getElementById("modalConfirmarInscripcion");
+
+    const textoConfirmarInscripcion =
+        document.getElementById("textoConfirmarInscripcion");
+
+    const idTorneoInscribir =
+        document.getElementById("idTorneoInscribir");
+
+    const cerrarConfirmarInscripcion =
+        document.getElementById("cerrarConfirmarInscripcion");
+
+    const noInscribirme =
+        document.getElementById("noInscribirme");
+
+    const formInscribirTorneo =
+        document.getElementById("formInscribirTorneo");
+
+    const modalInvitarCompanero =
+        document.getElementById("modalInvitarCompanero");
+
+    const textoInvitarCompanero =
+        document.getElementById("textoInvitarCompanero");
+
+    const idTorneoInvitar =
+        document.getElementById("idTorneoInvitar");
+
+    const emailCompaneroInput =
+        document.getElementById("emailCompanero");
+
+    const emailCompaneroOculto =
+        document.getElementById("emailCompaneroOculto");
+
+    const buscarCompaneroBtn =
+        document.getElementById("buscarCompaneroBtn");
+
+    const resultadoBusquedaCompanero =
+        document.getElementById("resultadoBusquedaCompanero");
+
+    const enviarInvitacionBtn =
+        document.getElementById("enviarInvitacionBtn");
+
+    const cerrarInvitarCompanero =
+        document.getElementById("cerrarInvitarCompanero");
+
+    const cancelarInvitarCompanero =
+        document.getElementById("cancelarInvitarCompanero");
+
+    const csrfTokenInput =
+        document.querySelector('#formInvitarCompanero input[name="csrf_token"]');
+
+    let tipoTorneoActual = "";
+
+    function cerrarModalConfirmarInscripcion() {
+
+        if (!modalConfirmarInscripcion) {
+            return;
+        }
+
+        modalConfirmarInscripcion.classList.remove("mostrar");
+
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+
+    }
+
+    function cerrarModalInvitarCompanero() {
+
+        if (!modalInvitarCompanero) {
+            return;
+        }
+
+        modalInvitarCompanero.classList.remove("mostrar");
+
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+
+    }
+
+    if (cerrarConfirmarInscripcion) {
+        cerrarConfirmarInscripcion.addEventListener(
+            "click",
+            cerrarModalConfirmarInscripcion
+        );
+    }
+
+    if (noInscribirme) {
+        noInscribirme.addEventListener(
+            "click",
+            cerrarModalConfirmarInscripcion
+        );
+    }
+
     botonesInscribirse.forEach(function (boton) {
 
         boton.addEventListener("click", function () {
 
             const nombre = boton.dataset.nombre || "este torneo";
+            const tipo = boton.dataset.tipo || "";
 
-            if (modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc) {
-
-                tituloMensajeExitoInsc.textContent = "¡Ya casi!";
-
-                textoMensajeExitoInsc.textContent =
-                    "Todavía estamos preparando las inscripciones online para \"" +
-                    nombre +
-                    "\". Muy pronto vas a poder anotarte desde acá.";
-
-                modalMensajeExitoInsc.classList.add("mostrar");
-
-                document.documentElement.style.overflow = "hidden";
-                document.body.style.overflow = "hidden";
-
-            } else {
-
-                alert("Las inscripciones online todavía no están disponibles.");
-
+            if (!modalConfirmarInscripcion || !textoConfirmarInscripcion || !idTorneoInscribir) {
+                return;
             }
+
+            tipoTorneoActual = tipo;
+
+            textoConfirmarInscripcion.textContent =
+                "¿Seguro que querés inscribirte a este torneo: \"" +
+                nombre +
+                "\"?";
+
+            idTorneoInscribir.value = boton.dataset.id || "";
+            idTorneoInscribir.dataset.nombre = nombre;
+
+            modalConfirmarInscripcion.classList.add("mostrar");
+
+            document.documentElement.style.overflow = "hidden";
+            document.body.style.overflow = "hidden";
 
         });
 
     });
+
+    // El "Inscribirme" del paso 1 solo se envía directo si es Individual.
+    // En Parejas/Mixto abre el paso 2 en vez de mandar el formulario.
+    if (formInscribirTorneo) {
+
+        formInscribirTorneo.addEventListener("submit", function (evento) {
+
+            if (tipoTorneoActual === "Individual") {
+                return; // envío normal, ya tiene data-loader
+            }
+
+            evento.preventDefault();
+
+            cerrarModalConfirmarInscripcion();
+
+            if (!modalInvitarCompanero || !idTorneoInvitar || !textoInvitarCompanero) {
+                return;
+            }
+
+            const nombre = idTorneoInscribir ? (idTorneoInscribir.dataset.nombre || "este torneo") : "este torneo";
+
+            idTorneoInvitar.value = idTorneoInscribir.value;
+
+            textoInvitarCompanero.textContent =
+                "Ingresá el correo de tu compañero para el torneo \"" + nombre + "\".";
+
+            if (emailCompaneroInput) emailCompaneroInput.value = "";
+            if (emailCompaneroOculto) emailCompaneroOculto.value = "";
+            if (resultadoBusquedaCompanero) resultadoBusquedaCompanero.textContent = "";
+            if (resultadoBusquedaCompanero) resultadoBusquedaCompanero.className = "resultado-busqueda-companero";
+            if (enviarInvitacionBtn) enviarInvitacionBtn.disabled = true;
+
+            modalInvitarCompanero.classList.add("mostrar");
+
+            document.documentElement.style.overflow = "hidden";
+            document.body.style.overflow = "hidden";
+
+        });
+
+    }
+
+    if (cerrarInvitarCompanero) {
+        cerrarInvitarCompanero.addEventListener("click", cerrarModalInvitarCompanero);
+    }
+
+    if (cancelarInvitarCompanero) {
+        cancelarInvitarCompanero.addEventListener("click", cerrarModalInvitarCompanero);
+    }
+
+    /* ---------------------------------------------
+       PASO 2: buscar/verificar el correo del compañero
+       antes de poder enviar la invitación.
+       --------------------------------------------- */
+
+    if (buscarCompaneroBtn) {
+
+        buscarCompaneroBtn.addEventListener("click", function () {
+
+            const email = emailCompaneroInput ? emailCompaneroInput.value.trim() : "";
+
+            if (!resultadoBusquedaCompanero) {
+                return;
+            }
+
+            if (enviarInvitacionBtn) enviarInvitacionBtn.disabled = true;
+            if (emailCompaneroOculto) emailCompaneroOculto.value = "";
+
+            if (!email) {
+                resultadoBusquedaCompanero.textContent = "Ingresá un correo primero.";
+                resultadoBusquedaCompanero.className = "resultado-busqueda-companero resultado-error";
+                return;
+            }
+
+            resultadoBusquedaCompanero.textContent = "Buscando...";
+            resultadoBusquedaCompanero.className = "resultado-busqueda-companero";
+
+            const datos = new URLSearchParams();
+            datos.set("email", email);
+            datos.set("id_torneo", idTorneoInvitar ? idTorneoInvitar.value : "");
+            datos.set("csrf_token", csrfTokenInput ? csrfTokenInput.value : "");
+
+            fetch("funciones/buscar_companero.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: datos.toString()
+            })
+                .then(function (respuesta) { return respuesta.json(); })
+                .then(function (data) {
+
+                    resultadoBusquedaCompanero.textContent = data.mensaje || "No se pudo verificar el correo.";
+
+                    if (data.ok && data.puede_invitar) {
+
+                        resultadoBusquedaCompanero.className = "resultado-busqueda-companero resultado-ok";
+
+                        if (enviarInvitacionBtn) enviarInvitacionBtn.disabled = false;
+                        if (emailCompaneroOculto) emailCompaneroOculto.value = email;
+
+                    } else {
+
+                        resultadoBusquedaCompanero.className = "resultado-busqueda-companero resultado-error";
+
+                    }
+
+                })
+                .catch(function () {
+
+                    resultadoBusquedaCompanero.textContent = "No se pudo conectar con el servidor.";
+                    resultadoBusquedaCompanero.className = "resultado-busqueda-companero resultado-error";
+
+                });
+
+        });
+
+    }
+
+    // Si cambia el email a mano después de buscar, hay que buscar de nuevo.
+    if (emailCompaneroInput) {
+
+        emailCompaneroInput.addEventListener("input", function () {
+
+            if (enviarInvitacionBtn) enviarInvitacionBtn.disabled = true;
+            if (emailCompaneroOculto) emailCompaneroOculto.value = "";
+
+        });
+
+    }
+
+    if (
+        window.location.search.includes("inscripcion=exito") &&
+        modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc
+    ) {
+
+        tituloMensajeExitoInsc.textContent = "¡Listo!";
+
+        textoMensajeExitoInsc.textContent =
+            "Te inscribiste correctamente al torneo.";
+
+        modalMensajeExitoInsc.classList.add("mostrar");
+
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
+    }
+
+    if (
+        window.location.search.includes("invitacion=exito") &&
+        modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc
+    ) {
+
+        tituloMensajeExitoInsc.textContent = "¡Invitación enviada!";
+
+        textoMensajeExitoInsc.textContent =
+            "Le avisamos a tu compañero. En cuanto responda vas a ver la novedad en Notificaciones.";
+
+        modalMensajeExitoInsc.classList.add("mostrar");
+
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
+    }
 
 });
 

@@ -6104,6 +6104,25 @@
     }
 
 
+    /* PARTICIPANTES */
+
+    .btn-torneo.participantes {
+        text-decoration: none;
+    }
+
+    .btn-torneo.participantes:hover {
+
+        background:
+            rgba(16, 152, 247, 0.24);
+
+        border-color:
+            rgba(16, 152, 247, 0.75);
+
+        box-shadow:
+            0 7px 16px rgba(16, 152, 247, 0.12);
+    }
+
+
     /* EDITAR */
 
     .btn-torneo.editar:hover {
@@ -6460,6 +6479,66 @@
         line-height: 1.55;
 
         z-index: 2;
+    }
+
+
+    /* =========================================================
+    CONFIRMAR INSCRIPCIÓN (dos botones)
+    ========================================================= */
+
+    .modal-inscripcion-botones {
+
+        display: flex;
+
+        gap: 14px;
+    }
+
+    .btn-confirmar-inscripcion,
+    .btn-cancelar-inscripcion {
+
+        flex: 1;
+
+        height: 54px;
+
+        border: none;
+
+        border-radius: 11px;
+
+        font-size: 16px;
+
+        font-weight: 700;
+
+        cursor: pointer;
+
+        color: #ffffff;
+
+        transition:
+            transform 0.2s ease,
+            filter 0.2s ease;
+    }
+
+    .btn-confirmar-inscripcion {
+
+        background: #198754;
+    }
+
+    .btn-confirmar-inscripcion:hover {
+
+        filter: brightness(1.1);
+
+        transform: translateY(-2px);
+    }
+
+    .btn-cancelar-inscripcion {
+
+        background: rgba(255, 255, 255, 0.08);
+
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .btn-cancelar-inscripcion:hover {
+
+        background: rgba(255, 255, 255, 0.14);
     }
 
 
@@ -7076,6 +7155,435 @@
     ========================================================= */
 
     body.panel-body:has(.contenido-participante)
+    .mensaje-error-compacto {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 8px;
+
+        width: auto;
+
+        max-width: min(480px, 100%);
+
+        margin-bottom: 18px;
+
+        box-sizing: border-box;
+    }
+
+    body.panel-body .mensaje-exito.mensaje-error-compacto {
+
+        background: rgba(25, 135, 84, 0.16);
+
+        color: #4ad68a;
+
+        border: 1px solid rgba(74, 214, 138, 0.4);
+    }
+
+
+    /* =========================================================
+    PASO 2: INVITAR COMPAÑERO
+    ========================================================= */
+
+    .invitacion-buscar {
+
+        display: flex;
+
+        gap: 10px;
+
+        margin-bottom: 14px;
+    }
+
+    .invitacion-buscar input {
+
+        flex: 1;
+
+        padding: 12px 14px;
+
+        border-radius: 10px;
+
+        border: 1px solid rgba(255, 255, 255, 0.18);
+
+        background: rgba(255, 255, 255, 0.06);
+
+        color: #ffffff;
+
+        font-size: 15px;
+    }
+
+    .invitacion-buscar input::placeholder {
+
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .btn-buscar-companero {
+
+        padding: 0 18px;
+
+        border: none;
+
+        border-radius: 10px;
+
+        background: #1098f7;
+
+        color: #ffffff;
+
+        font-weight: 700;
+
+        cursor: pointer;
+
+        transition: filter 0.2s ease;
+    }
+
+    .btn-buscar-companero:hover {
+
+        filter: brightness(1.1);
+    }
+
+    .resultado-busqueda-companero {
+
+        min-height: 20px;
+
+        margin-bottom: 20px;
+
+        font-size: 14px;
+
+        color: #9db5c9;
+    }
+
+    .resultado-busqueda-companero.resultado-ok {
+
+        color: #4ad68a;
+    }
+
+    .resultado-busqueda-companero.resultado-error {
+
+        color: #ff8585;
+    }
+
+    .btn-confirmar-inscripcion:disabled {
+
+        opacity: 0.5;
+
+        cursor: not-allowed;
+
+        transform: none !important;
+    }
+
+
+    /* =========================================================
+    AVISO DE INVITACIONES PENDIENTES (dentro de Mis inscripciones)
+    ========================================================= */
+
+    .aviso-invitaciones-pendientes {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+
+        width: fit-content;
+
+        max-width: 100%;
+
+        padding: 12px 18px;
+
+        margin-bottom: 22px;
+
+        border-radius: 12px;
+
+        background: rgba(16, 152, 247, 0.14);
+
+        border: 1px solid rgba(16, 152, 247, 0.4);
+
+        color: #6cc3ff;
+
+        text-decoration: none;
+
+        font-weight: 600;
+
+        font-size: 14px;
+
+        flex-wrap: wrap;
+    }
+
+    .aviso-invitaciones-pendientes:hover {
+
+        background: rgba(16, 152, 247, 0.22);
+    }
+
+
+    /* =========================================================
+    GESTIONAR PARTICIPANTES (organizador/admin)
+    ========================================================= */
+
+    .lista-gestion-participantes {
+
+        display: flex;
+
+        flex-direction: column;
+
+        gap: 12px;
+
+        margin-bottom: 24px;
+    }
+
+    .tarjeta-gestion-participante {
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        gap: 16px;
+
+        padding: 16px 20px;
+
+        background: #03243D;
+
+        border: 1px solid #0A4568;
+
+        border-radius: 14px;
+
+        color: #ffffff;
+
+        flex-wrap: wrap;
+    }
+
+    .btn-cancelar-gestion {
+
+        width: auto;
+
+        padding: 10px 18px;
+
+        flex: none;
+    }
+
+    .btn-confirmar-cancelacion {
+
+        background: #dc3545;
+    }
+
+    .btn-confirmar-cancelacion:hover {
+
+        filter: brightness(1.1);
+    }
+
+
+    /* =========================================================
+    NOTIFICACIONES
+    ========================================================= */
+
+    .lista-notificaciones {
+
+        display: flex;
+
+        flex-direction: column;
+
+        gap: 12px;
+    }
+
+    .tarjeta-notificacion {
+
+        display: flex;
+
+        gap: 16px;
+
+        padding: 16px 20px;
+
+        background: #03243D;
+
+        border: 1px solid #0A4568;
+
+        border-radius: 14px;
+
+        color: #ffffff;
+    }
+
+    .tarjeta-notificacion.notificacion-no-leida {
+
+        border-color: #1098f7;
+
+        background: #053358;
+    }
+
+    .notificacion-icono {
+
+        flex-shrink: 0;
+
+        width: 42px;
+
+        height: 42px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        border-radius: 50%;
+
+        background: rgba(255, 255, 255, 0.08);
+
+        font-size: 18px;
+
+        color: #6cc3ff;
+    }
+
+    .notificacion-cuerpo {
+
+        flex: 1;
+
+        min-width: 0;
+    }
+
+    .notificacion-cuerpo p {
+
+        margin: 0 0 6px;
+
+        line-height: 1.5;
+    }
+
+    .notificacion-fecha {
+
+        display: block;
+
+        margin-bottom: 10px;
+
+        font-size: 12px;
+
+        color: #9db5c9;
+    }
+
+
+    /* =========================================================
+    MIS INSCRIPCIONES
+    ========================================================= */
+
+    .subtitulo-mis-inscripciones {
+
+        color: #ffffff;
+
+        font-size: 19px;
+
+        margin: 10px 0 14px;
+    }
+
+    .sin-inscripciones {
+
+        color: #9db5c9;
+    }
+
+    .lista-invitaciones-recibidas,
+    .lista-mis-inscripciones {
+
+        display: flex;
+
+        flex-direction: column;
+
+        gap: 12px;
+
+        margin-bottom: 30px;
+    }
+
+    .tarjeta-invitacion-recibida,
+    .tarjeta-mi-inscripcion {
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        gap: 16px;
+
+        padding: 16px 20px;
+
+        background: #03243D;
+
+        border: 1px solid #0A4568;
+
+        border-radius: 14px;
+
+        color: #ffffff;
+
+        flex-wrap: wrap;
+    }
+
+    .detalle-invitacion-recibida {
+
+        margin-top: 4px;
+
+        font-size: 13px;
+
+        color: #9db5c9;
+    }
+
+    .acciones-invitacion-recibida {
+
+        display: flex;
+
+        gap: 10px;
+    }
+
+    .acciones-invitacion-recibida form {
+
+        margin: 0;
+    }
+
+    .acciones-invitacion-recibida button {
+
+        padding: 10px 18px;
+
+        border-radius: 10px;
+
+        border: none;
+
+        font-weight: 700;
+
+        cursor: pointer;
+
+        color: #ffffff;
+    }
+
+    .estado-mi-inscripcion {
+
+        padding: 6px 14px;
+
+        border-radius: 999px;
+
+        font-size: 13px;
+
+        font-weight: 700;
+
+        white-space: nowrap;
+    }
+
+    .estado-mi-inscripcion.estado-confirmada {
+
+        background: rgba(25, 135, 84, 0.18);
+
+        color: #4ad68a;
+    }
+
+    .estado-mi-inscripcion.estado-pendiente {
+
+        background: rgba(255, 193, 7, 0.18);
+
+        color: #ffc107;
+    }
+
+    .estado-mi-inscripcion.estado-cancelada {
+
+        background: rgba(220, 53, 69, 0.18);
+
+        color: #ff8585;
+    }
+
+
     .torneos-participante {
 
         width: 100%;

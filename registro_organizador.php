@@ -623,7 +623,7 @@ unset($_SESSION['datos_registro']);
 <!-- ========================================= -->
 <!-- DATOS RECUPERADOS PARA JAVASCRIPT -->
 <!-- ========================================= -->
-<script src="js/padel.js?v=3"></script>
+<script src="js/padel.js?v=6"></script>
 <script src="js/organizador.js?v=3"></script>
 
 
