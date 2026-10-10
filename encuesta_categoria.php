@@ -1,5 +1,8 @@
 <?php
 session_start();
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 ?>
 
 <!DOCTYPE html>
@@ -33,6 +36,8 @@ session_start();
         </div>
 
         <form action="funciones/guardar_encuesta1.php" method="POST" id="formEncuesta">
+
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
             <!-- Pregunta 1 -->
 
@@ -266,6 +271,6 @@ session_start();
     </div>
 
 </div>
-<script src="js/padel.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
 </body>
 </html>

@@ -2,8 +2,7 @@
 
 include("../config/no_cache.php");
 include("../config/conexion.php");
-
-session_start();
+require_once("csrf.php");
 
 /* ==========================================
    VERIFICAR QUE SEA ADMINISTRADOR
@@ -18,17 +17,32 @@ if (!isset($_SESSION['id_usuario']) || $_SESSION['id_rol'] != 1) {
 
 
 /* ==========================================
-   RECIBIR ID DE LA SOLICITUD
+   VERIFICAR MÉTODO Y TOKEN CSRF
 ========================================== */
 
-if (!isset($_GET['id_solicitud'])) {
+if (
+    $_SERVER['REQUEST_METHOD'] !== 'POST' ||
+    !verificar_csrf_token($_POST['csrf_token'] ?? '')
+) {
 
-    header("Location: ../paneles.php");
+    header("Location: ../paneles.php?seccion=solicitudes");
     exit();
 
 }
 
-$id_solicitud = intval($_GET['id_solicitud']);
+
+/* ==========================================
+   RECIBIR ID DE LA SOLICITUD
+========================================== */
+
+if (!isset($_POST['id_solicitud'])) {
+
+    header("Location: ../paneles.php?seccion=solicitudes");
+    exit();
+
+}
+
+$id_solicitud = intval($_POST['id_solicitud']);
 
 
 /* ==========================================
@@ -282,8 +296,10 @@ try {
 
     mysqli_rollback($conexion);
 
+    error_log("Error al aceptar solicitud de organizador: " . $e->getMessage());
+
     echo "<h2>Error al aceptar la solicitud</h2>";
-    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p>Ocurrió un error al procesar la solicitud. Intentá nuevamente.</p>";
     echo '<br>';
     echo '<a href="../paneles.php">Volver al panel</a>';
 

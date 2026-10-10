@@ -2,6 +2,14 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("enviar_codigo.php");
+require_once("csrf.php");
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../registro_participante.php");
+    exit();
+
+}
 
 $nombre = $_POST['nombre'];
 $apellido = $_POST['apellido'];
@@ -42,6 +50,7 @@ $codigo = rand(100000, 999999);
 // Un código nuevo invalida cualquier verificación previa de esta sesión
 unset($_SESSION['verificacion_ok']);
 unset($_SESSION['email_verificado']);
+$_SESSION['intentos_codigo'] = 0;
 
 // Guardar datos temporalmente en la sesión
 $_SESSION['nombre'] = $nombre;

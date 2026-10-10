@@ -4,6 +4,7 @@ session_start();
 
 require_once "../config/conexion.php";
 require_once "../config/no_cache.php";
+require_once "csrf.php";
 
 
 /* =========================================================
@@ -24,6 +25,12 @@ if (
    ========================================================= */
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+
+    header("Location: ../paneles.php?seccion=torneos");
+    exit;
+}
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
     header("Location: ../paneles.php?seccion=torneos");
     exit;

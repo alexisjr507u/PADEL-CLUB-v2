@@ -884,7 +884,7 @@ $final = [
 
 
     </div>
-    <script src="js/padel.js?v=2"></script>
+    <script src="js/padel.js?v=3"></script>
 </body>
 
 </html>

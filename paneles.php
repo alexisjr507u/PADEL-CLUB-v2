@@ -2,6 +2,7 @@
 
 include("config/no_cache.php");
 include("config/conexion.php");
+require_once("funciones/csrf.php");
 
 session_regenerate_id(true);
 
@@ -16,6 +17,8 @@ if (!isset($_SESSION['id_usuario'])) {
     exit();
 
 }
+
+$csrf_token = generar_csrf_token();
 
 
 // ==========================================
@@ -795,12 +798,14 @@ $totalSolicitudes = $filaSolicitudes["total"];
                             <!-- BOTONES -->
                             <div class="solicitud-acciones">
 
-                                <form action="funciones/aceptar_solicitud.php" method="GET">
+                                <form action="funciones/aceptar_solicitud.php" method="POST">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                     <input type="hidden" name="id_solicitud" value="<?php echo $idSolicitud; ?>">
                                     <button type="submit" class="btn-aceptar-solicitud">✓ Aceptar</button>
                                 </form>
 
-                                <form action="funciones/rechazar_solicitud.php" method="GET">
+                                <form action="funciones/rechazar_solicitud.php" method="POST">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                     <input type="hidden" name="id_solicitud" value="<?php echo $idSolicitud; ?>">
                                     <button type="submit" class="btn-rechazar-solicitud">✕ Rechazar</button>
                                 </form>
@@ -2935,6 +2940,11 @@ $horaFin = date(
         >
         <input
             type="hidden"
+            name="csrf_token"
+            value="<?php echo htmlspecialchars($csrf_token); ?>"
+        >
+        <input
+            type="hidden"
             id="idTorneoEditar"
             name="id_torneo"
             value=""
@@ -3369,6 +3379,12 @@ $horaFin = date(
 
             <input
                 type="hidden"
+                name="csrf_token"
+                value="<?php echo htmlspecialchars($csrf_token); ?>"
+            >
+
+            <input
+                type="hidden"
                 name="id_torneo"
                 id="idTorneoEliminar"
             >
@@ -3664,6 +3680,12 @@ $canchasNoDisponibles =
             id="formAgregarCancha"
         >
 
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?php echo htmlspecialchars($csrf_token); ?>"
+            >
+
             <!-- NOMBRE -->
 
             <div class="campo-cancha">
@@ -3809,6 +3831,12 @@ $canchasNoDisponibles =
             id="formCambiarEstado"
         >
 
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?php echo htmlspecialchars($csrf_token); ?>"
+            >
+
             <!-- ID DE LA CANCHA -->
 
             <input
@@ -3924,6 +3952,12 @@ $canchasNoDisponibles =
             enctype="multipart/form-data"
             id="formEditarCancha"
         >
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?php echo htmlspecialchars($csrf_token); ?>"
+            >
 
             <!-- ID DE LA CANCHA -->
 
@@ -4138,6 +4172,12 @@ $canchasNoDisponibles =
             method="POST"
             id="formEliminarCancha"
         >
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?php echo htmlspecialchars($csrf_token); ?>"
+            >
 
             <input
                 type="hidden"
@@ -4931,7 +4971,7 @@ $canchasNoDisponibles =
 <?php } ?>
 
 
-<script src="js/padel.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
 
 <!-- =========================================================
      MODAL MENSAJE DE ÉXITO

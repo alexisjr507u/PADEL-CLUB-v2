@@ -1,3 +1,62 @@
+//loader "pelota de pádel" al enviar formularios (login, registros, verificar código)
+(function () {
+
+    const overlay = document.createElement("div");
+    overlay.className = "loader-overlay";
+    overlay.setAttribute("role", "status");
+    overlay.setAttribute("aria-live", "polite");
+    overlay.setAttribute("aria-busy", "false");
+
+    overlay.innerHTML =
+        '<div class="padel-ball"><span class="padel-ball-costuras"></span></div>' +
+        '<p class="loader-texto"></p>';
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.body.appendChild(overlay);
+    });
+
+    const textoLoader = overlay.querySelector(".loader-texto");
+
+    function mostrarLoader(texto) {
+
+        textoLoader.textContent = texto || "Procesando...";
+        overlay.classList.add("activo");
+        overlay.setAttribute("aria-busy", "true");
+
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+        document.querySelectorAll("form[data-loader]").forEach((form) => {
+
+            form.addEventListener("submit", (evento) => {
+
+                // Se espera un tick para que terminen de correr otras
+                // validaciones del formulario (por ejemplo las de
+                // organizador.js) antes de decidir si se muestra el loader.
+                setTimeout(() => {
+
+                    if (evento.defaultPrevented) {
+                        return;
+                    }
+
+                    mostrarLoader(form.dataset.loader);
+
+                    const boton = form.querySelector('button[type="submit"]');
+
+                    if (boton) {
+                        boton.disabled = true;
+                    }
+
+                }, 0);
+
+            });
+
+        });
+
+    });
+
+})();
 //tiempo de mensaje
 setTimeout(() => {
 

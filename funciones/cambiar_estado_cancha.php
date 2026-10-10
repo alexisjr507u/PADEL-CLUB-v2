@@ -2,8 +2,7 @@
 
 require_once "../config/no_cache.php";
 require_once "../config/conexion.php";
-
-session_start();
+require_once "csrf.php";
 
 
 // ==========================================
@@ -12,6 +11,11 @@ session_start();
 
 if (!isset($_SESSION['id_usuario'])) {
     header("Location: ../login.php");
+    exit;
+}
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+    header("Location: ../paneles.php?seccion=canchas");
     exit;
 }
 

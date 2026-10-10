@@ -259,6 +259,91 @@
         padding-right: 45px;
     }
 
+    /* ===========================
+    LOADER - PELOTA DE PADEL
+    =========================== */
+
+    .loader-overlay{
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 21, 43, 0.78);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.25s ease;
+    }
+
+    .loader-overlay.activo{
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .padel-ball{
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient(circle at 32% 28%, #fbffb0, #d7e600 55%, #8a9900 100%);
+        box-shadow:
+            inset -8px -8px 16px rgba(0,0,0,0.3),
+            inset 6px 6px 10px rgba(255,255,255,0.45),
+            0 4px 14px rgba(0,0,0,0.4);
+    }
+
+    .padel-ball-costuras{
+        position: absolute;
+        inset: 0;
+        animation: padel-ball-girar 0.85s linear infinite;
+    }
+
+    .padel-ball-costuras::before,
+    .padel-ball-costuras::after{
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 150%;
+        height: 48%;
+        border: 3px solid rgba(35,40,8,0.55);
+        border-radius: 50%;
+        transform: translate(-50%, -50%) rotate(22deg);
+    }
+
+    .padel-ball-costuras::after{
+        transform: translate(-50%, -50%) rotate(-22deg);
+    }
+
+    @keyframes padel-ball-girar{
+        from{ transform: rotate(0deg); }
+        to{ transform: rotate(360deg); }
+    }
+
+    .loader-texto{
+        color: #fff;
+        font-weight: bold;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+        text-align: center;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+
+        .padel-ball-costuras{
+            animation: none;
+        }
+
+        .loader-overlay{
+            transition: none;
+        }
+
+    }
+
     .toggle-password{
         position: absolute;
         right: 15px;

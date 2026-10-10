@@ -1,6 +1,14 @@
 <?php
 
 include("../config/conexion.php");
+require_once("csrf.php");
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../encuesta_categoria.php");
+    exit();
+
+}
 
 if ($_POST["p1"] == "nunca") {
 

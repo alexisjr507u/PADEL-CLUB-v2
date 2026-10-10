@@ -2,8 +2,7 @@
 
 include("../config/no_cache.php");
 include("../config/conexion.php");
-
-session_start();
+require_once("csrf.php");
 
 /* ==========================================
    VERIFICAR ADMINISTRADOR
@@ -18,17 +17,32 @@ if (!isset($_SESSION['id_usuario']) || $_SESSION['id_rol'] != 1) {
 
 
 /* ==========================================
-   RECIBIR ID DE SOLICITUD
+   VERIFICAR MÉTODO Y TOKEN CSRF
 ========================================== */
 
-if (!isset($_GET['id_solicitud'])) {
+if (
+    $_SERVER['REQUEST_METHOD'] !== 'POST' ||
+    !verificar_csrf_token($_POST['csrf_token'] ?? '')
+) {
 
     header("Location: ../paneles.php?seccion=solicitudes");
     exit();
 
 }
 
-$id_solicitud = intval($_GET['id_solicitud']);
+
+/* ==========================================
+   RECIBIR ID DE SOLICITUD
+========================================== */
+
+if (!isset($_POST['id_solicitud'])) {
+
+    header("Location: ../paneles.php?seccion=solicitudes");
+    exit();
+
+}
+
+$id_solicitud = intval($_POST['id_solicitud']);
 
 
 /* ==========================================
@@ -51,10 +65,9 @@ $stmt = mysqli_prepare(
 
 if (!$stmt) {
 
-    die(
-        "Error al preparar la consulta: "
-        . mysqli_error($conexion)
-    );
+    error_log("Error al preparar consulta de rechazo: " . mysqli_error($conexion));
+
+    die("Ocurrió un error. Intentá nuevamente.");
 
 }
 
@@ -68,10 +81,9 @@ mysqli_stmt_bind_param(
 
 if (!mysqli_stmt_execute($stmt)) {
 
-    die(
-        "Error al rechazar la solicitud: "
-        . mysqli_stmt_error($stmt)
-    );
+    error_log("Error al rechazar solicitud: " . mysqli_stmt_error($stmt));
+
+    die("Ocurrió un error. Intentá nuevamente.");
 
 }
 

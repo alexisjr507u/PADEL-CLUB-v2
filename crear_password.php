@@ -14,6 +14,10 @@ if (
     exit();
 }
 
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -53,7 +57,9 @@ if (
 
 <?php } ?>
 
-        <form action="funciones/guardar_password_temporal.php" method="POST"autocomplete="off">
+        <form action="funciones/guardar_password_temporal.php" method="POST"autocomplete="off" data-loader="Creando contraseña...">
+
+    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
     <div class="input-group">
 
@@ -97,6 +103,6 @@ if (
     </div>
 
 </div>
-<script src="js/padel.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
 </body>
 </html>

@@ -1,11 +1,23 @@
 <?php
 
-include("no_cache.php");
 include("../config/no_cache.php");
 
 session_start();
 
 include("../config/conexion.php");
+require_once("csrf.php");
+
+
+// ==========================================
+// VERIFICAR TOKEN CSRF
+// ==========================================
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../login.php?error=1");
+    exit();
+
+}
 
 
 // ==========================================

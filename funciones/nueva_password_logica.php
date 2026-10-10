@@ -3,6 +3,14 @@ include("../config/no_cache.php");
 
 
 include("../config/conexion.php");
+require_once("csrf.php");
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../login.php");
+    exit();
+
+}
 
 // Defensa en profundidad: aunque la vista ya lo valida, este
 // controlador también exige que el código haya sido verificado.

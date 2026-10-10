@@ -9,22 +9,23 @@ require '../PHPMailer/src/SMTP.php';
 
 function enviarCodigo($correo, $codigo)
 {
+    $configMail = require __DIR__ . '/../config/mail.php';
+
     $mail = new PHPMailer(true);
 
     try {
 
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
+        $mail->Host = $configMail['host'];
         $mail->SMTPAuth = true;
 
-        // TU CORREO GMAIL
-        $mail->Username = 'padelweb2026@gmail.com';
-        $mail->Password = 'kzbhndxdvxvnheeh';
+        $mail->Username = $configMail['username'];
+        $mail->Password = $configMail['password'];
 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Port = $configMail['port'];
 
-        $mail->setFrom('padelweb2026@gmail.com', 'Padel');
+        $mail->setFrom($configMail['from_email'], $configMail['from_name']);
 
         $mail->addAddress($correo);
 

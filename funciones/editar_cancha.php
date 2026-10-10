@@ -2,8 +2,7 @@
 
 require_once "../config/no_cache.php";
 require_once "../config/conexion.php";
-
-session_start();
+require_once "csrf.php";
 
 /* ==========================================
    VERIFICAR SESIÓN
@@ -11,6 +10,11 @@ session_start();
 
 if (!isset($_SESSION['id_usuario'])) {
     header("Location: ../login.php");
+    exit;
+}
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+    header("Location: ../paneles.php?seccion=canchas");
     exit;
 }
 
@@ -119,49 +123,6 @@ if (!$cancha) {
 
 $sqlExisteCancha = "
     SELECT id_cancha
-    FROM cancha
-    WHERE id_club = ?
-      AND nombre = ?
-      AND id_cancha != ?
-    LIMIT 1
-";
-
-$stmtExisteCancha = mysqli_prepare(
-    $conexion,
-    $sqlExisteCancha
-);
-
-mysqli_stmt_bind_param(
-    $stmtExisteCancha,
-    "isi",
-    $cancha['id_club'],
-    $nombre,
-    $idCancha
-);
-
-mysqli_stmt_execute($stmtExisteCancha);
-
-$resultadoExisteCancha =
-    mysqli_stmt_get_result($stmtExisteCancha);
-
-if (mysqli_num_rows($resultadoExisteCancha) > 0) {
-
-    mysqli_stmt_close($stmtExisteCancha);
-
-    header(
-        "Location: ../paneles.php?seccion=canchas&error=cancha_repetida"
-    );
-
-    exit;
-}
-
-mysqli_stmt_close($stmtExisteCancha);
-/* ==========================================
-   VERIFICAR NOMBRE REPETIDO
-   ========================================== */
-
-$sqlExisteCancha = "
-    SELECT id_cancha        
     FROM cancha
     WHERE id_club = ?
       AND nombre = ?

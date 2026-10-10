@@ -1,5 +1,9 @@
 <?php
 include("config/no_cache.php");
+include("config/conexion.php");
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -39,7 +43,25 @@ include("config/no_cache.php");
 </div>
 
 <?php } ?>
-            <form action="funciones/verificar_codigo_logica.php" method="POST" autocomplete="off">
+
+<?php if(isset($_GET['error']) && $_GET['error'] == 'bloqueado'){ ?>
+
+<div id="mensajeError" class="mensaje-error">
+     <i class="bi bi-exclamation-circle-fill"></i> Demasiados intentos fallidos. Solicitá un código nuevo.
+</div>
+
+<?php } ?>
+
+<?php if(isset($_GET['error']) && $_GET['error'] == 'espera'){ ?>
+
+<div id="mensajeError" class="mensaje-error">
+     <i class="bi bi-exclamation-circle-fill"></i> Esperá unos segundos antes de pedir otro código.
+</div>
+
+<?php } ?>
+            <form action="funciones/verificar_codigo_logica.php" method="POST" autocomplete="off" data-loader="Verificando código...">
+
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
                 <div class="input-group">
 
@@ -72,5 +94,5 @@ include("config/no_cache.php");
     </div>
 
 </body>
-<script src="js/padel.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
 </html>

@@ -6,6 +6,7 @@
 
 include("../config/no_cache.php");
 include("../config/conexion.php");
+require_once("csrf.php");
 
 
 // ==========================================
@@ -15,6 +16,13 @@ include("../config/conexion.php");
 if (!isset($_SESSION['id_usuario'])) {
 
     header("Location: ../login.php");
+    exit();
+
+}
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../paneles.php?seccion=canchas");
     exit();
 
 }
@@ -101,10 +109,9 @@ $stmtClub = mysqli_prepare(
 
 if (!$stmtClub) {
 
-    die(
-        "Error al preparar la consulta del club: "
-        . mysqli_error($conexion)
-    );
+    error_log("Error al preparar consulta de club: " . mysqli_error($conexion));
+
+    die("Ocurrió un error. Intentá nuevamente.");
 
 }
 
@@ -424,10 +431,9 @@ if (!$stmtCancha) {
 
     }
 
-    die(
-        "Error al preparar la cancha: "
-        . mysqli_error($conexion)
-    );
+    error_log("Error al preparar cancha: " . mysqli_error($conexion));
+
+    die("Ocurrió un error. Intentá nuevamente.");
 
 }
 
@@ -460,10 +466,9 @@ if (!mysqli_stmt_execute($stmtCancha)) {
 
     mysqli_stmt_close($stmtCancha);
 
-    die(
-        "Error al guardar la cancha: "
-        . $error
-    );
+    error_log("Error al guardar cancha: " . $error);
+
+    die("Ocurrió un error. Intentá nuevamente.");
 
 }
 

@@ -1,5 +1,9 @@
 <?php
 include("config/no_cache.php");
+include("config/conexion.php");
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -43,7 +47,9 @@ include("config/no_cache.php");
 <?php } ?>
 
             <form action="funciones/registro_logica.php"
-                method="POST" autocomplete="off">
+                method="POST" autocomplete="off" data-loader="Procesando...">
+
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
                 <div class="form-grid">
 
@@ -126,7 +132,7 @@ include("config/no_cache.php");
         </div>
 
     </div>
-<script src="js/padel.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
 </body>
 
 </html>

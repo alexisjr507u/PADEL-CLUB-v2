@@ -1,6 +1,14 @@
 <?php
 
 include("../config/conexion.php");
+require_once("csrf.php");
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../encuesta_categoria2.php");
+    exit();
+
+}
 
 // Puntos de la parte 1
 $puntos1 = $_SESSION["puntos1"];

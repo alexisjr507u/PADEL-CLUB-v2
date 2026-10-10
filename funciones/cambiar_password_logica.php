@@ -2,6 +2,24 @@
 include("../config/no_cache.php");
 
 include("../config/conexion.php");
+require_once("csrf.php");
+
+// Este controlador no tenía ninguna verificación de sesión: cualquiera
+// podía llamarlo directo. Lo exigimos acá como defensa en profundidad,
+// además del chequeo que ya hace la vista cambiar_password.php.
+if (!isset($_SESSION['id_usuario'])) {
+
+    header("Location: ../login.php");
+    exit();
+
+}
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+    header("Location: ../cambiar_password.php");
+    exit();
+
+}
 
 $password_actual = $_POST['password_actual'];
 $password_nueva = $_POST['password_nueva'];

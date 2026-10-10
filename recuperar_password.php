@@ -1,5 +1,9 @@
 <?php
 include("config/no_cache.php");
+include("config/conexion.php");
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 
 ?>
 <!DOCTYPE html>
@@ -10,6 +14,7 @@ include("config/no_cache.php");
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recuperar Contraseña</title>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -19,17 +24,23 @@ include("config/no_cache.php");
 
     <div class="login-box">
 
+        <img src="img/ChatGPT Image 29 may 2026, 17_54_13.png"
+            alt="Logo"
+            class="logo">
+
         <h2>Recuperar Contraseña</h2>
 
         <?php
         if(isset($_GET['error']) && $_GET['error'] == 'email'){
             echo '<div class="mensaje-error" id="mensajeError">
-                    No existe una cuenta con ese correo.
+                    <i class="bi bi-exclamation-circle-fill"></i> No existe una cuenta con ese correo.
                     </div>';
         }
         ?>
 
-        <form action="funciones/recuperar_password_logica.php" method="POST" autocomplete="off">
+        <form action="funciones/recuperar_password_logica.php" method="POST" autocomplete="off" data-loader="Enviando código...">
+
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
             <div class="input-group">
 
@@ -57,6 +68,6 @@ include("config/no_cache.php");
     </div>
 
 </div>
-<script src="js/padel.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
 </body>
 </html>

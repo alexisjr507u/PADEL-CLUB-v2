@@ -2,6 +2,7 @@
 
 include("../config/no_cache.php");
 include("../config/conexion.php");
+require_once("csrf.php");
 
 
 // ==========================================
@@ -9,6 +10,13 @@ include("../config/conexion.php");
 // ==========================================
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+
+    header("Location: ../registro_organizador.php");
+    exit();
+
+}
+
+if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
     header("Location: ../registro_organizador.php");
     exit();
@@ -197,11 +205,11 @@ if (
 // VALIDAR CONTRASEÑA
 // ==========================================
 
-// Exactamente 8 caracteres
-if (strlen($password) !== 8) {
+// Mínimo 8 caracteres
+if (strlen($password) < 8) {
 
     die(
-        "La contraseña debe tener exactamente 8 caracteres."
+        "La contraseña debe tener al menos 8 caracteres."
     );
 
 }
@@ -783,10 +791,10 @@ try {
         $conexion
     );
 
+    error_log("Error al guardar solicitud de organizador: " . $e->getMessage());
 
     die(
-        "Error al guardar la solicitud: "
-        . $e->getMessage()
+        "Ocurrió un error al guardar la solicitud. Intentá nuevamente."
     );
 
 }

@@ -3,6 +3,9 @@
 include("config/no_cache.php");
 
 session_start();
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 
 /*
 |--------------------------------------------------------------------------
@@ -83,8 +86,10 @@ unset($_SESSION['datos_registro']);
         method="POST"
         enctype="multipart/form-data"
         autocomplete="off"
+        data-loader="Enviando solicitud..."
     >
 
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
         <div class="organizador-container">
 
@@ -263,13 +268,13 @@ unset($_SESSION['datos_registro']);
                             id="password"
                             name="password"
                             placeholder="Ejemplo: Alex123!"
-                            maxlength="8"
+                            maxlength="64"
                             minlength="8"
                             required
                         >
 
                         <small>
-                            Debe tener exactamente 8 caracteres,
+                            Debe tener al menos 8 caracteres,
                             una mayúscula, un número y un carácter especial.
                             Ejemplo: Alex123!
                         </small>
@@ -297,7 +302,7 @@ unset($_SESSION['datos_registro']);
                             id="confirmar_password"
                             name="confirmar_password"
                             placeholder="Repita la contraseña"
-                            maxlength="8"
+                            maxlength="64"
                             minlength="8"
                             required
                         >
@@ -618,8 +623,8 @@ unset($_SESSION['datos_registro']);
 <!-- ========================================= -->
 <!-- DATOS RECUPERADOS PARA JAVASCRIPT -->
 <!-- ========================================= -->
-<script src="js/padel.js?v=2"></script>
-<script src="js/organizador.js?v=2"></script>
+<script src="js/padel.js?v=3"></script>
+<script src="js/organizador.js?v=3"></script>
 
 
 </body>

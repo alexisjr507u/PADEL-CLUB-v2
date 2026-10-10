@@ -2,8 +2,16 @@
 include("../config/no_cache.php");
 require '../config/conexion.php';
 require 'enviar_codigo.php';
+require 'csrf.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
+    if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
+
+        header("Location: ../recuperar_password.php");
+        exit();
+
+    }
 
     $email = mysqli_real_escape_string($conexion, $_POST['email']);
 
@@ -25,6 +33,7 @@ $_SESSION['tiempo_codigo'] = time();
         // Un código nuevo invalida cualquier verificación previa de esta sesión
         unset($_SESSION['verificacion_ok']);
         unset($_SESSION['email_verificado']);
+        $_SESSION['intentos_codigo'] = 0;
 
         if (enviarCodigo($email, $codigo)) {
 

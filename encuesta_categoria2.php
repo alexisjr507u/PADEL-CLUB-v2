@@ -1,5 +1,8 @@
 <?php
 session_start();
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 ?>
 
 <!DOCTYPE html>
@@ -32,6 +35,8 @@ session_start();
         </div>
 
         <form action="funciones/calcular_categoria.php" method="POST">
+
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
             <!-- Pregunta 6 -->
 

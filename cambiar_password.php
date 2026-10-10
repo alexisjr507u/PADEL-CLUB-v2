@@ -8,6 +8,10 @@ if (!isset($_SESSION['id_usuario'])) {
     header("Location: login.php");
     exit();
 }
+
+require_once("funciones/csrf.php");
+
+$csrf_token = generar_csrf_token();
 ?>
 
 <!DOCTYPE html>
@@ -62,7 +66,9 @@ if (!isset($_SESSION['id_usuario'])) {
 <?php } ?>
 
             <form action="funciones/cambiar_password_logica.php "
-                method="POST" autocomplete="off">
+                method="POST" autocomplete="off" data-loader="Cambiando contraseña...">
+
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
                 <div class="input-group">
 
@@ -135,7 +141,7 @@ if (!isset($_SESSION['id_usuario'])) {
 
     </div>
 
-    <script src="js/padel.js?v=2"></script>
+    <script src="js/padel.js?v=3"></script>
 
 </body>
 

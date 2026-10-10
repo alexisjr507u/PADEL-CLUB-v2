@@ -131,7 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
             /[^A-Za-z0-9]/.test(valor);
 
         return (
-            valor.length === 8 &&
+            valor.length >= 8 &&
             tieneMayuscula &&
             tieneNumero &&
             tieneEspecial
@@ -559,7 +559,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     event.preventDefault();
 
                     alert(
-                        "La contraseña debe tener exactamente 8 caracteres, una mayúscula, un número y un carácter especial."
+                        "La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial."
                     );
 
                     password.focus();
