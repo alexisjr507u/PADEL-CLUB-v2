@@ -1268,7 +1268,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     previewEditar.innerHTML = `
                         <div class="preview-cancha-vacio">
-                            🏟
+                            <i class="bi bi-image"></i>
                             <span>Sin imagen</span>
                         </div>
                     `;

@@ -203,53 +203,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <a href="paneles.php">
 
-            <svg viewBox="0 0 24 24" fill="none">
-
-                <path
-                    d="M8 21h8"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M12 17v4"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M6 17h12"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M7 13h10"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M8 9h8"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M10 5h4"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-            </svg>
-
-            <span>Torneos</span>
+            <i class="bi bi-trophy-fill icono-menu"></i> Torneos
 
         </a>
 
@@ -262,42 +216,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <a href="paneles.php?seccion=mis_inscripciones">
 
-            <svg viewBox="0 0 24 24" fill="none">
-
-                <rect
-                    x="4"
-                    y="3"
-                    width="16"
-                    height="18"
-                    rx="2"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                />
-
-                <path
-                    d="M8 8h8"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M8 12h8"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M8 16h5"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-            </svg>
-
-            <span>Mis inscripciones</span>
+            <i class="bi bi-clipboard-check-fill icono-menu"></i> Mis inscripciones
 
         </a>
 
@@ -310,32 +229,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <a href="paneles.php?seccion=ranking">
 
-            <svg viewBox="0 0 24 24" fill="none">
-
-                <path
-                    d="M5 20V10"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M12 20V5"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M19 20v-7"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-            </svg>
-
-            <span>Ranking</span>
+            <i class="bi bi-bar-chart-fill icono-menu"></i> Ranking
 
         </a>
 
@@ -348,26 +242,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <a href="paneles.php?seccion=notificaciones">
 
-            <svg viewBox="0 0 24 24" fill="none">
-
-                <path
-                    d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-
-                <path
-                    d="M10 21h4"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-            </svg>
-
-            <span>Notificaciones</span>
+            <i class="bi bi-bell-fill icono-menu"></i> Notificaciones
 
         </a>
 
@@ -380,33 +255,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <a href="funciones/logout.php">
 
-            <svg viewBox="0 0 24 24" fill="none">
-
-                <path
-                    d="M10 17l5-5-5-5"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-
-                <path
-                    d="M15 12H3"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-                <path
-                    d="M21 3v18"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                />
-
-            </svg>
-
-            <span>Cerrar sesión</span>
+            <i class="bi bi-box-arrow-right icono-menu"></i> Cerrar sesión
 
         </a>
 
@@ -576,7 +425,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
         <?php if (!$resultado || mysqli_num_rows($resultado) == 0) { ?>
 
             <div class="solicitudes-vacio">
-                <div class="solicitudes-vacio-icono">📋</div>
+                <div class="solicitudes-vacio-icono"><i class="bi bi-clipboard-check"></i></div>
                 <h2>No hay solicitudes pendientes</h2>
                 <p>Actualmente no hay solicitudes de organizadores para revisar.</p>
             </div>
@@ -611,7 +460,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                              aria-expanded="<?php echo ($numeroSolicitud === 1) ? 'true' : 'false'; ?>">
 
                             <div class="solicitud-usuario">
-                                <div class="solicitud-avatar">👤</div>
+                                <div class="solicitud-avatar"><i class="bi bi-person-fill"></i></div>
 
                                 <div>
                                     <h2>
@@ -621,7 +470,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                     <p>
                                         <?php echo htmlspecialchars($solicitud['nombre_club']); ?>
                                         <span>•</span>
-                                        🎾 <?php echo htmlspecialchars($solicitud['cantidad_canchas']); ?> canchas
+                                        <i class="bi bi-geo-alt-fill"></i> <?php echo htmlspecialchars($solicitud['cantidad_canchas']); ?> canchas
                                     </p>
                                 </div>
                             </div>
@@ -639,7 +488,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                             <div class="solicitud-datos">
 
                                 <div class="solicitud-dato">
-                                    <span>📍</span>
+                                    <span><i class="bi bi-geo-alt-fill"></i></span>
                                     <div>
                                         <small>Dirección</small>
                                         <strong><?php echo htmlspecialchars($solicitud['direccion']); ?></strong>
@@ -647,7 +496,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                 </div>
 
                                 <div class="solicitud-dato">
-                                    <span>✉️</span>
+                                    <span><i class="bi bi-envelope-fill"></i></span>
                                     <div>
                                         <small>Correo</small>
                                         <strong><?php echo htmlspecialchars($solicitud['email']); ?></strong>
@@ -655,7 +504,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                 </div>
 
                                 <div class="solicitud-dato">
-                                    <span>📅</span>
+                                    <span><i class="bi bi-calendar-event-fill"></i></span>
                                     <div>
                                         <small>Fecha de solicitud</small>
                                         <strong><?php echo htmlspecialchars($solicitud['fecha_solicitud']); ?></strong>
@@ -665,7 +514,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                             <!-- INFORMACIÓN DEL ORGANIZADOR -->
                             <section class="solicitud-detalle-seccion">
-                                <h3>👤 Información del Organizador</h3>
+                                <h3><i class="bi bi-person-fill"></i> Información del Organizador</h3>
 
                                 <div class="solicitud-detalle-grid">
                                     <div>
@@ -697,7 +546,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                             <!-- INFORMACIÓN DEL CLUB -->
                             <section class="solicitud-detalle-seccion">
-                                <h3>🏢 Información del Club</h3>
+                                <h3><i class="bi bi-building-fill"></i> Información del Club</h3>
 
                                 <div class="solicitud-detalle-grid">
                                     <div>
@@ -754,7 +603,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                             <!-- INFORMACIÓN DE LAS CANCHAS -->
                             <section class="solicitud-detalle-seccion">
-                                <h3>🎾 Información de las Canchas</h3>
+                                <h3><i class="bi bi-geo-alt-fill"></i> Información de las Canchas</h3>
 
                                 <?php if ($resultadoCanchas && mysqli_num_rows($resultadoCanchas) > 0) { ?>
                                     <div class="solicitud-canchas-grid">
@@ -767,7 +616,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                                             <div class="solicitud-cancha-card">
                                                 <div class="solicitud-cancha-titulo">
-                                                    <strong>🎾 Cancha <?php echo $numeroCancha; ?></strong>
+                                                    <strong><i class="bi bi-geo-alt-fill"></i> Cancha <?php echo $numeroCancha; ?></strong>
 
                                                     <span class="cancha-estado <?php echo ($cancha['estado'] == 'Disponible') ? 'disponible' : 'ocupada'; ?>">
                                                         <?php echo htmlspecialchars($cancha['estado']); ?>
@@ -778,7 +627,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                                     <?php if (!empty($cancha['imagen'])) { ?>
                                                         <img src="<?php echo htmlspecialchars($cancha['imagen']); ?>" alt="Imagen de <?php echo htmlspecialchars($cancha['nombre']); ?>">
                                                     <?php } else { ?>
-                                                        <div class="solicitud-sin-imagen">🏟️<span>Sin imagen</span></div>
+                                                        <div class="solicitud-sin-imagen"><i class="bi bi-image"></i><span>Sin imagen</span></div>
                                                     <?php } ?>
                                                 </div>
 
@@ -802,13 +651,13 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                 <form action="funciones/aceptar_solicitud.php" method="POST">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                     <input type="hidden" name="id_solicitud" value="<?php echo $idSolicitud; ?>">
-                                    <button type="submit" class="btn-aceptar-solicitud">✓ Aceptar</button>
+                                    <button type="submit" class="btn-aceptar-solicitud"><i class="bi bi-check-circle-fill"></i> Aceptar</button>
                                 </form>
 
                                 <form action="funciones/rechazar_solicitud.php" method="POST">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                     <input type="hidden" name="id_solicitud" value="<?php echo $idSolicitud; ?>">
-                                    <button type="submit" class="btn-rechazar-solicitud">✕ Rechazar</button>
+                                    <button type="submit" class="btn-rechazar-solicitud"><i class="bi bi-x-circle-fill"></i> Rechazar</button>
                                 </form>
 
                             </div>
@@ -867,7 +716,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
 
         <!-- ================================= -->
-        <!-- TORNEOS -->
+        <!-- TORNEOS (ADMINISTRADOR) -->
         <!-- ================================= -->
 
         <header class="topbar">
@@ -876,11 +725,268 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
             <p>
 
-                Administración de torneos.
+                Administración de torneos de toda la plataforma.
 
             </p>
 
         </header>
+
+        <?php
+
+        $erroresTorneosAdmin = [
+            'sin_permiso' => 'No tenés permiso sobre ese torneo.',
+            'no_existe'   => 'Ese torneo no existe.',
+        ];
+
+        if (isset($_GET['error']) && isset($erroresTorneosAdmin[$_GET['error']])) {
+            echo '<div id="mensajeError" class="mensaje-error mensaje-error-compacto">'
+                . '<i class="bi bi-exclamation-circle-fill"></i> '
+                . htmlspecialchars($erroresTorneosAdmin[$_GET['error']])
+                . '</div>';
+        }
+
+
+        /* =========================================================
+           TODOS LOS TORNEOS (cualquier club)
+           ========================================================= */
+
+        $sqlTorneosAdmin = "
+            SELECT
+                torneos.id_torneo,
+                torneos.nombre,
+                torneos.imagen,
+                torneos.fecha_inicio,
+                torneos.hora_inicio,
+                torneos.fecha_fin,
+                torneos.hora_fin,
+                torneos.lugar,
+                torneos.tipo,
+                torneos.max_participantes,
+                torneos.estado,
+                categoria.nombre AS categoria,
+                club.nombre AS nombre_club
+            FROM torneos
+            INNER JOIN categoria ON categoria.id_categoria = torneos.id_categoria
+            INNER JOIN club ON club.id_club = torneos.id_club
+            ORDER BY torneos.fecha_inicio DESC
+        ";
+
+        $torneosAdmin = mysqli_fetch_all(
+            mysqli_query($conexion, $sqlTorneosAdmin),
+            MYSQLI_ASSOC
+        );
+
+        // Confirmados por torneo, una sola consulta agregada
+        // (no una consulta dentro del bucle de tarjetas).
+        $conteosConfirmadosAdmin = [];
+
+        $resultadoConteosAdmin = mysqli_query(
+            $conexion,
+            "SELECT id_torneo, COUNT(*) AS n FROM inscripcion WHERE estado = 'Confirmada' GROUP BY id_torneo"
+        );
+
+        while ($filaConteoAdmin = mysqli_fetch_assoc($resultadoConteosAdmin)) {
+            $conteosConfirmadosAdmin[(int) $filaConteoAdmin['id_torneo']] = (int) $filaConteoAdmin['n'];
+        }
+
+        ?>
+
+
+        <!-- BUSCADOR Y FILTROS (mismo patrón visual que el panel del organizador) -->
+        <div class="torneos-filtros">
+
+            <div class="torneo-buscador">
+
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M16 16L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+
+                <input type="text" id="buscarTorneo" placeholder="Buscar torneo..." autocomplete="off">
+
+            </div>
+
+            <select id="filtroEstadoTorneo" class="filtro-estado-torneo">
+                <option value="todos">Estado: Todos</option>
+                <option value="Abierto">Abierto</option>
+                <option value="Cerrado">Cerrado</option>
+                <option value="En curso">En curso</option>
+                <option value="Finalizado">Finalizado</option>
+            </select>
+
+        </div>
+
+
+        <div class="torneos-grid" id="listaTorneos">
+
+            <?php if (!empty($torneosAdmin)) { ?>
+
+                <?php foreach ($torneosAdmin as $torneo) { ?>
+
+                    <?php
+                        $estado = $torneo['estado'];
+
+                        $claseEstado = '';
+
+                        if ($estado === 'Abierto') {
+                            $claseEstado = 'abierto';
+                        } elseif ($estado === 'Cerrado') {
+                            $claseEstado = 'cerrado';
+                        } elseif ($estado === 'En curso') {
+                            $claseEstado = 'en-curso';
+                        } elseif ($estado === 'Finalizado') {
+                            $claseEstado = 'finalizado';
+                        }
+
+                        $fechaInicio = date('d/m/Y', strtotime($torneo['fecha_inicio']));
+                        $fechaFin = date('d/m/Y', strtotime($torneo['fecha_fin']));
+                        $horaInicio = date('H:i', strtotime($torneo['hora_inicio']));
+                        $horaFin = date('H:i', strtotime($torneo['hora_fin']));
+
+                        $imagenTorneo = $torneo['imagen'] ?? '';
+
+                        $nombreTorneo = htmlspecialchars($torneo['nombre'], ENT_QUOTES, 'UTF-8');
+                        $lugarTorneo = htmlspecialchars($torneo['lugar'], ENT_QUOTES, 'UTF-8');
+                        $categoriaTorneo = htmlspecialchars($torneo['categoria'], ENT_QUOTES, 'UTF-8');
+                        $tipoTorneo = htmlspecialchars($torneo['tipo'], ENT_QUOTES, 'UTF-8');
+                        $clubTorneoAdmin = htmlspecialchars($torneo['nombre_club'], ENT_QUOTES, 'UTF-8');
+                        $estadoTorneo = htmlspecialchars($estado, ENT_QUOTES, 'UTF-8');
+
+                        $confirmadosAdmin = (int) ($conteosConfirmadosAdmin[(int) $torneo['id_torneo']] ?? 0);
+                    ?>
+
+                    <article class="torneo-card" data-nombre="<?php echo $nombreTorneo; ?>" data-estado="<?php echo $estadoTorneo; ?>">
+
+                        <div class="torneo-card-imagen">
+
+                            <?php if (!empty($imagenTorneo)) { ?>
+
+                                <img src="<?php echo htmlspecialchars($imagenTorneo, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo $nombreTorneo; ?>">
+
+                            <?php } else { ?>
+
+                                <div class="torneo-card-sin-imagen">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 3H18V7C18 10.3137 15.3137 13 12 13C8.68629 13 6 10.3137 6 7V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>Sin imagen</span>
+                                </div>
+
+                            <?php } ?>
+
+                            <div class="torneo-estado <?php echo $claseEstado; ?>">
+                                <span class="torneo-estado-punto"></span>
+                                <?php echo $estadoTorneo; ?>
+                            </div>
+
+                        </div>
+
+                        <div class="torneo-card-contenido">
+
+                            <h3><?php echo $nombreTorneo; ?></h3>
+
+                            <div class="torneo-dato">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                                    <path d="M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M8 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M3 10H21" stroke="currentColor" stroke-width="1.8"/>
+                                </svg>
+                                <span>
+                                    <?php echo $fechaInicio; ?> - <?php echo $fechaFin; ?>
+                                    <span class="torneo-horario"><?php echo $horaInicio; ?> - <?php echo $horaFin; ?></span>
+                                </span>
+                            </div>
+
+                            <div class="torneo-dato">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 21C16 16.5 19 13.5 19 9.5C19 5.91015 15.866 3 12 3C8.13401 3 5 5.91015 5 9.5C5 13.5 8 16.5 12 21Z" stroke="currentColor" stroke-width="1.8"/>
+                                    <circle cx="12" cy="9.5" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+                                </svg>
+                                <span><?php echo $lugarTorneo; ?> · <?php echo $clubTorneoAdmin; ?></span>
+                            </div>
+
+                            <div class="torneo-dato">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 3H18V7C18 10.3137 15.3137 13 12 13C8.68629 13 6 10.3137 6 7V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                                    <path d="M12 13V18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M8 21H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                                <span><?php echo $categoriaTorneo; ?> categoría</span>
+                            </div>
+
+                            <div class="torneo-dato">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/>
+                                    <circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+                                    <path d="M3.5 20C3.5 16.6863 5.96243 14 9 14C12.0376 14 14.5 16.6863 14.5 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M14.5 14.5C15.25 14.18 16.08 14 17 14C19.4853 14 21.5 15.79 21.5 18.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                                <span><?php echo $tipoTorneo; ?></span>
+                            </div>
+
+                            <div class="torneo-dato">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/>
+                                    <path d="M3.5 20C3.5 16.6863 5.96243 14 9 14C12.0376 14 14.5 16.6863 14.5 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M16 11C18.2091 11 20 12.7909 20 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                                <span><?php echo $confirmadosAdmin; ?> / <?php echo intval($torneo['max_participantes']); ?> participantes</span>
+                            </div>
+
+
+                            <!-- ACCIONES: el admin consulta y gestiona participantes,
+                                 no duplicamos editar/eliminar (son del organizador). -->
+
+                            <div class="torneo-card-acciones">
+
+                                <a href="ver_torneo.php?id=<?php echo intval($torneo['id_torneo']); ?>" class="btn-torneo ver">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M2.5 12C4.8 7.5 8 5 12 5C16 5 19.2 7.5 21.5 12C19.2 16.5 16 19 12 19C8 19 4.8 16.5 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                                        <circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+                                    </svg>
+                                    <span>Ver</span>
+                                </a>
+
+                                <a
+                                    href="gestionar_participantes.php?id_torneo=<?php echo intval($torneo['id_torneo']); ?>"
+                                    class="btn-torneo participantes"
+                                >
+                                    <i class="bi bi-people-fill"></i>
+                                    <span>Participantes</span>
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </article>
+
+                <?php } ?>
+
+            <?php } else { ?>
+
+                <div class="torneos-vacio">
+
+                    <div class="torneos-vacio-icono">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 3H18V7C18 10.3137 15.3137 13 12 13C8.68629 13 6 10.3137 6 7V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                            <path d="M6 5H3C3 9.41828 5.23858 12 8.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M18 5H21C21 9.41828 18.7614 12 15.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M12 13V18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M8 21H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+
+                    <h3>Todavía no hay torneos registrados</h3>
+
+                    <p>Cuando algún organizador cree un torneo, va a aparecer acá.</p>
+
+                </div>
+
+            <?php } ?>
+
+        </div>
 
 
     <?php } ?>
@@ -902,7 +1008,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
             <div class="canchas-titulo">
 
                 <div class="canchas-icono">
-                    🏟
+                    <i class="bi bi-geo-alt-fill"></i>
                 </div>
 
                 <div>
@@ -978,7 +1084,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
             <div class="estadistica-cancha">
 
                 <div class="estadistica-icono azul">
-                    🏟
+                    <i class="bi bi-geo-alt-fill"></i>
                 </div>
 
                 <div>
@@ -1000,7 +1106,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
             <div class="estadistica-cancha">
 
                 <div class="estadistica-icono verde">
-                    ✓
+                    <i class="bi bi-check-circle-fill"></i>
                 </div>
 
                 <div>
@@ -1022,7 +1128,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
             <div class="estadistica-cancha">
 
                 <div class="estadistica-icono rojo">
-                    ×
+                    <i class="bi bi-x-circle-fill"></i>
                 </div>
 
                 <div>
@@ -1042,44 +1148,6 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         </div>
 
-                <div>
-                    <span>Ocupadas</span>
-
-                    <strong>
-                        <?php echo $canchasOcupadas; ?>
-                    </strong>
-
-                    <small>
-                        En uso
-                    </small>
-                </div>
-
-            </div>
-
-
-            <!-- MANTENIMIENTO -->
-            <div class="estadistica-cancha">
-
-                <div class="estadistica-icono rojo">
-                    🔧
-                </div>
-
-                <div>
-                    <span>Mantenimiento</span>
-
-                    <strong>
-    <?php echo $canchasMantenimiento; ?>
-                    </strong>
-
-                    <small>
-                        En mantenimiento
-                    </small>
-                </div>
-
-            </div>
-
-        </div>
-
 
         <!-- ========================================= -->
         <!-- MIS CANCHAS -->
@@ -1092,7 +1160,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                 <div>
 
                     <h2>
-                        🏟 Mis canchas
+                        <i class="bi bi-geo-alt-fill"></i> Mis canchas
                     </h2>
 
                 </div>
@@ -1102,7 +1170,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                     type="button"
                     class="btn-agregar-cancha"
                 >
-                    ＋ Agregar cancha
+                    <i class="bi bi-plus-lg"></i> Agregar cancha
                 </button>
 
             </div>
@@ -1114,7 +1182,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                 <div class="buscador-cancha">
 
-                    <span>⌕</span>
+                    <span><i class="bi bi-search"></i></span>
 
                     <input
                         type="text"
@@ -1153,13 +1221,13 @@ $totalSolicitudes = $filaSolicitudes["total"];
                         type="button"
                         class="vista-activa"
                     >
-                        ▦
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
                     </button>
 
                     <button
                         type="button"
                     >
-                        ☷
+                        <i class="bi bi-list-ul"></i>
                     </button>
 
                 </div>
@@ -1235,7 +1303,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                 <?php } else { ?>
 
                                     <div class="cancha-sin-imagen">
-                                        🏟
+                                        <i class="bi bi-image"></i>
                                     </div>
 
                                 <?php } ?>
@@ -1265,7 +1333,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                 </h3>
 
                                 <p class="cancha-ubicacion">
-                                    📍 Cancha principal
+                                    <i class="bi bi-geo-alt-fill"></i> Cancha principal
                                 </p>
 
 
@@ -1277,7 +1345,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                         type="button"
                                         class="btn-cancha detalles"
                                     >
-                                        👁
+                                        <i class="bi bi-eye-fill"></i>
                                         <span>Ver detalles</span>
                                     </button>
 
@@ -1286,7 +1354,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                         type="button"
                                         class="btn-cancha estado"
                                     >
-                                        ⟳
+                                        <i class="bi bi-arrow-repeat"></i>
                                         <span>Cambiar estado</span>
                                     </button>
 
@@ -1298,7 +1366,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                             data-nombre="<?php echo htmlspecialchars($cancha['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-imagen="<?php echo htmlspecialchars($cancha['imagen'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                                         >
-                                            ✎
+                                            <i class="bi bi-pencil-fill"></i>
                                             <span>Editar</span>
                                         </button>
 
@@ -1315,7 +1383,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
                     <div class="canchas-vacio">
 
                         <div>
-                            🏟
+                            <i class="bi bi-geo-alt-fill"></i>
                         </div>
 
                         <h3>
@@ -1433,7 +1501,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                     <a href="paneles.php?seccion=inicio">
 
-                        🏠 Panel
+                        <i class="bi bi-house-door-fill icono-menu"></i> Panel
 
                     </a>
 
@@ -1446,7 +1514,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                     <a href="paneles.php?seccion=torneos">
 
-                        🏆 Torneos
+                        <i class="bi bi-trophy-fill icono-menu"></i> Torneos
 
                     </a>
 
@@ -1459,7 +1527,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                     <a href="paneles.php?seccion=canchas">
 
-                        🏟 Canchas
+                        <i class="bi bi-geo-alt-fill icono-menu"></i> Canchas
 
                     </a>
 
@@ -1472,7 +1540,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                     <a href="paneles.php?seccion=ranking">
 
-                        📊 Ranking
+                        <i class="bi bi-bar-chart-fill icono-menu"></i> Ranking
 
                     </a>
 
@@ -1485,7 +1553,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                     <a href="paneles.php?seccion=notificaciones">
 
-                        📢 Notificaciones
+                        <i class="bi bi-bell-fill icono-menu"></i> Notificaciones
 
                     </a>
 
@@ -1498,7 +1566,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
                     <a href="funciones/logout.php">
 
-                        🚪 Cerrar sesión
+                        <i class="bi bi-box-arrow-right icono-menu"></i> Cerrar sesión
 
                     </a>
 
@@ -2666,15 +2734,6 @@ $horaFin = date(
 
                         </button>
 
-                        <a
-                            href="gestionar_participantes.php?id_torneo=<?php echo intval($torneo['id_torneo']); ?>"
-                            class="btn-torneo participantes"
-                        >
-                            <i class="bi bi-people-fill"></i>
-                            <span>Participantes</span>
-                        </a>
-
-
                         <button
                             type="button"
                             class="btn-torneo editar"
@@ -2801,6 +2860,15 @@ $horaFin = date(
                             </span>
 
                         </button>
+
+
+                        <a
+                            href="gestionar_participantes.php?id_torneo=<?php echo intval($torneo['id_torneo']); ?>"
+                            class="btn-torneo participantes"
+                        >
+                            <i class="bi bi-people-fill"></i>
+                            <span>Participantes</span>
+                        </a>
 
                     </div>
 
@@ -3378,7 +3446,7 @@ $horaFin = date(
 
         <!-- ICONO -->
         <div class="modal-eliminar-icono">
-            🗑
+            <i class="bi bi-trash-fill"></i>
         </div>
 
         <!-- TITULO -->
@@ -3443,7 +3511,7 @@ $horaFin = date(
                     type="submit"
                     class="btn-modal-eliminar"
                 >
-                    <span>🗑</span>
+                    <span><i class="bi bi-trash-fill"></i></span>
                     Sí, eliminar
                 </button>
 
@@ -3515,7 +3583,7 @@ $horaFin = date(
             <div class="canchas-titulo">
 
                 <div class="canchas-icono">
-                    🏟
+                    <i class="bi bi-geo-alt-fill"></i>
                 </div>
 
                 <div>
@@ -3591,7 +3659,7 @@ $canchasNoDisponibles =
             <div class="estadistica-cancha">
 
                 <div class="estadistica-icono azul">
-                    🏟
+                    <i class="bi bi-geo-alt-fill"></i>
                 </div>
 
                 <div>
@@ -3613,7 +3681,7 @@ $canchasNoDisponibles =
             <div class="estadistica-cancha">
 
                 <div class="estadistica-icono verde">
-                    ✓
+                    <i class="bi bi-check-circle-fill"></i>
                 </div>
 
                 <div>
@@ -3634,7 +3702,7 @@ $canchasNoDisponibles =
            <!-- NO DISPONIBLES -->
 <div class="estadistica-cancha">
     <div class="estadistica-icono rojo">
-        !
+        <i class="bi bi-x-circle-fill"></i>
     </div>
 
     <div>
@@ -3664,7 +3732,7 @@ $canchasNoDisponibles =
                 <div>
 
                     <h2>
-                        🏟 Mis canchas
+                        <i class="bi bi-geo-alt-fill"></i> Mis canchas
                     </h2>
 
                 </div>
@@ -3675,7 +3743,7 @@ $canchasNoDisponibles =
                     class="btn-agregar-cancha"
                     id="btnAbrirAgregarCancha"
                 >
-                    ＋ Agregar cancha
+                    <i class="bi bi-plus-lg"></i> Agregar cancha
                 </button>
 
             </div>
@@ -3698,7 +3766,7 @@ $canchasNoDisponibles =
         <div class="modal-cancha-header">
 
             <div class="modal-cancha-icono">
-                🏟
+                <i class="bi bi-geo-alt-fill"></i>
             </div>
 
             <div>
@@ -3759,7 +3827,7 @@ $canchasNoDisponibles =
                 >
 
                     <div class="subir-imagen-icono">
-                        📷
+                        <i class="bi bi-camera-fill"></i>
                     </div>
 
                     <strong>
@@ -3792,7 +3860,7 @@ $canchasNoDisponibles =
 
             <div class="aviso-cancha">
 
-                <span>✓</span>
+                <span><i class="bi bi-check-circle-fill"></i></span>
 
                 <p>
                     La cancha se registrará automáticamente
@@ -3818,7 +3886,7 @@ $canchasNoDisponibles =
                     type="submit"
                     class="btn-guardar-cancha"
                 >
-                    ✓ Guardar cancha
+                    <i class="bi bi-check-circle-fill"></i> Guardar cancha
                 </button>
 
             </div>
@@ -3850,7 +3918,7 @@ $canchasNoDisponibles =
         <div class="modal-cancha-header">
 
             <div class="modal-cancha-icono">
-                ⟳
+                <i class="bi bi-arrow-repeat"></i>
             </div>
 
             <div>
@@ -3942,7 +4010,7 @@ $canchasNoDisponibles =
                     type="submit"
                     class="btn-guardar-cancha"
                 >
-                    ✓ Guardar cambios
+                    <i class="bi bi-check-circle-fill"></i> Guardar cambios
                 </button>
 
             </div>
@@ -3971,7 +4039,7 @@ $canchasNoDisponibles =
         <div class="modal-cancha-header">
 
             <div class="modal-cancha-icono">
-                ✎
+                <i class="bi bi-pencil-fill"></i>
             </div>
 
             <div>
@@ -4040,7 +4108,7 @@ $canchasNoDisponibles =
                 >
 
                     <div class="subir-imagen-icono">
-                        📷
+                        <i class="bi bi-camera-fill"></i>
                     </div>
 
                     <strong>
@@ -4087,7 +4155,7 @@ $canchasNoDisponibles =
                     type="submit"
                     class="btn-guardar-cancha"
                 >
-                    ✓ Guardar cambios
+                    <i class="bi bi-check-circle-fill"></i> Guardar cambios
                 </button>
 
             </div>
@@ -4101,7 +4169,7 @@ $canchasNoDisponibles =
 
                 <div class="buscador-cancha">
 
-                    <span>⌕</span>
+                    <span><i class="bi bi-search"></i></span>
 
                     <input
                         type="text"
@@ -4137,13 +4205,13 @@ $canchasNoDisponibles =
                         type="button"
                         class="vista-activa"
                     >
-                        ▦
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
                     </button>
 
                     <button
                         type="button"
                     >
-                        ☷
+                        <i class="bi bi-list-ul"></i>
                     </button>
 
                 </div>
@@ -4174,7 +4242,7 @@ $canchasNoDisponibles =
 
         <!-- ICONO -->
         <div class="modal-eliminar-icono">
-            🗑
+            <i class="bi bi-trash-fill"></i>
         </div>
 
         <!-- TITULO -->
@@ -4239,7 +4307,7 @@ $canchasNoDisponibles =
                     type="submit"
                     class="btn-modal-eliminar"
                 >
-                    <span>🗑</span>
+                    <span><i class="bi bi-trash-fill"></i></span>
                     Sí, eliminar
                 </button>
 
@@ -4314,7 +4382,7 @@ $canchasNoDisponibles =
                                 <?php } else { ?>
 
                                     <div class="cancha-sin-imagen">
-                                        🏟
+                                        <i class="bi bi-image"></i>
                                     </div>
 
                                 <?php } ?>
@@ -4344,7 +4412,7 @@ $canchasNoDisponibles =
                                 </h3>
 
                                 <p class="cancha-ubicacion">
-                                    📍 Cancha principal
+                                    <i class="bi bi-geo-alt-fill"></i> Cancha principal
                                 </p>
 
 
@@ -4360,7 +4428,7 @@ $canchasNoDisponibles =
                                                 data-nombre="<?php echo htmlspecialchars($cancha['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
                                                 data-estado="<?php echo htmlspecialchars($cancha['estado'], ENT_QUOTES, 'UTF-8'); ?>"
                                             >
-                                                ⟳
+                                                <i class="bi bi-arrow-repeat"></i>
                                                 <span>Cambiar estado</span>
                                                 </button>
 
@@ -4372,7 +4440,7 @@ $canchasNoDisponibles =
                                             data-nombre="<?php echo htmlspecialchars($cancha['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-imagen="<?php echo htmlspecialchars($cancha['imagen'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                                         >
-                                            ✎
+                                            <i class="bi bi-pencil-fill"></i>
                                             <span>Editar</span>
                                         </button>
                                          <button
@@ -4381,7 +4449,7 @@ $canchasNoDisponibles =
                                             data-id="<?php echo $cancha['id_cancha']; ?>"
                                             data-nombre="<?php echo htmlspecialchars($cancha['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
                                         >
-                                            🗑
+                                            <i class="bi bi-trash-fill"></i>
                                             <span>Eliminar</span>
                                         </button>
 
@@ -4398,7 +4466,7 @@ $canchasNoDisponibles =
                     <div class="canchas-vacio">
 
                         <div>
-                            🏟
+                            <i class="bi bi-geo-alt-fill"></i>
                         </div>
 
                         <h3>

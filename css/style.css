@@ -4532,6 +4532,19 @@
         font-size: 14px;
     }
 
+    /* Icono reutilizable del sidebar (admin/organizador): tamaño fijo y
+       compacto, independiente del font-size del texto del enlace, para que
+       no dependa de reglas globales ni del tamaño intrínseco del elemento. */
+    .icono-menu {
+        display: inline-block;
+        width: 20px;
+        font-size: 18px;
+        text-align: center;
+        vertical-align: middle;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+
     /* ---------- CONTENIDO ---------- */
 
     body.panel-body .contenido {
@@ -6042,6 +6055,11 @@
 
         border-top:
             1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    /* Fila 2: Participantes ocupa todo el ancho, solo. */
+    .torneo-card-acciones .btn-torneo.participantes {
+        grid-column: 1 / -1;
     }
 
     .btn-torneo {

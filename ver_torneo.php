@@ -20,6 +20,7 @@ if (!isset($_SESSION['id_usuario'])) {
 
 
   if (
+    $_SESSION['id_rol'] != 1 &&
     $_SESSION['id_rol'] != 2 &&
     $_SESSION['id_rol'] != 3
 ) {
@@ -223,18 +224,98 @@ if ($torneo['tipo'] === 'Individual') {
 
 /* =========================================================
    DISTRIBUCIÓN EN GRUPOS
-   (propuesta calculada en el momento a partir de las
-   inscripciones/parejas confirmadas actuales: no se guarda
-   en la base de datos, así que puede cambiar si se confirman
-   más inscripciones más adelante. No es una fase definitiva.)
+   Si el organizador/admin ya armó grupos persistentes
+   (tablas grupo/grupo_inscripcion/grupo_pareja) se usan esos,
+   respetando nombre y orden. Si todavía no hay ninguno, se
+   mantiene la propuesta automática calculada en el momento
+   (no guardada) como alternativa, igual que antes.
    ========================================================= */
 
 $grupos = [];
+$gruposPersistidos = false;
 
-$TAMANIO_GRUPO = 4;
-$MINIMO_PARA_AGRUPAR = 5;
+$stmtGruposGuardados = mysqli_prepare(
+    $conexion,
+    "SELECT id_grupo, nombre FROM grupo WHERE id_torneo = ? ORDER BY orden ASC, id_grupo ASC"
+);
+mysqli_stmt_bind_param($stmtGruposGuardados, "i", $id_torneo);
+mysqli_stmt_execute($stmtGruposGuardados);
+$filasGruposGuardados = mysqli_fetch_all(mysqli_stmt_get_result($stmtGruposGuardados), MYSQLI_ASSOC);
 
-if (count($entradasConfirmadas) > 0) {
+if (count($filasGruposGuardados) > 0) {
+
+    $gruposPersistidos = true;
+    $letrasGrupos = range('A', 'Z');
+
+    foreach ($filasGruposGuardados as $indice => $filaGrupo) {
+
+        $idGrupoActual = (int) $filaGrupo['id_grupo'];
+        $miembrosGrupo = [];
+
+        if ($torneo['tipo'] === 'Individual') {
+
+            $stmtMiembros = mysqli_prepare(
+                $conexion,
+                "SELECT u.nombre, u.apellido
+                 FROM grupo_inscripcion gi
+                 INNER JOIN inscripcion insc ON insc.id_inscripcion = gi.id_inscripcion
+                 INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
+                 WHERE gi.id_grupo = ? AND insc.estado = 'Confirmada'
+                 ORDER BY gi.orden ASC, gi.id_grupo_inscripcion ASC"
+            );
+            mysqli_stmt_bind_param($stmtMiembros, "i", $idGrupoActual);
+            mysqli_stmt_execute($stmtMiembros);
+            $filasMiembros = mysqli_fetch_all(mysqli_stmt_get_result($stmtMiembros), MYSQLI_ASSOC);
+
+            foreach ($filasMiembros as $m) {
+                $miembrosGrupo[] = ['nombre' => trim($m['nombre'] . ' ' . $m['apellido'])];
+            }
+
+        } else {
+
+            $stmtMiembros = mysqli_prepare(
+                $conexion,
+                "SELECT u1.nombre AS nombre1, u1.apellido AS apellido1,
+                        u2.nombre AS nombre2, u2.apellido AS apellido2
+                 FROM grupo_pareja gp
+                 INNER JOIN pareja p ON p.id_pareja = gp.id_pareja
+                 INNER JOIN inscripcion i1 ON i1.id_inscripcion = p.id_inscripcion_1
+                 INNER JOIN inscripcion i2 ON i2.id_inscripcion = p.id_inscripcion_2
+                 INNER JOIN usuario u1 ON u1.id_usuario = i1.id_usuario
+                 INNER JOIN usuario u2 ON u2.id_usuario = i2.id_usuario
+                 WHERE gp.id_grupo = ?
+                 ORDER BY gp.orden ASC, gp.id_grupo_pareja ASC"
+            );
+            mysqli_stmt_bind_param($stmtMiembros, "i", $idGrupoActual);
+            mysqli_stmt_execute($stmtMiembros);
+            $filasMiembros = mysqli_fetch_all(mysqli_stmt_get_result($stmtMiembros), MYSQLI_ASSOC);
+
+            foreach ($filasMiembros as $m) {
+                $miembrosGrupo[] = [
+                    'nombres' => [
+                        trim($m['nombre1'] . ' ' . $m['apellido1']),
+                        trim($m['nombre2'] . ' ' . $m['apellido2']),
+                    ],
+                ];
+            }
+
+        }
+
+        $grupos[] = [
+            'letra'  => $letrasGrupos[$indice] ?? ('G' . ($indice + 1)),
+            'nombre' => $filaGrupo['nombre'],
+        ] + (
+            $torneo['tipo'] === 'Individual'
+                ? ['participantes' => $miembrosGrupo]
+                : ['parejas' => $miembrosGrupo]
+        );
+
+    }
+
+} elseif (count($entradasConfirmadas) > 0) {
+
+    $TAMANIO_GRUPO = 4;
+    $MINIMO_PARA_AGRUPAR = 5;
 
     if (count($entradasConfirmadas) < $MINIMO_PARA_AGRUPAR) {
 
@@ -330,7 +411,7 @@ $final = null;
 
                 <h2>The Bull</h2>
 
-                <span>Organizador</span>
+                <span><?php echo ($_SESSION['id_rol'] == 1) ? 'Administrador' : 'Organizador'; ?></span>
 
             </div>
 
@@ -380,7 +461,7 @@ $final = null;
         <!-- CONTENIDO -->
 
         <main class="contenido">
-            <?php if ($_SESSION['id_rol'] == 2) { ?>
+            <?php if ($_SESSION['id_rol'] == 1 || $_SESSION['id_rol'] == 2) { ?>
 
     <!-- =========================================
          VISTA DEL ORGANIZADOR
@@ -404,9 +485,20 @@ $final = null;
 
                 </div>
 
-                <a href="paneles.php?seccion=torneos" class="vt-volver">
-                    <i class="bi bi-arrow-left"></i> Volver a torneos
-                </a>
+                <div class="vt-topbar-acciones">
+
+                    <a
+                        href="gestionar_grupos.php?id_torneo=<?php echo (int) $id_torneo; ?>"
+                        class="vt-volver"
+                    >
+                        <i class="bi bi-diagram-3"></i> Gestionar grupos
+                    </a>
+
+                    <a href="paneles.php?seccion=torneos" class="vt-volver">
+                        <i class="bi bi-arrow-left"></i> Volver a torneos
+                    </a>
+
+                </div>
 
             </div>
 
@@ -461,7 +553,11 @@ $final = null;
                     <div class="vt-seccion-titulo">
                         <span class="vt-eyebrow">COMPETENCIA</span>
                         <h2>Fase de grupos</h2>
-                        <p>Distribución propuesta a partir de las inscripciones confirmadas</p>
+                        <p>
+                            <?php echo $gruposPersistidos
+                                ? 'Distribución configurada por la organización'
+                                : 'Distribución propuesta a partir de las inscripciones confirmadas'; ?>
+                        </p>
                     </div>
 
                     <?php if (empty($grupos)) { ?>
@@ -519,10 +615,15 @@ $final = null;
                         </table>
 
                         <p class="vt-nota-datos">
-                            * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
-                            <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
-                            No es una fase guardada de forma permanente: puede cambiar si se confirman más inscripciones.
-                            Las columnas PJ/PG/PTS están en cero porque todavía no hay partidos cargados.
+                            <?php if ($gruposPersistidos) { ?>
+                                * Distribución guardada por la organización. Las columnas PJ/PG/PTS
+                                están en cero porque todavía no hay partidos cargados.
+                            <?php } else { ?>
+                                * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
+                                <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
+                                No es una fase guardada de forma permanente: puede cambiar si se confirman más inscripciones.
+                                Las columnas PJ/PG/PTS están en cero porque todavía no hay partidos cargados.
+                            <?php } ?>
                         </p>
 
                     </div>
@@ -716,7 +817,11 @@ $final = null;
         <div class="vt-seccion-titulo">
             <span class="vt-eyebrow">COMPETENCIA</span>
             <h2>Fase de grupos</h2>
-            <p>Distribución propuesta a partir de las inscripciones confirmadas</p>
+            <p>
+                <?php echo $gruposPersistidos
+                    ? 'Distribución configurada por la organización'
+                    : 'Distribución propuesta a partir de las inscripciones confirmadas'; ?>
+            </p>
         </div>
 
         <?php if (empty($grupos)) { ?>
@@ -782,9 +887,13 @@ $final = null;
             </table>
 
             <p class="vt-nota-datos">
-                * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
-                <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
-                No es una fase guardada de forma permanente.
+                <?php if ($gruposPersistidos) { ?>
+                    * Distribución guardada por la organización.
+                <?php } else { ?>
+                    * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
+                    <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
+                    No es una fase guardada de forma permanente.
+                <?php } ?>
             </p>
 
         </div>
