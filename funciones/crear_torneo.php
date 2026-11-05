@@ -49,7 +49,6 @@ $fecha_inicio = $_POST['fecha_inicio'] ?? '';
 $hora_inicio = $_POST['hora_inicio'] ?? '';
 
 $fecha_fin = $_POST['fecha_fin'] ?? '';
-$hora_fin = $_POST['hora_fin'] ?? '';
 
 $categoria = trim($_POST['categoria'] ?? '');
 $tipo = trim($_POST['tipo'] ?? '');
@@ -115,11 +114,42 @@ if ($fecha_fin < $fecha_inicio) {
     exit;
 
 }
+
+
+/* =========================================================
+   LA FECHA DE INICIO NO PUEDE SER ANTERIOR A HOY
+   "Hoy" sale de MySQL (hora de este equipo), no de PHP, que trabaja en UTC
+   y de noche ya estaría un día adelantado.
+   ========================================================= */
+
+$fechaInicioValida = DateTime::createFromFormat('!Y-m-d', $fecha_inicio);
+
+if (!$fechaInicioValida || $fechaInicioValida->format('Y-m-d') !== $fecha_inicio) {
+
+    header(
+        "Location: ../paneles.php?seccion=torneos&error=fechas"
+    );
+
+    exit;
+
+}
+
+$hoy = mysqli_fetch_row(mysqli_query($conexion, "SELECT CURDATE()"))[0];
+
+if ($fecha_inicio < $hoy) {
+
+    header(
+        "Location: ../paneles.php?seccion=torneos&error=fecha_pasada"
+    );
+
+    exit;
+
+}
 /* =========================================================
    VALIDAR HORAS
    ========================================================= */
 
-if ($hora_inicio === '' || $hora_fin === '') {
+if ($hora_inicio === '') {
 
     header(
         "Location: ../paneles.php?seccion=torneos&error=horas"
@@ -129,24 +159,6 @@ if ($hora_inicio === '' || $hora_fin === '') {
 
 }
 
-
-/* =========================================================
-   SI ES EL MISMO DÍA
-   LA HORA FINAL NO PUEDE SER ANTERIOR
-   ========================================================= */
-
-if (
-    $fecha_inicio === $fecha_fin &&
-    $hora_fin <= $hora_inicio
-) {
-
-    header(
-        "Location: ../paneles.php?seccion=torneos&error=hora_invalida"
-    );
-
-    exit;
-
-}
 
 
 /* =========================================================
@@ -502,7 +514,6 @@ $sql = "
     fecha_inicio,
     hora_inicio,
     fecha_fin,
-    hora_fin,
     lugar,
     id_club,
     id_categoria,
@@ -510,7 +521,7 @@ $sql = "
     max_participantes,
     estado
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ";
 
 $stmt = mysqli_prepare(
@@ -541,13 +552,12 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "sssssssiisis",
+    "ssssssiisis",
     $nombre,
     $rutaImagen,
     $fecha_inicio,
     $hora_inicio,
     $fecha_fin,
-    $hora_fin,
     $lugar,
     $id_club,
     $id_categoria,

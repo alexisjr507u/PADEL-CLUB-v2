@@ -41,7 +41,7 @@ if ($id_torneo <= 0 || !filter_var($email_invitado, FILTER_VALIDATE_EMAIL)) {
 
 $stmtTitular = mysqli_prepare(
     $conexion,
-    "SELECT nombre, apellido, email, id_categoria FROM usuario WHERE id_usuario = ?"
+    "SELECT nombre, apellido, email, id_categoria, categoria_estado FROM usuario WHERE id_usuario = ?"
 );
 mysqli_stmt_bind_param($stmtTitular, "i", $id_usuario_titular);
 mysqli_stmt_execute($stmtTitular);
@@ -84,6 +84,11 @@ try {
 
     if (!in_array($torneo['tipo'], ['Parejas', 'Mixto'], true)) {
         throw new Exception("tipo_invalido");
+    }
+
+    // Una categoría pendiente de revisión no cuenta como confirmada.
+    if ($titular['categoria_estado'] === 'Pendiente') {
+        throw new Exception("categoria_pendiente");
     }
 
     if ((int) $titular['id_categoria'] !== (int) $torneo['id_categoria']) {
@@ -141,7 +146,7 @@ try {
 
     $stmtInvitado = mysqli_prepare(
         $conexion,
-        "SELECT id_usuario, nombre, apellido, id_categoria FROM usuario WHERE email = ?"
+        "SELECT id_usuario, nombre, apellido, id_categoria, categoria_estado FROM usuario WHERE email = ?"
     );
     mysqli_stmt_bind_param($stmtInvitado, "s", $email_invitado);
     mysqli_stmt_execute($stmtInvitado);
@@ -150,6 +155,10 @@ try {
     $id_usuario_invitado = null;
 
     if ($invitado) {
+
+        if ($invitado['categoria_estado'] === 'Pendiente') {
+            throw new Exception("companero_categoria_pendiente");
+        }
 
         if ((int) $invitado['id_categoria'] !== (int) $torneo['id_categoria']) {
             throw new Exception("companero_categoria_incompatible");

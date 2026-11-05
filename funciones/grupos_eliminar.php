@@ -77,8 +77,11 @@ try {
 
     $motivo = $e->getMessage();
 
-    if ($motivo === 'error_bd') {
+    if ($e->getCode() === 1451 || mysqli_errno($conexion) === 1451) {
+        $motivo = 'tiene_partidos';
+    } elseif (!in_array($motivo, ['no_existe', 'sin_permiso'], true)) {
         error_log("Error al eliminar grupo $id_grupo: " . mysqli_error($conexion));
+        $motivo = 'error_bd';
     }
 
     header("Location: ../gestionar_grupos.php?id_torneo=$id_torneo&accion=" . urlencode($motivo));

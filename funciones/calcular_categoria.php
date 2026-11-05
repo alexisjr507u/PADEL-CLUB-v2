@@ -2,6 +2,7 @@
 
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("clasificacion_categoria.php");
 
 if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
@@ -10,61 +11,43 @@ if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
 }
 
-// Puntos de la parte 1
-$puntos1 = $_SESSION["puntos1"];
+// La parte 2 requiere haber completado la parte 1 en esta sesión.
+if (empty($_SESSION["encuesta_parte1"]) || !is_array($_SESSION["encuesta_parte1"])) {
 
-// Puntos de la parte 2
-$puntos2 =
-    $_POST["p6"] +
-    $_POST["p7"] +
-    $_POST["p8"] +
-    $_POST["p9"] +
-    $_POST["p10"];
+    header("Location: ../encuesta_categoria.php");
+    exit();
 
-// Total de puntos
-$total = $puntos1 + $puntos2;
+}
 
-// Guardamos el total por si lo queremos mostrar luego
-$_SESSION["puntos_totales"] = $total;
+$respuestas = $_SESSION["encuesta_parte1"];
 
-// Calculamos el porcentaje
-$porcentaje = ($total / 50) * 100;
+for ($numero = 6; $numero <= 10; $numero++) {
+    $respuestas[$numero] = $_POST["p$numero"] ?? null;
+}
 
-$_SESSION["porcentaje"] = $porcentaje;
+$clasificacion = calcularClasificacionEncuesta($respuestas);
 
-// Asignar categoría
+if (!$clasificacion['valido']) {
 
-if ($porcentaje <= 19) {
+    header("Location: ../encuesta_categoria2.php");
+    exit();
 
-    $_SESSION["id_categoria"] = 1; // Principiante
+}
 
-} elseif ($porcentaje <= 34) {
+$_SESSION["clasificacion"] = $clasificacion;
+unset($_SESSION["encuesta_parte1"]);
 
-    $_SESSION["id_categoria"] = 2; // 7ta
+if ($clasificacion['requiere_revision']) {
 
-} elseif ($porcentaje <= 49) {
-
-    $_SESSION["id_categoria"] = 3; // 6ta
-
-} elseif ($porcentaje <= 64) {
-
-    $_SESSION["id_categoria"] = 4; // 5ta
-
-} elseif ($porcentaje <= 79) {
-
-    $_SESSION["id_categoria"] = 5; // 4ta
-
-} elseif ($porcentaje <= 89) {
-
-    $_SESSION["id_categoria"] = 6; // 3ra
-
-} elseif ($porcentaje <= 95) {
-
-    $_SESSION["id_categoria"] = 7; // 2da
+    // Pendiente: no hay categoría definitiva hasta que la revise el administrador.
+    // id_categoria queda vacío, así ninguna validación de categoría la da por buena.
+    $_SESSION["id_categoria"] = null;
+    $_SESSION["categoria_estado"] = 'Pendiente';
 
 } else {
 
-    $_SESSION["id_categoria"] = 8; // 1ra
+    $_SESSION["id_categoria"] = $clasificacion['id_categoria_estimada'];
+    $_SESSION["categoria_estado"] = 'Confirmada';
 
 }
 

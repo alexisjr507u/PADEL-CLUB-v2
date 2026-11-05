@@ -505,21 +505,23 @@
 
 .vt-avatar {
 
-    width: 34px;
+    width: 40px;
 
-    height: 34px;
+    height: 40px;
 
-    min-width: 34px;
+    min-width: 40px;
 
     border-radius: 50%;
 
-    background: #0A4568;
+    background: linear-gradient(135deg, #2f7bff, #0A4568);
 
-    color: #cfe0f5;
+    color: #eaf2ff;
 
     font-weight: bold;
 
-    font-size: 12px;
+    font-size: 13px;
+
+    letter-spacing: 0.5px;
 
     display: flex;
 
@@ -527,9 +529,21 @@
 
     justify-content: center;
 
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
 }
 
-.vt-pareja-nombres strong {
+.vt-pareja-nombres {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+
+}
+
+.vt-pareja-nombres strong:not(.vt-pareja-apodo) {
 
     display: block;
 
@@ -539,19 +553,43 @@
 
 }
 
-.vt-pareja-nombres span {
+.vt-pareja-apodo {
+
+    display: block;
+
+    color: #5b9cff;
+
+    font-size: 13.5px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.6px;
+
+    text-transform: uppercase;
+
+}
+
+.vt-pareja-completo {
+
+    display: block;
 
     color: #92a2b6;
 
     font-size: 12px;
 
+    line-height: 1.4;
+
 }
 
 .vt-tabla-grupo td strong {
 
-    color: #2f7bff;
-
     font-size: 15px;
+
+}
+
+.vt-tabla-grupo td:last-child strong {
+
+    color: #2f7bff;
 
 }
 
@@ -678,6 +716,12 @@
     gap: 26px;
 
     margin-top: 10px;
+
+}
+
+.vt-bracket.vt-bracket-2col {
+
+    grid-template-columns: repeat(2, 1fr);
 
 }
 
@@ -928,4 +972,407 @@
     color: #9CB2C5;
     font-size: 14px;
     line-height: 1.6;
+}
+
+/* =========================================================
+   BARRA LATERAL FIJA (escritorio)
+   La barra queda anclada a la ventana con su alto completo y scroll
+   propio; el contenido se desplaza solo. Se usa sticky dentro del flex
+   del .panel para conservar el ancho actual sin solapar el contenido.
+   En <=900px rige el comportamiento responsive existente.
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+    body.panel-body .panel > .sidebar {
+        position: sticky !important;
+        top: 0;
+        align-self: flex-start;
+        flex-shrink: 0;
+        height: 100vh;
+        min-height: 0;
+        box-sizing: border-box;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    body.panel-body .panel > .contenido {
+        margin-left: 0;
+        min-width: 0;
+    }
+
+}
+
+
+/* =========================================================
+   RANKING FINAL DEL TORNEO (tabla general + avisos)
+   ========================================================= */
+
+.vt-ranking-card {
+    overflow-x: auto;
+}
+
+.vt-ranking-aviso {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    border: 1px solid #0A4568;
+}
+
+.vt-ranking-provisional {
+    background: rgba(245, 166, 35, 0.10);
+    border-color: rgba(245, 166, 35, 0.35);
+    color: #f5c26b;
+}
+
+.vt-ranking-final {
+    background: rgba(34, 197, 94, 0.10);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+}
+
+.vt-ranking-alerta {
+    background: rgba(255, 107, 107, 0.12);
+    border-color: rgba(255, 107, 107, 0.35);
+    color: #ff9b9b;
+}
+
+.vt-tabla-ranking {
+    min-width: 640px;
+}
+
+.vt-tabla-ranking td:last-child strong {
+    color: #2f7bff;
+}
+
+.vt-tabla-ranking tr.vt-ranking-podio td:first-child,
+.vt-tabla-ranking tr.vt-ranking-podio td:nth-child(2) {
+    color: #fbbf24;
+}
+
+.vt-tabla-ranking td span {
+    margin-left: 4px;
+    color: #7c8ba0;
+    cursor: help;
+}
+
+.vt-dos-columnas.vt-una-columna {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.vt-ranking-bloque {
+    min-width: 0;
+    margin-bottom: 45px;
+}
+.vt-ranking-bloque { margin-top: 40px; }
+
+/* Pestañas del torneo (reutilizan .grupos-subnav de grupos.css) */
+.vt-tabs {
+    margin: 0 0 28px;
+}
+
+.grupos-tab-panel .vt-ranking-bloque {
+    margin-top: 0;
+}
+
+/* El cuadro de cruces es solo un envoltorio de las tarjetas de partido:
+   sin fondo ni borde propio, deja ver el fondo general como en
+   gestionar_grupos.php. Las tarjetas de partido conservan su fondo. */
+.vt-card.vt-bracket-card {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+
+/* =========================================================
+   TRANSICIÓN ENTRE GRUPOS (tarjeta "Fase de grupos")
+   La animación la hace js/padel.js; acá solo el envoltorio de la tabla.
+   Si la tabla no entra en pantallas angostas, se desplaza dentro de la tarjeta.
+   ========================================================= */
+
+.vt-grupo-tabla-wrap {
+    overflow-x: auto;
+}
+
+
+/* =========================================================
+   CUADRO CON OCTAVOS / CUARTOS (torneos con 4 u 8 grupos)
+   Una columna por ronda; si no entran, el cuadro se desplaza dentro de la tarjeta.
+   ========================================================= */
+
+.vt-card.vt-bracket-card {
+    overflow-x: auto;
+}
+
+.vt-bracket.vt-bracket-ncol {
+    grid-template-columns: repeat(var(--cols, 4), minmax(210px, 1fr));
+    min-width: min-content;
+}
+
+.vt-bracket-col.ronda {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    gap: 12px;
+}
+
+.vt-bracket-col.ronda .vt-match {
+    margin-bottom: 0;
+}
+
+.vt-bracket-ncol .vt-bracket-col.semis,
+.vt-bracket-ncol .vt-bracket-col.final {
+    padding: 0;
+}
+
+.vt-bracket-ncol .vt-bracket-col.semis .vt-bracket-col-titulo,
+.vt-bracket-ncol .vt-bracket-col.final .vt-bracket-col-titulo {
+    margin-top: 0;
+}
+
+/* Títulos de ronda alineados arriba en todas las columnas */
+.vt-bracket-ncol .vt-bracket-col {
+    position: relative;
+    padding: 28px 0 0;
+}
+
+.vt-bracket-ncol .vt-bracket-col .vt-bracket-col-titulo,
+.vt-bracket-ncol .vt-bracket-col.semis .vt-bracket-col-titulo,
+.vt-bracket-ncol .vt-bracket-col.final .vt-bracket-col-titulo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+}
+
+
+/* =========================================================
+   CUADRO SIMÉTRICO (octavos / cuartos -> semifinales -> final)
+   Árbol de partidos: cada partido recibe a los ganadores de sus dos
+   "hijos". La mitad derecha es el espejo de la izquierda.
+   ========================================================= */
+
+.br-scroll {
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.br-cuadro {
+    --w: 168px;      /* ancho de cada partido */
+    --c: 28px;       /* ancho del conector entre rondas */
+    --linea: #2f6aa3;
+    width: max-content;
+    margin: 0 auto;
+}
+
+.br-titulos {
+    display: flex;
+    gap: var(--c);
+    margin-bottom: 14px;
+}
+
+.br-col {
+    width: var(--w);
+    text-align: center;
+    color: #7c8ba0;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.br-col-final {
+    color: #fbbf24;
+}
+
+.br-arbol {
+    display: flex;
+    align-items: center;
+}
+
+.br-nodo {
+    display: flex;
+    align-items: center;
+}
+
+.br-hijos {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding-right: var(--c);
+}
+
+/* línea vertical que une los dos partidos hijos */
+.br-hijos::before {
+    content: "";
+    position: absolute;
+    right: calc(var(--c) / 2);
+    top: 25%;
+    bottom: 25%;
+    border-right: 2px solid var(--linea);
+}
+
+/* salida hacia el partido padre */
+.br-hijos::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: calc(var(--c) / 2);
+    border-top: 2px solid var(--linea);
+}
+
+.br-partido {
+    position: relative;
+    width: var(--w);
+    margin: 7px 0;
+    background: #052B47;
+    border: 1px solid #0A4568;
+    border-radius: 10px;
+    overflow: visible;
+}
+
+/* línea hacia la derecha (hacia el conector) */
+.br-partido::after {
+    content: "";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    width: calc(var(--c) / 2);
+    border-top: 2px solid var(--linea);
+}
+
+.br-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    color: #8da1b6;
+    font-size: 13px;
+    min-height: 18px;
+}
+
+.br-fila + .br-fila {
+    border-top: 1px solid #0A4568;
+}
+
+.br-fila.gano {
+    background: #07385a;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 9px;
+}
+
+.br-nombre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.br-marcador {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: #5aa9ff;
+}
+
+.br-vacio {
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.br-pendiente .br-fila {
+    color: #c3d1e0;
+}
+
+/* ---- Centro: final y campeón ---- */
+
+.br-centro {
+    position: relative;
+    margin: 0 var(--c);
+}
+
+.br-final {
+    margin: 0;
+    border-color: #2f6aa3;
+}
+
+.br-final::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    width: calc(var(--c) / 2);
+    border-top: 2px solid var(--linea);
+}
+
+/* la final no lleva línea de salida a la derecha, sino a ambos lados */
+.br-final::after {
+    left: 100%;
+}
+
+.br-campeon {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 8px;
+    border-radius: 12px;
+    border: 1px dashed #2f7bff;
+    background: #052B47;
+    color: #8fb8ff;
+    text-align: center;
+}
+
+.br-campeon i {
+    font-size: 22px;
+}
+
+.br-campeon span {
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.br-campeon strong {
+    color: #ffffff;
+    font-size: 15px;
+}
+
+/* ---- Mitad derecha (espejo) ---- */
+
+.br-espejo {
+    flex-direction: row-reverse;
+}
+
+.br-espejo .br-hijos {
+    padding-right: 0;
+    padding-left: var(--c);
+}
+
+.br-espejo .br-hijos::before {
+    right: auto;
+    left: calc(var(--c) / 2);
+    border-right: 0;
+    border-left: 2px solid var(--linea);
+}
+
+.br-espejo .br-hijos::after {
+    right: auto;
+    left: 0;
+}
+
+.br-espejo > .br-partido::after {
+    left: auto;
+    right: 100%;
 }

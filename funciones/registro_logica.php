@@ -3,6 +3,7 @@ include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("enviar_codigo.php");
 require_once("csrf.php");
+require_once("validar_nombre.php");
 
 if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
@@ -11,8 +12,16 @@ if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
 }
 
-$nombre = $_POST['nombre'];
-$apellido = $_POST['apellido'];
+$nombre = normalizar_nombre_persona($_POST['nombre'] ?? '');
+$apellido = normalizar_nombre_persona($_POST['apellido'] ?? '');
+
+if ($nombre === null || $apellido === null) {
+
+    header("Location: ../registro_participante.php?error=nombre");
+    exit();
+
+}
+
 $fecha_nacimiento = $_POST['fecha_nacimiento'];
 $telefono = $_POST['telefono'];
 

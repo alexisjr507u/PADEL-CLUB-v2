@@ -122,8 +122,11 @@ try {
 
     $motivo = $e->getMessage();
 
-    if ($motivo === 'error_bd') {
+    if ($e->getCode() === 1451 || mysqli_errno($conexion) === 1451) {
+        $motivo = 'tiene_partidos';
+    } elseif (!in_array($motivo, ['no_existe', 'sin_permiso', 'elemento_no_asignado'], true)) {
         error_log("Error al quitar $tipo $id_elemento de su grupo: " . mysqli_error($conexion));
+        $motivo = 'error_bd';
     }
 
     header("Location: ../gestionar_grupos.php?id_torneo=$id_torneo&accion=" . urlencode($motivo));

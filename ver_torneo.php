@@ -2,8 +2,8 @@
 
 include("config/no_cache.php");
 include("config/conexion.php");
-
-session_regenerate_id(true);
+require_once("funciones/standings.php");
+require_once("funciones/ranking_torneo.php");
 
 
 /* =========================================================
@@ -54,7 +54,6 @@ $sqlTorneo = "
         torneos.nombre,
         torneos.fecha_inicio,
         torneos.hora_inicio,
-        torneos.hora_fin,
         torneos.tipo,
         torneos.estado,
         torneos.max_participantes,
@@ -125,8 +124,6 @@ $fechaTorneoFormateada =
 
 $horarioTorneo =
     date('H:i', strtotime($torneo['hora_inicio'])) .
-    ' - ' .
-    date('H:i', strtotime($torneo['hora_fin'])) .
     ' hs';
 
 
@@ -213,6 +210,10 @@ if ($torneo['tipo'] === 'Individual') {
                 trim($fila['nombre1'] . ' ' . $fila['apellido1']),
                 trim($fila['nombre2'] . ' ' . $fila['apellido2']),
             ],
+            'apellidos' => [
+                trim($fila['apellido1']),
+                trim($fila['apellido2']),
+            ],
         ];
 
     }
@@ -251,52 +252,56 @@ if (count($filasGruposGuardados) > 0) {
 
         $idGrupoActual = (int) $filaGrupo['id_grupo'];
         $miembrosGrupo = [];
+        $esIndividualGrupo = ($torneo['tipo'] === 'Individual');
 
-        if ($torneo['tipo'] === 'Individual') {
+        $datosGrupoPersistido = obtenerMiembrosYPartidosDeGrupo($conexion, $idGrupoActual, $esIndividualGrupo);
 
-            $stmtMiembros = mysqli_prepare(
-                $conexion,
-                "SELECT u.nombre, u.apellido
-                 FROM grupo_inscripcion gi
-                 INNER JOIN inscripcion insc ON insc.id_inscripcion = gi.id_inscripcion
-                 INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
-                 WHERE gi.id_grupo = ? AND insc.estado = 'Confirmada'
-                 ORDER BY gi.orden ASC, gi.id_grupo_inscripcion ASC"
-            );
-            mysqli_stmt_bind_param($stmtMiembros, "i", $idGrupoActual);
-            mysqli_stmt_execute($stmtMiembros);
-            $filasMiembros = mysqli_fetch_all(mysqli_stmt_get_result($stmtMiembros), MYSQLI_ASSOC);
+        $miembrosPorIdEntrante = [];
+        foreach ($datosGrupoPersistido['miembros'] as $m) {
+            $miembrosPorIdEntrante[(int) $m['id_entrante']] = $m;
+        }
 
-            foreach ($filasMiembros as $m) {
-                $miembrosGrupo[] = ['nombre' => trim($m['nombre'] . ' ' . $m['apellido'])];
+        $standingsGrupo = calcularStandings($datosGrupoPersistido['miembros'], $datosGrupoPersistido['partidos']);
+
+        foreach ($standingsGrupo as $fila) {
+
+            $m = $miembrosPorIdEntrante[$fila['id_entrante']] ?? null;
+
+            if (!$m) {
+                continue;
             }
 
-        } else {
+            if ($esIndividualGrupo) {
 
-            $stmtMiembros = mysqli_prepare(
-                $conexion,
-                "SELECT u1.nombre AS nombre1, u1.apellido AS apellido1,
-                        u2.nombre AS nombre2, u2.apellido AS apellido2
-                 FROM grupo_pareja gp
-                 INNER JOIN pareja p ON p.id_pareja = gp.id_pareja
-                 INNER JOIN inscripcion i1 ON i1.id_inscripcion = p.id_inscripcion_1
-                 INNER JOIN inscripcion i2 ON i2.id_inscripcion = p.id_inscripcion_2
-                 INNER JOIN usuario u1 ON u1.id_usuario = i1.id_usuario
-                 INNER JOIN usuario u2 ON u2.id_usuario = i2.id_usuario
-                 WHERE gp.id_grupo = ?
-                 ORDER BY gp.orden ASC, gp.id_grupo_pareja ASC"
-            );
-            mysqli_stmt_bind_param($stmtMiembros, "i", $idGrupoActual);
-            mysqli_stmt_execute($stmtMiembros);
-            $filasMiembros = mysqli_fetch_all(mysqli_stmt_get_result($stmtMiembros), MYSQLI_ASSOC);
+                $miembrosGrupo[] = [
+                    'nombre' => trim($m['nombre'] . ' ' . $m['apellido']),
+                    'pj' => $fila['pj'],
+                    'pg' => $fila['pg'],
+                    'pp' => $fila['pp'],
+                    'sets' => $fila['sets_favor'] . '-' . $fila['sets_contra'],
+                    'dif' => $fila['games_favor'] - $fila['games_contra'],
+                    'pts' => $fila['pts'],
+                ];
 
-            foreach ($filasMiembros as $m) {
+            } else {
+
                 $miembrosGrupo[] = [
                     'nombres' => [
                         trim($m['nombre1'] . ' ' . $m['apellido1']),
                         trim($m['nombre2'] . ' ' . $m['apellido2']),
                     ],
+                    'apellidos' => [
+                        trim($m['apellido1']),
+                        trim($m['apellido2']),
+                    ],
+                    'pj' => $fila['pj'],
+                    'pg' => $fila['pg'],
+                    'pp' => $fila['pp'],
+                    'sets' => $fila['sets_favor'] . '-' . $fila['sets_contra'],
+                    'dif' => $fila['games_favor'] - $fila['games_contra'],
+                    'pts' => $fila['pts'],
                 ];
+
             }
 
         }
@@ -353,16 +358,419 @@ if (count($filasGruposGuardados) > 0) {
 
 
 /* =========================================================
-   RANKING Y CRUCES
-   Todavía no existe ninguna tabla de resultados/partidos en
-   el proyecto, así que no hay datos reales para mostrar acá.
-   No se inventan puntos ni cruces.
+   RANKING Y CRUCES (SEMIFINALES / FINAL)
+   El ranking de jugadores todavía no se pidió, así que se deja
+   vacío. Las semis/final sí se calculan a partir de las tablas
+   partido_individual/partido_pareja (fase final).
    ========================================================= */
 
-$ranking = [];
-$cuartos = [];
+$rankingTorneo = calcularRankingTorneo($conexion, $id_torneo, $torneo['tipo'] === 'Individual');
 $semis = [];
 $final = null;
+$rondasPrevias = [];   // Octavos / Cuartos (torneos con 4 u 8 grupos)
+
+$esIndividualTorneo = ($torneo['tipo'] === 'Individual');
+$tablaPartidosFinal = $esIndividualTorneo ? 'partido_individual' : 'partido_pareja';
+$tablaEntrantesFinal = $esIndividualTorneo ? 'grupo_inscripcion' : 'grupo_pareja';
+$colEntranteFinal = $esIndividualTorneo ? 'id_grupo_inscripcion' : 'id_grupo_pareja';
+
+$stmtBracket = mysqli_prepare(
+    $conexion,
+    "SELECT p.id_partido, p.fase, p.orden, p.id_entrante_1, p.id_entrante_2,
+            p.set1_games_1, p.set1_games_2, p.set2_games_1, p.set2_games_2,
+            p.set3_games_1, p.set3_games_2, p.id_ganador, p.resultado_tipo, p.estado
+     FROM $tablaPartidosFinal p
+     INNER JOIN $tablaEntrantesFinal e ON e.$colEntranteFinal = p.id_entrante_1
+     INNER JOIN grupo g ON g.id_grupo = e.id_grupo
+     WHERE g.id_torneo = ? AND p.fase IN ('Octavos', 'Cuartos', 'Semifinal', 'Final')
+     ORDER BY FIELD(p.fase, 'Octavos', 'Cuartos', 'Semifinal', 'Final') ASC, p.orden ASC"
+);
+mysqli_stmt_bind_param($stmtBracket, "i", $id_torneo);
+mysqli_stmt_execute($stmtBracket);
+$filasBracket = mysqli_fetch_all(mysqli_stmt_get_result($stmtBracket), MYSQLI_ASSOC);
+
+$nombresEntrantesTorneoVT = [];
+
+if (!empty($filasBracket)) {
+
+    $idsEntrantes = [];
+    foreach ($filasBracket as $fb) {
+        $idsEntrantes[] = (int) $fb['id_entrante_1'];
+        $idsEntrantes[] = (int) $fb['id_entrante_2'];
+    }
+    $idsEntrantes = array_values(array_unique($idsEntrantes));
+
+    $placeholders = implode(',', array_fill(0, count($idsEntrantes), '?'));
+    $tiposBind = str_repeat('i', count($idsEntrantes));
+
+    if ($esIndividualTorneo) {
+        $sqlNombresEntrantes = "SELECT gi.id_grupo_inscripcion AS id_entrante, u.nombre, u.apellido
+                                 FROM grupo_inscripcion gi
+                                 INNER JOIN inscripcion insc ON insc.id_inscripcion = gi.id_inscripcion
+                                 INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
+                                 WHERE gi.id_grupo_inscripcion IN ($placeholders)";
+    } else {
+        $sqlNombresEntrantes = "SELECT gp.id_grupo_pareja AS id_entrante,
+                                        u1.nombre AS nombre1, u1.apellido AS apellido1,
+                                        u2.nombre AS nombre2, u2.apellido AS apellido2
+                                 FROM grupo_pareja gp
+                                 INNER JOIN pareja p ON p.id_pareja = gp.id_pareja
+                                 INNER JOIN inscripcion i1 ON i1.id_inscripcion = p.id_inscripcion_1
+                                 INNER JOIN inscripcion i2 ON i2.id_inscripcion = p.id_inscripcion_2
+                                 INNER JOIN usuario u1 ON u1.id_usuario = i1.id_usuario
+                                 INNER JOIN usuario u2 ON u2.id_usuario = i2.id_usuario
+                                 WHERE gp.id_grupo_pareja IN ($placeholders)";
+    }
+
+    $stmtNombresEntrantes = mysqli_prepare($conexion, $sqlNombresEntrantes);
+    mysqli_stmt_bind_param($stmtNombresEntrantes, $tiposBind, ...$idsEntrantes);
+    mysqli_stmt_execute($stmtNombresEntrantes);
+    $filasNombresEntrantes = mysqli_fetch_all(mysqli_stmt_get_result($stmtNombresEntrantes), MYSQLI_ASSOC);
+
+    foreach ($filasNombresEntrantes as $fn) {
+        $nombresEntrantesTorneoVT[(int) $fn['id_entrante']] = $esIndividualTorneo
+            ? trim($fn['nombre'] . ' ' . $fn['apellido'])
+            : trim($fn['nombre1'] . ' ' . $fn['apellido1']) . ' / ' . trim($fn['nombre2'] . ' ' . $fn['apellido2']);
+    }
+
+}
+
+foreach ($filasBracket as $fb) {
+
+    $nombre1Bracket = $nombresEntrantesTorneoVT[(int) $fb['id_entrante_1']] ?? '—';
+    $nombre2Bracket = $nombresEntrantesTorneoVT[(int) $fb['id_entrante_2']] ?? '—';
+    $jugadoBracket = ($fb['estado'] === 'Jugado');
+
+    $resultadoTextoBracket = '';
+    if ($jugadoBracket && ($fb['resultado_tipo'] ?? 'Normal') === 'WO') {
+        // Sin sets: el partido se resolvió por incomparecencia.
+        $resultadoTextoBracket = 'W.O.';
+    } elseif ($jugadoBracket) {
+        $setsBracket = [[$fb['set1_games_1'], $fb['set1_games_2']], [$fb['set2_games_1'], $fb['set2_games_2']]];
+        if ($fb['set3_games_1'] !== null) {
+            $setsBracket[] = [$fb['set3_games_1'], $fb['set3_games_2']];
+        }
+        $resultadoTextoBracket = implode(' / ', array_map(fn($s) => $s[0] . '-' . $s[1], $setsBracket));
+    }
+
+    $filaBracket = [
+        'nombre1' => $nombre1Bracket,
+        'nombre2' => $nombre2Bracket,
+        'jugado' => $jugadoBracket,
+        'resultado' => $resultadoTextoBracket,
+        'gano1' => $jugadoBracket && (int) $fb['id_ganador'] === (int) $fb['id_entrante_1'],
+        'gano2' => $jugadoBracket && (int) $fb['id_ganador'] === (int) $fb['id_entrante_2'],
+    ];
+
+    if ($fb['fase'] === 'Semifinal') {
+        $semis[] = $filaBracket;
+    } elseif ($fb['fase'] === 'Final') {
+        $final = $filaBracket;
+    } else {
+        $rondasPrevias[$fb['fase']][] = $filaBracket;
+    }
+
+}
+
+
+/**
+ * Cuadro de eliminación directa simétrico (como en una hoja de torneo):
+ * la primera ronda en los bordes, las rondas avanzan hacia el centro donde
+ * está la final, con el campeón arriba. La mitad izquierda reúne los primeros
+ * partidos de cada ronda y la derecha los últimos. Las rondas que todavía no
+ * se generaron se dibujan como "Por definir".
+ */
+function renderCuadroSimetrico(array $rondasPrevias, array $semis, ?array $final) {
+
+    $e = fn($t) => htmlspecialchars((string) $t, ENT_QUOTES, 'UTF-8');
+
+    // Niveles desde la primera ronda hasta las semifinales: [titulo => partidos]
+    $primera = !empty($rondasPrevias['Octavos']) ? 'Octavos' : 'Cuartos';
+    $nombresNivel = ['Octavos' => 'OCTAVOS', 'Cuartos' => 'CUARTOS', 'Semifinal' => 'SEMIFINAL'];
+    $tamanio = ['Octavos' => 8, 'Cuartos' => 4, 'Semifinal' => 2];
+    $secuencia = $primera === 'Octavos' ? ['Octavos', 'Cuartos', 'Semifinal'] : ['Cuartos', 'Semifinal'];
+
+    $niveles = [];
+
+    foreach ($secuencia as $nombre) {
+
+        $partidos = $nombre === 'Semifinal' ? $semis : ($rondasPrevias[$nombre] ?? []);
+
+        // Completa con "por definir" hasta el tamaño que corresponde a la ronda.
+        for ($i = count($partidos); $i < $tamanio[$nombre]; $i++) {
+            $partidos[$i] = null;
+        }
+
+        $niveles[] = $partidos;
+
+    }
+
+    $tarjeta = function (?array $p, string $clase = '') use ($e) {
+
+        if ($p === null) {
+            return '<div class="br-partido br-vacio ' . $clase . '"><div class="br-fila"><span>Por definir</span></div><div class="br-fila"><span>&nbsp;</span></div></div>';
+        }
+
+        $fila = function ($nombre, $gano, $marcador) use ($e) {
+            return '<div class="br-fila' . ($gano ? ' gano' : '') . '"><span class="br-nombre" title="' . $e($nombre) . '">' . $e($nombre) . '</span><span class="br-marcador">' . $e($marcador) . '</span></div>';
+        };
+
+        return '<div class="br-partido' . ($p['jugado'] ? '' : ' br-pendiente') . ' ' . $clase . '">'
+            . $fila($p['nombre1'], $p['gano1'], $p['jugado'] ? $p['resultado'] : '')
+            . $fila($p['nombre2'], $p['gano2'], '')
+            . '</div>';
+
+    };
+
+    // Nodo del árbol: sus dos partidos "hijos" (ronda anterior) y su propio partido.
+    $nodo = function (int $nivel, int $indice, bool $espejo) use (&$nodo, $niveles, $tarjeta) {
+
+        $html = '<div class="br-nodo' . ($espejo ? ' br-espejo' : '') . '">';
+
+        if ($nivel > 0) {
+            $html .= '<div class="br-hijos">'
+                . $nodo($nivel - 1, $indice * 2, $espejo)
+                . $nodo($nivel - 1, $indice * 2 + 1, $espejo)
+                . '</div>';
+        }
+
+        return $html . $tarjeta($niveles[$nivel][$indice]) . '</div>';
+
+    };
+
+    $ultimo = count($niveles) - 1;   // nivel de las semifinales
+
+    $titulos = [];
+    foreach ($secuencia as $nombre) {
+        $titulos[] = $nombresNivel[$nombre];
+    }
+
+    $html = '<div class="vt-card vt-bracket-card br-tarjeta">
+        <div class="vt-card-header">
+            <div>
+                <h3>Cuadro de eliminación directa</h3>
+                <p>Clasificados de la fase de grupos</p>
+            </div>
+        </div>
+        <div class="br-scroll">
+        <div class="br-cuadro">';
+
+    // Títulos de cada columna, alineados con el cuadro.
+    $html .= '<div class="br-titulos">';
+    foreach ($titulos as $t) {
+        $html .= '<span class="br-col">' . $t . '</span>';
+    }
+    $html .= '<span class="br-col br-col-final">FINAL</span>';
+    foreach (array_reverse($titulos) as $t) {
+        $html .= '<span class="br-col">' . $t . '</span>';
+    }
+    $html .= '</div>';
+
+    $html .= '<div class="br-arbol">';
+    $html .= '<div class="br-lado">' . $nodo($ultimo, 0, false) . '</div>';
+
+    $html .= '<div class="br-centro">';
+
+    if ($final && $final['jugado']) {
+        $campeon = $final['gano1'] ? $final['nombre1'] : $final['nombre2'];
+        $html .= '<div class="br-campeon"><i class="bi bi-trophy-fill"></i><span>CAMPEÓN</span><strong>' . $e($campeon) . '</strong></div>';
+    }
+
+    $html .= $tarjeta($final, 'br-final') . '</div>';
+
+    $html .= '<div class="br-lado br-lado-der">' . $nodo($ultimo, 1, true) . '</div>';
+    $html .= '</div></div></div></div>';
+
+    return $html;
+
+}
+
+/**
+ * Arma el HTML del cuadro de semifinales/final (o el estado vacío si
+ * todavía no se generaron). Se usa tanto en la vista del organizador
+ * como en la del participante para no duplicar el markup.
+ */
+function renderBracketTorneo(array $semis, ?array $final, array $rondasPrevias = []) {
+
+    // Con octavos o cuartos (4 u 8 grupos) se dibuja el cuadro simétrico.
+    if (!empty($rondasPrevias['Octavos']) || !empty($rondasPrevias['Cuartos'])) {
+        return renderCuadroSimetrico($rondasPrevias, $semis, $final);
+    }
+
+    if (empty($semis) && empty($rondasPrevias)) {
+        return '
+            <div class="vt-card vt-estado-vacio">
+                <i class="bi bi-diagram-3"></i>
+                <p>Todavía no hay cruces generados para este torneo.</p>
+            </div>
+        ';
+    }
+
+    $filaHtml = function (string $nombre, bool $gano, string $score) {
+        $clase = $gano ? 'vt-match-fila gano' : 'vt-match-fila';
+        return '
+            <div class="' . $clase . '">
+                <span>' . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . '</span>
+                <span class="vt-match-score">' . htmlspecialchars($score, ENT_QUOTES, 'UTF-8') . '</span>
+            </div>
+        ';
+    };
+
+    $titulosRonda = ['Octavos' => 'OCTAVOS DE FINAL', 'Cuartos' => 'CUARTOS DE FINAL'];
+    $rondasMostradas = array_values(array_filter(['Octavos', 'Cuartos'], fn($r) => !empty($rondasPrevias[$r])));
+    $columnas = count($rondasMostradas) + (empty($semis) ? 0 : 1) + (empty($semis) ? 0 : 1);
+
+    $html = '<div class="vt-card vt-bracket-card">
+        <div class="vt-card-header">
+            <div>
+                <h3>' . (empty($rondasMostradas) ? 'Cuadro de semifinales' : 'Cuadro de eliminación directa') . '</h3>
+                <p>Clasificados de la fase de grupos</p>
+            </div>
+        </div>
+        <div class="vt-bracket ' . (empty($rondasMostradas) ? 'vt-bracket-2col' : 'vt-bracket-ncol') . '" style="--cols:' . max(1, $columnas) . ';">';
+
+    // Octavos y cuartos (solo con 4 u 8 grupos): una columna por ronda.
+    foreach ($rondasMostradas as $nombreRonda) {
+
+        $html .= '<div class="vt-bracket-col ronda"><div class="vt-bracket-col-titulo">' . $titulosRonda[$nombreRonda] . '</div>';
+
+        foreach ($rondasPrevias[$nombreRonda] as $partido) {
+            $html .= '<div class="vt-match' . (!$partido['jugado'] ? ' vt-match-pendiente' : '') . '">';
+            $html .= $filaHtml($partido['nombre1'], $partido['gano1'], $partido['jugado'] ? $partido['resultado'] : '-');
+            $html .= $filaHtml($partido['nombre2'], $partido['gano2'], '');
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+
+    }
+
+    if (!empty($semis)) {
+    $html .= '<div class="vt-bracket-col semis">
+                <div class="vt-bracket-col-titulo">SEMIFINALES</div>';
+    }
+
+    foreach ($semis as $semi) {
+        $html .= '<div class="vt-match' . (!$semi['jugado'] ? ' vt-match-pendiente' : '') . '">';
+        $html .= $filaHtml($semi['nombre1'], $semi['gano1'], $semi['jugado'] ? $semi['resultado'] : '-');
+        $html .= $filaHtml($semi['nombre2'], $semi['gano2'], '');
+        $html .= '</div>';
+    }
+
+    if (!empty($semis)) {
+    $html .= '</div>
+            <div class="vt-bracket-col final">
+                <div class="vt-bracket-col-titulo">FINAL</div>';
+    }
+
+    if (empty($semis)) {
+
+        // Solo hay rondas previas (todavía no se generaron las semifinales).
+
+    } elseif ($final) {
+
+        $html .= '<div class="vt-match' . (!$final['jugado'] ? ' vt-match-pendiente' : '') . '">';
+        $html .= $filaHtml($final['nombre1'], $final['gano1'], $final['jugado'] ? $final['resultado'] : '-');
+        $html .= $filaHtml($final['nombre2'], $final['gano2'], '');
+        $html .= '</div>';
+
+        if ($final['jugado']) {
+            $nombreCampeon = $final['gano1'] ? $final['nombre1'] : $final['nombre2'];
+            $html .= '<div class="vt-campeon">
+                <i class="bi bi-trophy-fill"></i>
+                <strong>CAMPEÓN: ' . htmlspecialchars($nombreCampeon, ENT_QUOTES, 'UTF-8') . '</strong>
+            </div>';
+        }
+
+    } else {
+        $html .= '<div class="vt-match vt-match-pendiente"><div class="vt-match-fila"><span>Por definir</span></div></div>';
+    }
+
+    if (!empty($semis)) {
+        $html .= '</div>';
+    }
+
+    $html .= '</div></div>';
+
+    return $html;
+
+}
+
+
+/**
+ * Tabla del ranking final del torneo (todas las parejas/participantes).
+ * Se usa en la vista del organizador y en la del participante.
+ */
+function renderRankingTorneo(array $r, bool $esIndividual) {
+
+    $e = fn($t) => htmlspecialchars((string) $t, ENT_QUOTES, 'UTF-8');
+
+    if (empty($r['filas'])) {
+        return '
+            <div class="vt-card vt-estado-vacio">
+                <i class="bi bi-bar-chart-line"></i>
+                <p>Todavía no hay participantes en grupos para generar el ranking.</p>
+            </div>
+        ';
+    }
+
+    $html = '<div class="vt-card vt-ranking-card">';
+
+    if ($r['provisional']) {
+        $html .= '<div class="vt-ranking-aviso vt-ranking-provisional">
+            <i class="bi bi-hourglass-split"></i>
+            <span><strong>Clasificación provisional.</strong> El torneo sigue en curso: todavía no hay campeón definido.</span>
+        </div>';
+    } else {
+        $html .= '<div class="vt-ranking-aviso vt-ranking-final">
+            <i class="bi bi-trophy-fill"></i>
+            <span><strong>Clasificación final.</strong> Campeón: ' . $e($r['campeon']) . '</span>
+        </div>';
+    }
+
+    if (in_array('cruces_desactualizados', $r['avisos'], true)) {
+        $html .= '<div class="vt-ranking-aviso vt-ranking-alerta"><i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Se modificó un resultado de grupos después de generar las semifinales: los cruces ya creados pueden no coincidir con la tabla actual.</span></div>';
+    }
+
+    if (in_array('final_desactualizada', $r['avisos'], true)) {
+        $html .= '<div class="vt-ranking-aviso vt-ranking-alerta"><i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Se modificó un resultado de semifinales después de generar la final: la final ya creada no coincide con los ganadores actuales.</span></div>';
+    }
+
+    $html .= '<table class="vt-tabla-grupo vt-tabla-ranking"><thead><tr>
+        <th>#</th>
+        <th style="text-align:left;">' . ($esIndividual ? 'Participante' : 'Pareja') . '</th>
+        <th>Etapa</th><th>Grupo</th><th>PJ</th><th>PG</th><th>PP</th><th>Sets</th><th>Dif</th><th>PTS</th>
+    </tr></thead><tbody>';
+
+    foreach ($r['filas'] as $f) {
+
+        $dif = $f['games_favor'] - $f['games_contra'];
+        $clase = $f['tier'] <= 1 && !$r['provisional'] ? ' class="vt-ranking-podio"' : '';
+
+        $html .= '<tr' . $clase . '>
+            <td>' . (int) $f['puesto'] . ($f['empate'] ? '<span title="Empate en todos los criterios de comparación">=</span>' : '') . '</td>
+            <td style="text-align:left;"><strong>' . $e($f['nombre']) . '</strong></td>
+            <td>' . $e($f['etapa']) . '</td>
+            <td>' . $e($f['grupo']) . ' · ' . (int) $f['pos_grupo'] . '.º</td>
+            <td>' . (int) $f['pj'] . '</td>
+            <td>' . (int) $f['pg'] . '</td>
+            <td>' . (int) $f['pp'] . '</td>
+            <td>' . (int) $f['sets_favor'] . '-' . (int) $f['sets_contra'] . '</td>
+            <td>' . ($dif > 0 ? '+' : '') . $dif . '</td>
+            <td><strong>' . (int) $f['pts'] . '</strong></td>
+        </tr>';
+
+    }
+
+    $html .= '</tbody></table>
+        <p class="vt-nota-datos">Cuentan solo partidos finalizados. Llegar a una ronda posterior pesa más que el rendimiento en grupos; entre eliminados en grupos se ordena por puesto en el grupo y luego por rendimiento promedio por partido.</p>
+    </div>';
+
+    return $html;
+
+}
 
 ?>
 <!DOCTYPE html>
@@ -382,7 +790,8 @@ $final = null;
 
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/canchas.css">
-    <link rel="stylesheet" href="css/ver_torneo.css">
+    <link rel="stylesheet" href="css/ver_torneo.css?v=15">
+    <link rel="stylesheet" href="css/grupos.css?v=27">
 
 </head>
 
@@ -432,6 +841,12 @@ $final = null;
                 <li>
                     <a href="paneles.php?seccion=canchas">
                         <i class="bi bi-geo-alt-fill"></i> Canchas
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=grupos">
+                        <i class="bi bi-diagram-3"></i> Grupos
                     </a>
                 </li>
 
@@ -526,7 +941,7 @@ $final = null;
                 <div class="vt-info-card">
                     <div class="vt-info-icono horario"><i class="bi bi-alarm-fill"></i></div>
                     <div>
-                        <span>Horarios</span>
+                        <span>Hora de inicio</span>
                         <strong><?php echo $horarioTorneo; ?></strong>
                     </div>
                 </div>
@@ -544,7 +959,15 @@ $final = null;
 
             <!-- FASE DE GRUPOS + RANKING -->
 
-            <div class="vt-dos-columnas">
+            <nav class="grupos-subnav vt-tabs" id="gruposTabs" role="tablist" aria-label="Secciones del torneo" data-torneo="<?php echo (int) $id_torneo; ?>" data-default="<?php echo $rankingTorneo['provisional'] ? 'fase-de-grupos' : 'ranking-torneo'; ?>">
+                <a href="#fase-de-grupos" role="tab" data-tab="fase-de-grupos"><i class="bi bi-people-fill"></i> Fase de grupos</a>
+                <a href="#fase-final" role="tab" data-tab="fase-final"><i class="bi bi-trophy-fill"></i> Fase final</a>
+                <a href="#ranking-torneo" role="tab" data-tab="ranking-torneo"><i class="bi bi-bar-chart-fill"></i> Ranking del torneo</a>
+            </nav>
+
+            <section id="fase-de-grupos" class="grupos-tab-panel">
+
+            <div class="vt-dos-columnas vt-una-columna">
 
                 <!-- FASE DE GRUPOS -->
 
@@ -606,6 +1029,8 @@ $final = null;
                                     <th style="text-align:left;"><?php echo htmlspecialchars($textoColumna, ENT_QUOTES, 'UTF-8'); ?></th>
                                     <th>PJ</th>
                                     <th>PG</th>
+                                    <th>PP</th>
+                                    <th>Sets</th>
                                     <th>PTS</th>
                                 </tr>
                             </thead>
@@ -616,8 +1041,7 @@ $final = null;
 
                         <p class="vt-nota-datos">
                             <?php if ($gruposPersistidos) { ?>
-                                * Distribución guardada por la organización. Las columnas PJ/PG/PTS
-                                están en cero porque todavía no hay partidos cargados.
+                                * Distribución guardada por la organización. Las posiciones se calculan solo con los partidos finalizados (victoria = 3 pts).
                             <?php } else { ?>
                                 * Distribución calculada con las <?php echo (int) count($entradasConfirmadas); ?>
                                 <?php echo htmlspecialchars($textoCantidad, ENT_QUOTES, 'UTF-8'); ?> confirmadas actuales.
@@ -633,27 +1057,14 @@ $final = null;
                 </div>
 
 
-                <!-- RANKING DEL TORNEO -->
-
-                <div>
-
-                    <div class="vt-seccion-titulo">
-                        <span class="vt-eyebrow">CLASIFICACIÓN</span>
-                        <h2>Ranking del torneo</h2>
-                        <p>Jugadores con mayor cantidad de puntos</p>
-                    </div>
-
-                    <div class="vt-card vt-estado-vacio">
-                        <i class="bi bi-bar-chart-line"></i>
-                        <p>Todavía no hay resultados cargados para generar el ranking.</p>
-                    </div>
-
-                </div>
-
-            </div>
+</div>
 
 
-            <!-- CRUCES DEL TORNEO -->
+            </section>
+
+<section id="fase-final" class="grupos-tab-panel">
+
+<!-- CRUCES DEL TORNEO -->
 
             <div class="vt-seccion-titulo">
                 <span class="vt-eyebrow">COMPETENCIA</span>
@@ -661,10 +1072,23 @@ $final = null;
                 <p>Llaves eliminatorias del campeonato</p>
             </div>
 
-            <div class="vt-card vt-estado-vacio">
-                <i class="bi bi-diagram-3"></i>
-                <p>Todavía no hay cruces generados para este torneo.</p>
-            </div>
+            <?php echo renderBracketTorneo($semis, $final, $rondasPrevias); ?>
+
+</section>
+
+<section id="ranking-torneo" class="grupos-tab-panel">
+
+<!-- RANKING DEL TORNEO -->
+<div class="vt-ranking-bloque">
+<div class="vt-seccion-titulo">
+                        <span class="vt-eyebrow">CLASIFICACIÓN</span>
+                        <h2>Ranking del torneo</h2>
+                        <p>Posición final de todos los participantes del torneo</p>
+                    </div>
+
+                    <?php echo renderRankingTorneo($rankingTorneo, $torneo['tipo'] === 'Individual'); ?>
+</div>
+</section>
 
 <?php } elseif ($_SESSION['id_rol'] == 3) { ?>
 
@@ -770,7 +1194,7 @@ $final = null;
         </div>
 
         <div>
-            <span>Horarios</span>
+            <span>Hora de inicio</span>
 
             <strong>
                 <?php echo htmlspecialchars(
@@ -809,7 +1233,15 @@ $final = null;
      FASE DE GRUPOS + RANKING
      ========================================= -->
 
-<div class="vt-dos-columnas">
+<nav class="grupos-subnav vt-tabs" id="gruposTabs" role="tablist" aria-label="Secciones del torneo" data-torneo="<?php echo (int) $id_torneo; ?>" data-default="<?php echo $rankingTorneo['provisional'] ? 'fase-de-grupos' : 'ranking-torneo'; ?>">
+                <a href="#fase-de-grupos" role="tab" data-tab="fase-de-grupos"><i class="bi bi-people-fill"></i> Fase de grupos</a>
+                <a href="#fase-final" role="tab" data-tab="fase-final"><i class="bi bi-trophy-fill"></i> Fase final</a>
+                <a href="#ranking-torneo" role="tab" data-tab="ranking-torneo"><i class="bi bi-bar-chart-fill"></i> Ranking del torneo</a>
+            </nav>
+
+            <section id="fase-de-grupos" class="grupos-tab-panel">
+
+            <div class="vt-dos-columnas vt-una-columna">
 
     <!-- FASE DE GRUPOS -->
     <div>
@@ -878,6 +1310,8 @@ $final = null;
                         <th style="text-align:left;"><?php echo htmlspecialchars($textoColumna, ENT_QUOTES, 'UTF-8'); ?></th>
                         <th>PJ</th>
                         <th>PG</th>
+                                    <th>PP</th>
+                                    <th>Sets</th>
                         <th>PTS</th>
                     </tr>
                 </thead>
@@ -903,24 +1337,38 @@ $final = null;
     </div>
 
 
-    <!-- RANKING DEL TORNEO -->
+</div>
 
-    <div>
 
-        <div class="vt-seccion-titulo">
+</section>
+
+<section id="fase-final" class="grupos-tab-panel">
+
+<!-- CRUCES DEL TORNEO -->
+
+<div class="vt-seccion-titulo">
+    <span class="vt-eyebrow">COMPETENCIA</span>
+    <h2>Cruces del torneo</h2>
+    <p>Llaves eliminatorias del campeonato</p>
+</div>
+
+<?php echo renderBracketTorneo($semis, $final, $rondasPrevias); ?>
+
+</section>
+
+<section id="ranking-torneo" class="grupos-tab-panel">
+
+<!-- RANKING DEL TORNEO -->
+<div class="vt-ranking-bloque">
+<div class="vt-seccion-titulo">
             <span class="vt-eyebrow">CLASIFICACIÓN</span>
             <h2>Ranking del torneo</h2>
-            <p>Jugadores con mayor cantidad de puntos</p>
+            <p>Posición final de todos los participantes del torneo</p>
         </div>
 
-        <div class="vt-card vt-estado-vacio">
-            <i class="bi bi-bar-chart-line"></i>
-            <p>Todavía no hay resultados cargados para generar el ranking.</p>
-        </div>
-
-    </div>
-
+        <?php echo renderRankingTorneo($rankingTorneo, $torneo['tipo'] === 'Individual'); ?>
 </div>
+</section>
 
 <?php } ?>
         </main>
@@ -928,7 +1376,8 @@ $final = null;
 
 
     </div>
-    <script src="js/padel.js?v=6"></script>
+    <script src="js/padel.js?v=12"></script>
+    <script src="js/pestanas.js?v=1"></script>
 </body>
 
 </html>

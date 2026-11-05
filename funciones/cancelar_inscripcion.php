@@ -45,7 +45,7 @@ try {
 
     $stmtTorneo = mysqli_prepare(
         $conexion,
-        "SELECT t.tipo, c.id_usuario AS id_organizador
+        "SELECT t.tipo, t.estado, c.id_usuario AS id_organizador
          FROM torneos t
          INNER JOIN club c ON c.id_club = t.id_club
          WHERE t.id_torneo = ?
@@ -65,6 +65,11 @@ try {
 
     if ($torneo['tipo'] !== 'Individual') {
         throw new Exception("no_existe");
+    }
+
+    // Torneo terminado: no se cancelan inscripciones (ya hay resultados y puede haber puntos de ranking).
+    if ($torneo['estado'] === 'Finalizado') {
+        throw new Exception("torneo_finalizado");
     }
 
 

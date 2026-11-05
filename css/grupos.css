@@ -1,339 +1,1121 @@
 /* =========================================================
    GESTIÓN DE GRUPOS (PANEL ORGANIZADOR/ADMIN) — TEMA OSCURO
-   Reutiliza la paleta de vt-panel-oscuro (ver_torneo.css).
+   Misma paleta que vt-panel-oscuro (ver_torneo.css).
+
+   Los selectores de botones e inputs van prefijados con
+   body.panel-body porque style.css define estilos globales
+   (body.panel-body button / input) que, si no, les ganan.
    ========================================================= */
 
-.grupos-form-crear {
+body.panel-body {
+    --gr-superficie: rgba(7, 35, 62, 0.62);
+    --gr-superficie-alta: rgba(10, 48, 82, 0.55);
+    --gr-fila: rgba(255, 255, 255, 0.03);
+    --gr-borde: rgba(105, 181, 255, 0.22);
+    --gr-borde-suave: rgba(105, 181, 255, 0.12);
+    --gr-texto: #e7edf5;
+    --gr-texto-suave: #9fb3c8;
+    --gr-texto-tenue: #7c8ba0;
+    --gr-acento: #2f7bff;
+    --gr-acento-claro: #8fb8ff;
+    --gr-acento-fondo: rgba(47, 123, 255, 0.15);
+    --gr-verde: #22c55e;
+    --gr-verde-claro: #4ade80;
+    --gr-verde-fondo: rgba(34, 197, 94, 0.12);
+    --gr-peligro: #ff6b6b;
+    --gr-peligro-fondo: rgba(255, 107, 107, 0.14);
+    --gr-alerta: #f5a623;
+}
 
+/* style.css define `button { width: 100% }` para los formularios de
+   login; acá los botones toman el ancho de su contenido. Especificidad
+   baja a propósito, para que reglas puntuales (ej. .grupos-btn-agregar)
+   puedan volver a pedir el ancho completo. */
+.grupos-crear-card button,
+.grupos-seccion-header button,
+.grupos-tarjeta button,
+.grupos-fase-final button,
+.marcador button {
+    width: auto;
+}
+
+
+/* =========================================================
+   PORTADA DEL TORNEO
+   ========================================================= */
+
+.grupos-hero {
     display: flex;
-
-    gap: 10px;
-
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     flex-wrap: wrap;
-
-    margin-top: 14px;
-
+    padding: 18px 22px;
+    border-radius: 16px;
+    background: var(--gr-superficie);
+    border: 1px solid var(--gr-borde);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
 }
 
-.grupos-form-crear input[type="text"] {
+.grupos-hero-contenido h1 {
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 800;
+    text-transform: capitalize;
+    margin-top: 6px;
+}
 
-    flex: 1;
+.grupos-hero-contenido p {
+    color: var(--gr-texto-suave);
+    margin-top: 4px;
+}
 
-    min-width: 200px;
+.grupos-hero-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
 
-    padding: 10px 14px;
-
+.grupos-hero-info-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
     border-radius: 10px;
-
-    border: 1px solid rgba(90, 170, 255, 0.3);
-
-    background: rgba(5, 28, 50, 0.6);
-
-    color: #e7edf5;
-
-    font-size: 14px;
-
+    background: var(--gr-acento-fondo);
+    color: var(--gr-acento-claro);
 }
 
-.grupos-form-crear input[type="text"]:focus {
+.grupos-hero-fecha {
+    color: var(--gr-texto);
+    font-size: 13px;
+    white-space: nowrap;
+}
 
+.grupos-hero-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--gr-acento-fondo);
+    border: 1px solid var(--gr-borde);
+    color: var(--gr-acento-claro);
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background .2s ease;
+}
+
+.grupos-hero-boton:hover {
+    background: rgba(47, 123, 255, 0.28);
+}
+
+
+/* =========================================================
+   NAVEGACIÓN ENTRE SECCIONES
+   ========================================================= */
+
+/* Cabecera unificada (volver + portada + navegación): queda fija arriba.
+   Fondo opaco y márgenes negativos para cubrir el padding de .contenido
+   y que el contenido no se vea por los costados al pasar por debajo. */
+.grupos-cabecera {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -32px -32px 0;
+    padding: 16px 32px 12px;
+    background: #021d36;
+    border-bottom: 1px solid var(--gr-borde-suave);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.grupos-subnav {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding: 8px;
+    border-radius: 14px;
+    background: rgba(3, 26, 46, 0.92);
+    border: 1px solid var(--gr-borde-suave);
+    backdrop-filter: blur(8px);
+}
+
+.grupos-subnav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    color: var(--gr-texto-suave);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .15s ease, color .15s ease;
+}
+
+.grupos-subnav a:hover {
+    background: var(--gr-acento-fondo);
+    color: #ffffff;
+}
+
+.grupos-bloque {
+    margin-top: 34px;
+    scroll-margin-top: var(--gr-cab-alto, 300px);
+}
+
+.grupos-seccion-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+body.panel-body .grupos-btn-fixture {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   1. POSICIONES Y RESULTADOS — un panel por grupo
+   ========================================================= */
+
+.grupos-paneles {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.grupos-panel {
+    background: var(--gr-superficie);
+    border: 1px solid var(--gr-borde);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
+    overflow: hidden;
+}
+
+.grupos-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 20px;
+    background: var(--gr-superficie-alta);
+    border-bottom: 1px solid var(--gr-borde-suave);
+}
+
+.grupos-panel-titulo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.grupos-panel-titulo h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.grupos-progreso {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gr-texto-suave);
+    font-size: 12.5px;
+}
+
+.grupos-progreso-barra {
+    width: 120px;
+    height: 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.grupos-progreso-barra div {
+    height: 100%;
+    border-radius: 6px;
+    background: var(--gr-verde);
+}
+
+.grupos-panel-cuerpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+}
+
+.grupos-panel-tabla,
+.grupos-panel-partidos {
+    padding: 18px 20px;
+}
+
+.grupos-panel-partidos {
+    border-left: 1px solid var(--gr-borde-suave);
+}
+
+
+/* ---------- Tabla de posiciones ---------- */
+
+.grupos-tabla-scroll {
+    overflow-x: auto;
+}
+
+.grupos-tabla-standings {
+    width: 100%;
+    min-width: 460px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 14px;
+}
+
+.grupos-tabla-standings th {
+    padding: 0 6px 10px;
+    border-bottom: 1px solid var(--gr-borde);
+    color: var(--gr-texto-tenue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: help;
+}
+
+.grupos-tabla-standings td {
+    padding: 11px 6px;
+    border-bottom: 1px solid var(--gr-borde-suave);
+    color: #cfd9e6;
+    vertical-align: middle;
+}
+
+.grupos-tabla-standings tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.grupos-tabla-standings .col-pos {
+    width: 42px;
+    text-align: center;
+}
+
+.grupos-tabla-standings .col-nombre {
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.grupos-tabla-standings .col-num {
+    width: 44px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.grupos-tabla-standings .col-sets {
+    width: 58px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.grupos-tabla-standings th.col-pts {
+    color: var(--gr-acento-claro);
+}
+
+.grupos-tabla-standings td.col-pts {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.grupos-tabla-standings td.es-positivo {
+    color: var(--gr-verde-claro);
+}
+
+.grupos-tabla-standings td.es-negativo {
+    color: #ff8a8a;
+}
+
+.grupos-posicion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--gr-texto-suave);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* Puestos de clasificación (los 2 primeros) en verde. */
+.grupos-standings-clasifica td {
+    background: var(--gr-verde-fondo);
+}
+
+.grupos-standings-clasifica td:first-child {
+    box-shadow: inset 3px 0 0 var(--gr-verde);
+}
+
+.grupos-standings-clasifica .grupos-posicion {
+    background: var(--gr-verde);
+    color: #052e16;
+}
+
+.grupos-standings-clasifica .col-nombre {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.grupos-standings-clasifica td.col-pts {
+    color: var(--gr-verde-claro);
+}
+
+.grupos-nota-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 0;
+    color: var(--gr-texto-suave);
+    font-size: 12px;
+}
+
+.grupos-leyenda-clasifica {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--gr-verde);
+}
+
+.grupos-posiciones-vacio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gr-texto-tenue);
+    font-size: 13px;
+}
+
+.grupos-posiciones-vacio a,
+.grupos-bloque .vt-estado-vacio a {
+    color: var(--gr-acento-claro);
+}
+
+
+/* =========================================================
+   MARCADOR DE PARTIDO (carga de resultados en el lugar)
+   ========================================================= */
+
+.grupos-marcadores {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 12px;
+}
+
+.marcador {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--gr-fila);
+    border: 1px solid var(--gr-borde-suave);
+    scroll-margin-top: var(--gr-cab-alto, 300px);
+    transition: border-color .2s ease;
+}
+
+.marcador:focus-within {
+    border-color: var(--gr-acento);
+}
+
+.marcador-jugado {
+    border-color: rgba(34, 197, 94, 0.28);
+}
+
+/* Al volver de guardar, el partido editado se resalta un momento. */
+.marcador:target {
+    animation: marcador-resaltar 1.6s ease;
+}
+
+@keyframes marcador-resaltar {
+    0% { box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.55); }
+    100% { box-shadow: 0 0 0 3px rgba(47, 123, 255, 0); }
+}
+
+.marcador-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.marcador-etiqueta {
+    color: var(--gr-texto-tenue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.marcador-estado {
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.marcador-estado.es-pendiente {
+    background: rgba(245, 166, 35, 0.14);
+    color: #f5c26b;
+}
+
+.marcador-estado.es-jugado {
+    background: var(--gr-verde-fondo);
+    color: var(--gr-verde-claro);
+}
+
+.marcador-cuerpo {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Las celdas van en orden de columna: nombres, set 1, set 2, set 3. */
+.marcador-grilla {
+    flex: 1 1 240px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 44px);
+    grid-template-rows: auto 40px 40px;
+    grid-auto-flow: column;
+    column-gap: 6px;
+    row-gap: 6px;
+    align-items: center;
+}
+
+.marcador-set-titulo {
+    color: var(--gr-texto-tenue);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.marcador-nombre {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--gr-texto);
+    font-size: 13.5px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.marcador-nombre.gano {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.marcador-nombre.gano i {
+    flex-shrink: 0;
+    color: var(--gr-verde-claro);
+    font-size: 13px;
+}
+
+body.panel-body .marcador-input {
+    width: 44px;
+    height: 40px;
+    padding: 0;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.marcador-input::-webkit-outer-spin-button,
+.marcador-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+body.panel-body .marcador-input:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+}
+
+body.panel-body .marcador-guardar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    height: 40px;
+    margin-left: auto;
+    padding: 0 14px;
+    border: none;
+    border-radius: 8px;
+    background: #078cff;
+    box-shadow: none;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transform: none;
+}
+
+body.panel-body .marcador-guardar:hover {
+    background: #1498ff;
+    transform: none;
+}
+
+body.panel-body .marcador-jugado .marcador-guardar {
+    background: transparent;
+    border: 1px solid var(--gr-borde);
+    color: var(--gr-texto);
+}
+
+body.panel-body .marcador-jugado .marcador-guardar:hover {
+    background: var(--gr-acento-fondo);
+}
+
+/* W.O.: el partido se resuelve sin sets */
+.marcador-wo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.marcador-wo label {
+    flex: 0 0 auto;
+    color: var(--gr-texto-tenue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+body.panel-body .marcador-wo-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(105, 181, 255, 0.25);
+    background: #031f38;
+    color: #ffffff;
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+}
+
+.marcador-es-wo .marcador-grilla {
+    opacity: .55;
+}
+
+.marcador-aviso {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+}
+
+.marcador-aviso[hidden] {
+    display: none;
+}
+
+.marcador-aviso-exito {
+    background: var(--gr-verde-fondo);
+    color: var(--gr-verde-claro);
+}
+
+.marcador-aviso-error {
+    background: var(--gr-peligro-fondo);
+    color: #ff9b9b;
+}
+
+
+/* =========================================================
+   2. FASE FINAL
+   ========================================================= */
+
+.grupos-marcadores-final {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+}
+
+
+/* =========================================================
+   3. ADMINISTRAR GRUPOS
+   ========================================================= */
+
+.grupos-crear-card {
+    margin-bottom: 18px;
+}
+
+.grupos-form-crear {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.panel-body .grupos-form-crear input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.grupos-form-crear button {
+    flex: 0 0 auto;
+    height: 42px;
+    padding: 0 16px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.grupos-buscador {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 20px;
+    border: 1px solid var(--gr-borde);
+    background: rgba(5, 28, 50, 0.6);
+    color: var(--gr-texto-tenue);
+    min-width: 240px;
+    transition: border-color .2s ease;
+}
+
+.grupos-buscador:focus-within {
+    border-color: var(--gr-acento);
+}
+
+body.panel-body .grupos-buscador input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    color: var(--gr-texto);
+    font-size: 13.5px;
     outline: none;
-
-    border-color: #2f7bff;
-
 }
 
 .grupos-grid {
-
     display: grid;
-
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-
-    gap: 16px;
-
-    margin-top: 14px;
-
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    gap: 18px;
+    align-items: start;
 }
 
 .grupos-tarjeta {
-
-    background: rgba(7, 35, 62, 0.62);
-
-    border: 1px solid rgba(105, 181, 255, 0.25);
-
+    display: flex;
+    flex-direction: column;
+    background: var(--gr-superficie);
+    border: 1px solid var(--gr-borde);
     border-radius: 16px;
-
-    padding: 16px;
-
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
+    overflow: hidden;
+}
 
+.grupos-tarjeta-vacia {
+    border-color: rgba(245, 166, 35, 0.35);
 }
 
 .grupos-tarjeta-header {
-
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px 14px 18px;
+    background: var(--gr-superficie-alta);
+    border-bottom: 1px solid var(--gr-borde-suave);
+}
 
+.grupos-tarjeta-titulo {
+    display: flex;
+    align-items: center;
     gap: 10px;
-
-    flex-wrap: wrap;
-
-    margin-bottom: 12px;
-
-    padding-bottom: 12px;
-
-    border-bottom: 1px solid rgba(105, 181, 255, 0.18);
-
+    flex: 1;
+    min-width: 0;
 }
 
 .grupos-form-renombrar {
-
     display: flex;
-
     align-items: center;
-
-    gap: 6px;
-
-    flex: 1;
-
-    min-width: 140px;
-
+    min-width: 0;
 }
 
-.grupos-form-renombrar input[type="text"] {
-
-    flex: 1;
-
-    min-width: 100px;
-
-    padding: 6px 10px;
-
+/* El nombre se edita en el lugar: parece un título hasta que se enfoca.
+   El ancho sale del atributo size (lo ajusta el JS mientras se escribe). */
+body.panel-body .grupos-nombre-input {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 4px 8px;
+    margin-left: -8px;
+    border: 1px solid transparent;
     border-radius: 8px;
-
-    border: 1px solid rgba(90, 170, 255, 0.3);
-
-    background: rgba(5, 28, 50, 0.6);
-
+    background: transparent;
+    box-shadow: none;
     color: #ffffff;
-
+    font-size: 17px;
     font-weight: 700;
-
-    font-size: 15px;
-
+    text-overflow: ellipsis;
+    transition: background .2s ease, border-color .2s ease;
 }
 
-.grupos-form-renombrar input[type="text"]:focus {
+body.panel-body .grupos-nombre-input:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
 
+body.panel-body .grupos-nombre-input:focus {
     outline: none;
-
-    border-color: #2f7bff;
-
+    border-color: var(--gr-acento);
+    background: rgba(5, 28, 50, 0.7);
+    box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.15);
 }
 
-.grupos-tarjeta-header button,
-.grupos-form-renombrar button {
-
+/* El botón de guardar sólo aparece (y ocupa lugar) mientras se edita;
+   Enter también guarda. */
+body.panel-body .grupos-nombre-guardar {
     display: inline-flex;
-
     align-items: center;
-
     justify-content: center;
-
-    width: 32px;
-
-    height: 32px;
-
-    border-radius: 8px;
-
-    border: 1px solid rgba(105, 181, 255, 0.25);
-
-    background: rgba(0, 126, 255, 0.12);
-
-    color: #e7edf5;
-
-    cursor: pointer;
-
-    transition: background .2s ease;
-
     flex-shrink: 0;
-
+    width: 0;
+    height: 28px;
+    margin-left: 0;
+    padding: 0;
+    overflow: hidden;
+    border: none;
+    border-radius: 8px;
+    background: var(--gr-acento);
+    box-shadow: none;
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: none;
+    transition: opacity .15s ease;
 }
 
-.grupos-tarjeta-header button:hover,
-.grupos-form-renombrar button:hover {
-
-    background: rgba(0, 126, 255, 0.28);
-
+body.panel-body .grupos-form-renombrar:focus-within .grupos-nombre-guardar {
+    width: 28px;
+    margin-left: 6px;
+    opacity: 1;
+    pointer-events: auto;
 }
 
-.grupos-tarjeta-header button:disabled {
-
-    opacity: .35;
-
-    cursor: not-allowed;
-
+.grupos-pill {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--gr-acento-fondo);
+    color: var(--gr-acento-claro);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .grupos-tarjeta-acciones {
-
     display: flex;
-
-    gap: 6px;
-
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
 }
 
-.btn-eliminar-grupo {
 
-    color: #ff6b6b !important;
+/* ---------- Botones de ícono (acciones secundarias) ---------- */
 
+body.panel-body .grupos-icono-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--gr-texto-suave);
+    font-size: 15px;
+    cursor: pointer;
+    transform: none;
+    transition: background .15s ease, color .15s ease;
+}
+
+body.panel-body .grupos-icono-btn-sm {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+}
+
+body.panel-body .grupos-icono-btn:hover,
+body.panel-body .grupos-icono-btn.grupos-toggle-activo {
+    background: var(--gr-acento-fondo);
+    color: #ffffff;
+    transform: none;
+}
+
+body.panel-body .grupos-icono-btn-peligro:hover {
+    background: var(--gr-peligro-fondo);
+    color: var(--gr-peligro);
+}
+
+body.panel-body .grupos-icono-btn:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+    background: transparent;
+    color: var(--gr-texto-suave);
+}
+
+body.panel-body .grupos-icono-btn:focus-visible {
+    outline: 2px solid var(--gr-acento);
+    outline-offset: 1px;
+}
+
+
+/* ---------- Secciones de la tarjeta ---------- */
+
+.grupos-seccion {
+    padding: 16px 18px;
+}
+
+.grupos-seccion + .grupos-seccion {
+    border-top: 1px solid var(--gr-borde-suave);
+}
+
+.grupos-seccion-titulo {
+    margin: 0 0 10px;
+    color: var(--gr-texto-tenue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    text-transform: uppercase;
 }
 
 .grupos-tarjeta-vacio {
-
-    color: #9fb3c8;
-
+    margin: 10px 0 0;
+    color: var(--gr-texto-suave);
     font-size: 13px;
-
-    margin: 0;
-
 }
 
-.grupos-miembros {
-
-    list-style: none;
-
+.grupos-panel-partidos .grupos-tarjeta-vacio {
     margin: 0;
+}
 
+
+/* ---------- Integrantes ---------- */
+
+.grupos-miembros {
+    list-style: none;
+    margin: 0;
     padding: 0;
-
     display: flex;
-
     flex-direction: column;
-
-    gap: 8px;
-
+    gap: 6px;
 }
 
 .grupos-miembro {
-
     display: flex;
-
     align-items: center;
-
-    justify-content: space-between;
-
-    gap: 10px;
-
-    flex-wrap: wrap;
-
-    background: rgba(5, 28, 50, 0.5);
-
-    border: 1px solid rgba(105, 181, 255, 0.15);
-
+    gap: 12px;
+    padding: 8px 6px 8px 10px;
     border-radius: 10px;
-
-    padding: 8px 12px;
-
+    background: var(--gr-fila);
+    border: 1px solid var(--gr-borde-suave);
+    transition: background .15s ease, border-color .15s ease;
 }
 
-.grupos-miembro span {
+.grupos-miembro:hover {
+    background: rgba(47, 123, 255, 0.06);
+    border-color: var(--gr-borde);
+}
 
-    color: #e7edf5;
+.grupos-miembro-numero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--gr-acento-fondo);
+    color: var(--gr-acento-claro);
+    font-size: 11.5px;
+    font-weight: 700;
+}
 
+.grupos-miembro-nombre {
+    flex: 1;
+    min-width: 0;
+    color: var(--gr-texto);
     font-size: 14px;
-
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .grupos-miembro-acciones {
-
     display: flex;
-
-    gap: 8px;
-
-    flex-wrap: wrap;
-
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
 }
 
 .grupos-miembro-acciones form {
-
     display: flex;
-
-    align-items: center;
-
-    gap: 6px;
-
 }
 
-.grupos-miembro select,
-.grupos-sin-asignar select {
 
-    padding: 6px 8px;
+/* ---------- Agregar / mover (se despliegan en el lugar) ---------- */
 
-    border-radius: 8px;
-
-    border: 1px solid rgba(90, 170, 255, 0.3);
-
-    background: rgba(5, 28, 50, 0.6);
-
-    color: #e7edf5;
-
-    font-size: 13px;
-
-    max-width: 160px;
-
-}
-
-.grupos-miembro-acciones button,
-.grupos-sin-asignar button {
-
-    display: inline-flex;
-
+body.panel-body .grupos-btn-agregar {
+    display: flex;
     align-items: center;
-
     justify-content: center;
-
-    width: 30px;
-
-    height: 30px;
-
-    border-radius: 8px;
-
-    border: 1px solid rgba(105, 181, 255, 0.25);
-
-    background: rgba(0, 126, 255, 0.12);
-
-    color: #e7edf5;
-
-    cursor: pointer;
-
-    flex-shrink: 0;
-
-}
-
-.grupos-miembro-acciones button:hover,
-.grupos-sin-asignar button:hover {
-
-    background: rgba(0, 126, 255, 0.28);
-
-}
-
-.grupos-sin-asignar {
-
-    margin-top: 14px;
-
-}
-
-.grupos-sin-asignar .grupos-miembro form {
-
-    display: flex;
-
-    align-items: center;
-
     gap: 6px;
+    width: 100%;
+    height: 40px;
+    margin-top: 10px;
+    padding: 0 12px;
+    border: 1px dashed rgba(105, 181, 255, 0.4);
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--gr-acento-claro);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transform: none;
+    transition: background .15s ease, border-color .15s ease;
+}
 
+body.panel-body .grupos-btn-agregar:hover {
+    background: var(--gr-acento-fondo);
+    border-color: var(--gr-acento);
+    transform: none;
+}
+
+body.panel-body .grupos-btn-agregar-destacado {
+    border-style: solid;
+    border-color: transparent;
+    background: var(--gr-alerta);
+    color: #1a1204;
+}
+
+body.panel-body .grupos-btn-agregar-destacado:hover {
+    background: #ffb53d;
+    border-color: transparent;
+}
+
+.grupos-form-agregar-inline[hidden] {
+    display: none;
+}
+
+.grupos-form-agregar-inline {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+body.panel-body .grupos-form-agregar-inline select {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 13.5px;
+}
+
+body.panel-body .grupos-btn-confirmar {
+    flex-shrink: 0;
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 8px;
+    background: #078cff;
+    box-shadow: none;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transform: none;
+}
+
+body.panel-body .grupos-btn-confirmar:hover {
+    background: #1498ff;
+    transform: none;
+}
+
+
+/* ---------- Estado vacío de la tarjeta ---------- */
+
+.grupos-tarjeta-vacio-estado {
+    text-align: center;
+    padding: 6px 10px 4px;
+    color: var(--gr-texto-suave);
+}
+
+.grupos-tarjeta-vacio-estado i {
+    display: block;
+    margin-bottom: 6px;
+    color: #4f6a8a;
+    font-size: 26px;
+}
+
+.grupos-tarjeta-vacio-estado strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--gr-texto);
+    font-size: 14px;
+}
+
+.grupos-tarjeta-vacio-estado p {
+    margin: 0;
+    font-size: 12.5px;
+}
+
+
+/* =========================================================
+   LISTA DE TORNEOS (paneles.php?seccion=grupos)
+   ========================================================= */
+
+.grupos-lista-nombre {
+    color: #ffffff;
+    font-size: 16px;
+    text-transform: capitalize;
+    overflow-wrap: anywhere;
+}
+
+.grupos-lista-cuerpo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.grupos-lista-datos {
+    margin: 0;
+    color: var(--gr-texto-suave);
+    font-size: 13px;
+}
+
+.grupos-lista-link {
+    display: inline-flex;
+    padding: 0 14px;
+    text-decoration: none;
 }
 
 
@@ -341,26 +1123,395 @@
    RESPONSIVE
    ========================================================= */
 
-@media (max-width: 640px) {
+@media (max-width: 1150px) {
 
-    .grupos-grid {
-
-        grid-template-columns: 1fr;
-
+    .grupos-panel-cuerpo {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .grupos-miembro {
+    .grupos-panel-partidos {
+        border-left: none;
+        border-top: 1px solid var(--gr-borde-suave);
+    }
 
+}
+
+@media (max-width: 760px) {
+
+    .grupos-hero {
         flex-direction: column;
-
         align-items: flex-start;
-
     }
 
-    .grupos-miembro-acciones {
-
+    .grupos-hero-info {
         width: 100%;
-
+        flex-wrap: wrap;
     }
 
+    .grupos-seccion-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .grupos-buscador {
+        min-width: 0;
+    }
+
+    .grupos-panel-tabla,
+    .grupos-panel-partidos {
+        padding: 16px 14px;
+    }
+
+}
+
+@media (max-width: 520px) {
+
+    .grupos-form-crear {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .grupos-tarjeta-header {
+        flex-wrap: wrap;
+    }
+
+    .grupos-tarjeta-acciones {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* En celular se priorizan PJ, PG y PTS; el resto queda en escritorio. */
+    .grupos-tabla-standings {
+        min-width: 0;
+    }
+
+    .grupos-tabla-standings .col-extra {
+        display: none;
+    }
+
+    /* Una sola fila: la barra sticky ocupa poco alto y no tapa el contenido. */
+    .grupos-subnav {
+        flex-wrap: nowrap;
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .grupos-subnav a {
+        flex: 1 1 0;
+        min-width: 0;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 4px;
+        font-size: 11.5px;
+        text-align: center;
+        line-height: 1.15;
+    }
+
+    .grupos-subnav a i {
+        display: none;
+    }
+
+}
+
+
+/* =========================================================
+   CABECERA FIJA COMPACTA
+   En ventanas bajas o angostas la cabecera cede espacio al contenido:
+   se oculta la descripción y el ícono de fecha, y se reducen los
+   espaciados. El diseño y los botones no cambian.
+   ========================================================= */
+
+@media (max-height: 760px), (max-width: 900px) {
+
+    .grupos-cabecera {
+        padding: 8px 32px 8px;
+    }
+
+    .grupos-cabecera .vt-volver {
+        padding: 6px 12px;
+        font-size: 12.5px;
+    }
+
+    .grupos-cabecera .grupos-hero {
+        margin-top: 8px !important;
+        padding: 8px 14px;
+        gap: 6px 12px;
+    }
+
+    .grupos-hero-contenido h1 {
+        font-size: 18px;
+        margin-top: 2px;
+    }
+
+    .grupos-hero-contenido p,
+    .grupos-hero-info-icono {
+        display: none;
+    }
+
+    .grupos-cabecera .grupos-subnav {
+        margin-top: 8px;
+    }
+
+}
+
+@media (max-height: 760px), (max-width: 900px) {
+    body.panel-body { --gr-cab-alto: 290px; }
+}
+
+.grupos-cabecera .grupos-hero {
+    margin-top: 14px;
+}
+
+
+/* =========================================================
+   PESTAÑAS (Posiciones y resultados / Fase final / Administrar grupos)
+   ========================================================= */
+
+.grupos-tab-panel[hidden] {
+    display: none;
+}
+
+.grupos-tab-panel:not([hidden]) {
+    animation: grupos-tab-entrada .2s ease;
+}
+
+@keyframes grupos-tab-entrada {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .grupos-tab-panel:not([hidden]) { animation: none; }
+}
+
+.grupos-subnav a.activa {
+    background: var(--gr-acento-fondo);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--gr-borde);
+}
+
+
+/* =========================================================
+   CARRUSEL DE GRUPOS (Posiciones y resultados)
+   Un grupo por vez; flechas en cada tarjeta y selector de grupos.
+   ========================================================= */
+
+.grupos-panel[hidden] {
+    display: none;
+}
+
+.grupos-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+body.panel-body .grupos-chip {
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--gr-fila);
+    border: 1px solid var(--gr-borde-suave);
+    color: var(--gr-texto-suave);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+body.panel-body .grupos-chip:hover {
+    background: var(--gr-acento-fondo);
+    color: #ffffff;
+}
+
+body.panel-body .grupos-chip.activo {
+    background: var(--gr-acento-fondo);
+    border-color: var(--gr-borde);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--gr-borde);
+}
+
+.grupos-chip i {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.grupos-chip.es-completo i {
+    color: var(--gr-verde-claro);
+    opacity: 1;
+}
+
+/* Insignia con la letra del grupo y avatar de cada fila */
+.grupos-letra {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1d6bff, #2f7bff);
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.grupos-avatar {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin-right: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1d6bff, #2f7bff);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.grupos-nombre-texto {
+    vertical-align: middle;
+}
+
+/* Flechas de la tarjeta */
+.grupos-nav-carrusel {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+body.panel-body .grupos-nav-carrusel button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--gr-fila);
+    border: 1px solid var(--gr-borde);
+    color: #ffffff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+body.panel-body .grupos-nav-carrusel button[data-grupo-dir="1"] {
+    background: #1d6bff;
+    border-color: #1d6bff;
+}
+
+body.panel-body .grupos-nav-carrusel button:hover:not(:disabled) {
+    background: #2f7bff;
+    border-color: #2f7bff;
+}
+
+body.panel-body .grupos-nav-carrusel button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+
+    .grupos-nav-carrusel {
+        margin-left: 0;
+    }
+
+}
+
+
+/* =========================================================
+   MINI CARRUSEL DE PARTIDOS (de a 2 por página dentro de cada grupo)
+   ========================================================= */
+
+.grupos-marcadores > form.marcador[hidden] {
+    display: none;
+}
+
+.partidos-pag {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.partidos-pag-puntos {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+body.panel-body .partidos-pag-punto {
+    width: 9px;
+    height: 9px;
+    min-width: 0;
+    padding: 0;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.22);
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+}
+
+body.panel-body .partidos-pag-punto:hover {
+    background: rgba(143, 184, 255, 0.6);
+}
+
+body.panel-body .partidos-pag-punto.activo {
+    background: var(--gr-acento);
+    transform: scale(1.25);
+}
+
+.partidos-pag-texto {
+    margin-left: auto;
+    color: var(--gr-texto-suave);
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+body.panel-body .partidos-pag-flecha {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--gr-fila);
+    border: 1px solid var(--gr-borde);
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+body.panel-body .partidos-pag-flecha:hover:not(:disabled) {
+    background: #2f7bff;
+    border-color: #2f7bff;
+}
+
+body.panel-body .partidos-pag-flecha:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   PESTAÑAS POR RONDA (Fase final)
+   ========================================================= */
+
+.grupos-ronda-panel[hidden] {
+    display: none;
+}
+
+.grupos-subtabs {
+    margin-bottom: 16px;
 }

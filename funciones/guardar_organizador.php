@@ -3,6 +3,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("validar_nombre.php");
 
 
 // ==========================================
@@ -113,6 +114,22 @@ empty($tarde_hasta)
 ) {
 
     die("Todos los campos son obligatorios.");
+
+}
+
+
+// ==========================================
+// VALIDAR NOMBRE Y APELLIDO
+// ==========================================
+
+$nombre = normalizar_nombre_persona($nombre);
+$apellido = normalizar_nombre_persona($apellido);
+
+if ($nombre === null || $apellido === null) {
+
+    die(
+        "El nombre y el apellido solo pueden tener letras, espacios, apóstrofes o guiones (entre 2 y 50 caracteres)."
+    );
 
 }
 

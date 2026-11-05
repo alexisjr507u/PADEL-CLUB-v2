@@ -3,6 +3,8 @@
 include("config/no_cache.php");
 include("config/conexion.php");
 require_once("funciones/csrf.php");
+require_once("funciones/standings.php");
+require_once("funciones/ranking_vista.php");
 
 
 /* =========================================================
@@ -37,6 +39,7 @@ $esAdmin = ($_SESSION['id_rol'] == 1);
 
 $sqlTorneo = "
     SELECT torneos.id_torneo, torneos.nombre, torneos.tipo, torneos.estado,
+           torneos.imagen, torneos.fecha_inicio, torneos.fecha_fin,
            categoria.nombre AS categoria, club.nombre AS nombre_club, club.id_usuario AS id_organizador
     FROM torneos
     INNER JOIN categoria ON categoria.id_categoria = torneos.id_categoria
@@ -115,8 +118,152 @@ foreach ($grupos as &$grupo) {
 
     }
 
+    $datosPartidosGrupo = obtenerMiembrosYPartidosDeGrupo($conexion, $grupo['id_grupo'], $esIndividual);
+    $grupo['standings'] = calcularStandings($datosPartidosGrupo['miembros'], $datosPartidosGrupo['partidos']);
+    $grupo['partidos'] = $datosPartidosGrupo['partidos'];
+
+    $grupo['nombres_entrantes'] = [];
+    foreach ($datosPartidosGrupo['miembros'] as $m) {
+        $idEnt = (int) $m['id_entrante'];
+        $grupo['nombres_entrantes'][$idEnt] = $esIndividual
+            ? trim($m['nombre'] . ' ' . $m['apellido'])
+            : trim($m['nombre1'] . ' ' . $m['apellido1']) . ' / ' . trim($m['nombre2'] . ' ' . $m['apellido2']);
+    }
+
+    $grupo['partidos_pendientes'] = 0;
+    foreach ($grupo['partidos'] as $p) {
+        if ($p['estado'] !== 'Jugado') {
+            $grupo['partidos_pendientes']++;
+        }
+    }
+
 }
 unset($grupo);
+
+
+/* =========================================================
+   COLORES DE ÍCONO POR GRUPO + LISTADO GLOBAL DE PARTIDOS
+   ========================================================= */
+
+// Un solo acento (azul), para no romper la identidad visual del resto
+// del sitio con colores que no se usan en ninguna otra pantalla.
+$coloresGrupos = ['azul'];
+
+$partidosGlobal = [];
+
+foreach ($grupos as $indiceColor => $g) {
+    foreach ($g['partidos'] as $p) {
+        $p['grupo_nombre'] = $g['nombre'];
+        $p['grupo_color'] = $coloresGrupos[$indiceColor % count($coloresGrupos)];
+        $p['nombres_entrantes'] = $g['nombres_entrantes'];
+        $partidosGlobal[] = $p;
+    }
+}
+
+$hayAlgunPartido = !empty($partidosGlobal);
+
+
+/* =========================================================
+   FASE FINAL (SEMIFINALES/FINAL) — solo si hay exactamente 2 grupos
+   ========================================================= */
+
+$nombresEntrantesTorneo = [];
+foreach ($grupos as $g) {
+    $nombresEntrantesTorneo += $g['nombres_entrantes'];
+}
+
+// Con 2 grupos: semifinales y final. Con 4 u 8 grupos: cuadro completo (cuartos u octavos
+// hasta la final). Otras cantidades no tienen cruces automáticos.
+$modoCuadro = in_array(count($grupos), [4, 8], true);
+$faseFinalDisponible = (count($grupos) === 2) || $modoCuadro;
+$partidosFaseFinal = [];
+
+if ($faseFinalDisponible) {
+
+    $tablaPartidosFF = $esIndividual ? 'partido_individual' : 'partido_pareja';
+    $tablaEntrantesFF = $esIndividual ? 'grupo_inscripcion' : 'grupo_pareja';
+    $colEntranteFF = $esIndividual ? 'id_grupo_inscripcion' : 'id_grupo_pareja';
+
+    $stmtFaseFinal = mysqli_prepare(
+        $conexion,
+        "SELECT p.id_partido, p.fase, p.orden, p.id_entrante_1, p.id_entrante_2,
+                p.set1_games_1, p.set1_games_2, p.set2_games_1, p.set2_games_2,
+                p.set3_games_1, p.set3_games_2, p.id_ganador, p.resultado_tipo, p.estado
+         FROM $tablaPartidosFF p
+         INNER JOIN $tablaEntrantesFF e ON e.$colEntranteFF = p.id_entrante_1
+         INNER JOIN grupo g ON g.id_grupo = e.id_grupo
+         WHERE g.id_torneo = ? AND p.fase IN ('Octavos', 'Cuartos', 'Semifinal', 'Final')
+         ORDER BY FIELD(p.fase, 'Octavos', 'Cuartos', 'Semifinal', 'Final') ASC, p.orden ASC"
+    );
+    mysqli_stmt_bind_param($stmtFaseFinal, "i", $id_torneo);
+    mysqli_stmt_execute($stmtFaseFinal);
+    $partidosFaseFinal = mysqli_fetch_all(mysqli_stmt_get_result($stmtFaseFinal), MYSQLI_ASSOC);
+
+}
+
+$semisTotal = 0;
+$semisJugadas = 0;
+$finalGenerada = false;
+
+foreach ($partidosFaseFinal as $pf) {
+    if ($pf['fase'] === 'Semifinal') {
+        $semisTotal++;
+        if ($pf['estado'] === 'Jugado') {
+            $semisJugadas++;
+        }
+    } elseif ($pf['fase'] === 'Final') {
+        $finalGenerada = true;
+    }
+}
+
+$semifinalesGeneradas = $semisTotal > 0;
+$semifinalesCompletas = ($semisTotal === 2 && $semisJugadas === 2);
+
+// Cuadro (4 u 8 grupos): estado de cada ronda y cuál es la próxima a generar.
+$rondasCuadro = [];
+foreach ($partidosFaseFinal as $pf) {
+    $rondasCuadro[$pf['fase']][] = $pf;
+}
+
+$ordenRondasCuadro = ['Octavos', 'Cuartos', 'Semifinal', 'Final'];
+$etiquetasRonda = ['Octavos' => 'Octavos de final', 'Cuartos' => 'Cuartos de final', 'Semifinal' => 'Semifinales', 'Final' => 'Final'];
+$etiquetasBoton = ['Octavos' => 'Generar octavos de final', 'Cuartos' => 'Generar cuartos de final', 'Semifinal' => 'Generar semifinales', 'Final' => 'Generar final'];
+
+$proximaRonda = null;
+$rondaPendienteMensaje = '';
+
+if ($modoCuadro) {
+
+    $primera = count($grupos) === 8 ? 'Octavos' : 'Cuartos';
+    $ultimaGenerada = null;
+
+    foreach ($ordenRondasCuadro as $nombreRonda) {
+        if (!empty($rondasCuadro[$nombreRonda])) {
+            $ultimaGenerada = $nombreRonda;
+        }
+    }
+
+    if ($ultimaGenerada === null) {
+        $proximaRonda = $primera;
+    } elseif ($ultimaGenerada !== 'Final') {
+        $proximaRonda = $ordenRondasCuadro[array_search($ultimaGenerada, $ordenRondasCuadro, true) + 1];
+    }
+
+    $campeonCuadro = '';
+
+    if (!empty($rondasCuadro['Final']) && $rondasCuadro['Final'][0]['estado'] === 'Jugado') {
+        $campeonCuadro = $nombresEntrantesTorneo[(int) $rondasCuadro['Final'][0]['id_ganador']] ?? '';
+    }
+
+}
+
+$gruposCompletosParaSemis = $faseFinalDisponible;
+
+foreach ($grupos as $g) {
+    if (count($g['miembros']) < 2 || $g['partidos_pendientes'] > 0 || empty($g['partidos'])) {
+        $gruposCompletosParaSemis = false;
+    }
+}
 
 
 /* =========================================================
@@ -174,12 +321,197 @@ $mensajesAccion = [
     'no_existe'           => ['tipo' => 'error', 'texto' => 'Ese torneo no existe.'],
     'grupo_no_existe'     => ['tipo' => 'error', 'texto' => 'Ese grupo no existe en este torneo.'],
     'datos_invalidos'     => ['tipo' => 'error', 'texto' => 'Los datos enviados no son válidos.'],
+    'ranking_liquidado'   => ['tipo' => 'exito', 'texto' => 'Puntos otorgados: ya figuran en el ranking de la categoría.'],
+    'ranking_ya_liquidado' => ['tipo' => 'error', 'texto' => 'Los puntos de este torneo ya se habían otorgado.'],
+    'ranking_sin_partidos' => ['tipo' => 'error', 'texto' => 'Todavía no hay partidos en este torneo para otorgar puntos.'],
+    'ranking_partidos_pendientes' => ['tipo' => 'error', 'texto' => 'No se pueden otorgar los puntos: faltan resultados por cargar.'],
+    'ranking_falta_final' => ['tipo' => 'error', 'texto' => 'No se pueden otorgar los puntos: falta jugar la final.'],
+    'ranking_resultado_invalido' => ['tipo' => 'error', 'texto' => 'No se pueden otorgar los puntos: hay un resultado inválido.'],
+    'torneo_liquidado'    => ['tipo' => 'error', 'texto' => 'Los puntos de este torneo ya se otorgaron al ranking: los resultados quedaron fijos.'],
     'modalidad_incompatible' => ['tipo' => 'error', 'texto' => 'No se pueden mezclar inscripciones individuales con parejas.'],
     'elemento_no_disponible' => ['tipo' => 'error', 'texto' => 'Ese participante o pareja no está confirmado en este torneo.'],
     'elemento_no_asignado'   => ['tipo' => 'error', 'texto' => 'Ese participante o pareja no está asignado a ningún grupo de este torneo.'],
     'ya_asignado'         => ['tipo' => 'error', 'texto' => 'Ya está asignado a un grupo. Quitalo primero si querés moverlo.'],
+    'tiene_partidos'      => ['tipo' => 'error', 'texto' => 'No se puede quitar/eliminar: ese grupo ya tiene partidos con resultados cargados.'],
     'error_bd'            => ['tipo' => 'error', 'texto' => 'Ocurrió un error al guardar. Intentá nuevamente.'],
+    'partidos_generados'  => ['tipo' => 'exito', 'texto' => 'Se generaron los partidos del grupo (todos contra todos).'],
+    'partidos_con_resultados' => ['tipo' => 'error', 'texto' => 'No se puede regenerar: ya hay resultados cargados en ese grupo.'],
+    'miembros_insuficientes'  => ['tipo' => 'error', 'texto' => 'El grupo necesita al menos 2 participantes o parejas para generar partidos.'],
+    'resultado_cargado'   => ['tipo' => 'exito', 'texto' => 'El resultado se cargó correctamente.'],
+    'resultado_wo_cargado' => ['tipo' => 'exito', 'texto' => 'Se registró el W.O.: el partido quedó para quien se presentó, sin sets.'],
+    'resultado_invalido'  => ['tipo' => 'error', 'texto' => 'El resultado cargado no es válido. Revisá los sets.'],
+    'faltan_sets'         => ['tipo' => 'error', 'texto' => 'Completá los games del set 1 y del set 2.'],
+    'set_incompleto'      => ['tipo' => 'error', 'texto' => 'El set 3 tiene que tener los games de las dos parejas.'],
+    'set_invalido'        => ['tipo' => 'error', 'texto' => 'Hay un set con un marcador imposible. Un set termina 6-0 a 6-4, 7-5 o 7-6.'],
+    'falta_tercer_set'    => ['tipo' => 'error', 'texto' => 'Los sets quedaron 1 a 1: falta cargar el set 3.'],
+    'set_sobrante'        => ['tipo' => 'error', 'texto' => 'El partido ya se definió en 2 sets: el set 3 no corresponde.'],
+    'resultado_inconcluso' => ['tipo' => 'error', 'texto' => 'Ese resultado no define un ganador.'],
+    'partido_no_existe'   => ['tipo' => 'error', 'texto' => 'Ese partido no existe en este torneo.'],
+    'requiere_dos_grupos' => ['tipo' => 'error', 'texto' => 'El cruce de semifinales solo está disponible con exactamente 2 grupos.'],
+    'grupos_incompletos'  => ['tipo' => 'error', 'texto' => 'Todavía faltan resultados por cargar en los grupos.'],
+    'semifinales_ya_generadas' => ['tipo' => 'error', 'texto' => 'Las semifinales ya fueron generadas.'],
+    'semifinales_generadas'    => ['tipo' => 'exito', 'texto' => 'Se generaron las semifinales.'],
+    'requiere_semifinales'     => ['tipo' => 'error', 'texto' => 'Primero tenés que generar las semifinales.'],
+    'semifinales_incompletas'  => ['tipo' => 'error', 'texto' => 'Todavía faltan resultados de las semifinales.'],
+    'final_ya_generada'        => ['tipo' => 'error', 'texto' => 'La final ya fue generada.'],
+    'final_generada'          => ['tipo' => 'exito', 'texto' => 'Se generó la final del torneo.'],
+    'ronda_generada'         => ['tipo' => 'exito', 'texto' => 'Se generó la nueva ronda del cuadro.'],
+    'ronda_incompleta'       => ['tipo' => 'error', 'texto' => 'Todavía faltan resultados en la ronda actual del cuadro.'],
+    'ronda_ya_generada'      => ['tipo' => 'error', 'texto' => 'Esa ronda ya fue generada.'],
+    'cuadro_completo'        => ['tipo' => 'error', 'texto' => 'El cuadro ya llegó a la final.'],
+    'cuadro_no_soportado'    => ['tipo' => 'error', 'texto' => 'Los cruces automáticos están disponibles con 2, 4 u 8 grupos.'],
 ];
+
+
+/* =========================================================
+   FORMATO DE FECHAS PARA LA PORTADA
+   ========================================================= */
+
+$mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+$fechaRangoTorneo = '';
+
+if (!empty($torneo['fecha_inicio']) && !empty($torneo['fecha_fin'])) {
+
+    $fechaInicioTs = strtotime($torneo['fecha_inicio']);
+    $fechaFinTs = strtotime($torneo['fecha_fin']);
+
+    $mesInicio = $mesesCortos[(int) date('n', $fechaInicioTs) - 1];
+    $mesFin = $mesesCortos[(int) date('n', $fechaFinTs) - 1];
+
+    if (date('Y-m', $fechaInicioTs) === date('Y-m', $fechaFinTs)) {
+        $fechaRangoTorneo = date('d', $fechaInicioTs) . ' - ' . date('d', $fechaFinTs) . ' ' . $mesInicio . ' ' . date('Y', $fechaFinTs);
+    } else {
+        $fechaRangoTorneo = date('d', $fechaInicioTs) . ' ' . $mesInicio . ' - ' . date('d', $fechaFinTs) . ' ' . $mesFin . ' ' . date('Y', $fechaFinTs);
+    }
+
+}
+
+
+/* =========================================================
+   AVISO DE RESULTADO: cuando se guarda un partido, el mensaje
+   se muestra dentro de ese mismo marcador (la página vuelve
+   posicionada ahí), no arriba de todo.
+   ========================================================= */
+
+$avisoPartido = null;
+$accionActual = $_GET['accion'] ?? '';
+$idPartidoAviso = filter_input(INPUT_GET, 'partido', FILTER_VALIDATE_INT);
+
+if ($idPartidoAviso && isset($mensajesAccion[$accionActual])) {
+    $avisoPartido = ['partido' => $idPartidoAviso] + $mensajesAccion[$accionActual];
+}
+
+
+/**
+ * Marcador de un partido con los games de cada set editables en el
+ * lugar. Las casillas están en orden de columna (set por set) para que
+ * el Tab vaya 6 → 4 → siguiente set, como se anota un resultado.
+ */
+function renderMarcador(array $partido, string $nombre1, string $nombre2, string $etiqueta, bool $esIndividual, string $csrfToken, int $idTorneo, ?array $aviso) {
+
+    $id = (int) $partido['id_partido'];
+    $jugado = ($partido['estado'] === 'Jugado');
+    $idGanador = $jugado ? (int) $partido['id_ganador'] : 0;
+    $gano1 = $jugado && $idGanador === (int) $partido['id_entrante_1'];
+    $gano2 = $jugado && $idGanador === (int) $partido['id_entrante_2'];
+    $esWo = $jugado && (($partido['resultado_tipo'] ?? 'Normal') === 'WO');
+    // En un W.O. pierde quien no ganó (value = lado que no se presentó).
+    $woPerdedor = $esWo ? ($gano1 ? '2' : '1') : '';
+
+    $e = function ($valor) {
+        return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
+    };
+    $games = function ($campo) use ($partido) {
+        return $partido[$campo] === null ? '' : (int) $partido[$campo];
+    };
+    ?>
+    <form
+        action="funciones/grupos_cargar_resultado.php"
+        method="POST"
+        class="marcador <?php echo $jugado ? 'marcador-jugado' : ''; ?> <?php echo $esWo ? 'marcador-es-wo' : ''; ?>"
+        id="partido-<?php echo $id; ?>"
+        data-marcador
+        novalidate
+    >
+        <input type="hidden" name="csrf_token" value="<?php echo $e($csrfToken); ?>">
+        <input type="hidden" name="id_torneo" value="<?php echo $idTorneo; ?>">
+        <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
+        <input type="hidden" name="id_partido" value="<?php echo $id; ?>">
+
+        <div class="marcador-cabecera">
+            <span class="marcador-etiqueta"><?php echo $e($etiqueta); ?></span>
+            <span class="marcador-estado <?php echo $jugado ? 'es-jugado' : 'es-pendiente'; ?>">
+                <?php echo $jugado ? 'Finalizado' : 'Pendiente'; ?><?php echo $esWo ? ' · W.O.' : ''; ?>
+            </span>
+        </div>
+
+        <div class="marcador-cuerpo">
+
+            <div class="marcador-grilla">
+
+                <span class="marcador-esquina"></span>
+
+                <span class="marcador-nombre <?php echo $gano1 ? 'gano' : ''; ?>">
+                    <?php if ($gano1) { ?><i class="bi bi-trophy-fill"></i><?php } ?>
+                    <?php echo $e($nombre1); ?>
+                </span>
+
+                <span class="marcador-nombre <?php echo $gano2 ? 'gano' : ''; ?>">
+                    <?php if ($gano2) { ?><i class="bi bi-trophy-fill"></i><?php } ?>
+                    <?php echo $e($nombre2); ?>
+                </span>
+
+                <?php for ($set = 1; $set <= 3; $set++) { ?>
+
+                    <span class="marcador-set-titulo">Set <?php echo $set; ?></span>
+
+                    <?php foreach ([1 => $nombre1, 2 => $nombre2] as $lado => $nombreLado) { ?>
+                        <input
+                            type="number"
+                            name="set<?php echo $set; ?>_<?php echo $lado; ?>"
+                            value="<?php echo $games("set{$set}_games_{$lado}"); ?>"
+                            min="0"
+                            max="7"
+                            inputmode="numeric"
+                            class="marcador-input"
+                            <?php echo $set === 3 ? 'data-set3 placeholder="–"' : ''; ?>
+                            aria-label="Set <?php echo $set; ?>, games de <?php echo $e($nombreLado); ?>"
+                        >
+                    <?php } ?>
+
+                <?php } ?>
+
+            </div>
+
+            <button type="submit" class="marcador-guardar">
+                <i class="bi bi-check2"></i>
+                <span><?php echo $jugado ? 'Actualizar' : 'Guardar'; ?></span>
+            </button>
+
+        </div>
+
+        <div class="marcador-wo">
+            <label for="wo-<?php echo $id; ?>">Resultado</label>
+            <select name="wo" id="wo-<?php echo $id; ?>" class="marcador-wo-select">
+                <option value="">Se jugó (cargar sets)</option>
+                <option value="1" <?php echo $woPerdedor === '1' ? 'selected' : ''; ?>>W.O.: no se presentó <?php echo $e($nombre1); ?></option>
+                <option value="2" <?php echo $woPerdedor === '2' ? 'selected' : ''; ?>>W.O.: no se presentó <?php echo $e($nombre2); ?></option>
+            </select>
+        </div>
+
+        <p
+            class="marcador-aviso <?php echo ($aviso && $aviso['partido'] === $id) ? 'marcador-aviso-' . $aviso['tipo'] : ''; ?>"
+            data-marcador-aviso
+            <?php echo ($aviso && $aviso['partido'] === $id) ? '' : 'hidden'; ?>
+        >
+            <?php echo ($aviso && $aviso['partido'] === $id) ? $e($aviso['texto']) : ''; ?>
+        </p>
+
+    </form>
+    <?php
+
+}
 
 ?>
 <!DOCTYPE html>
@@ -194,8 +526,9 @@ $mensajesAccion = [
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/ver_torneo.css">
-    <link rel="stylesheet" href="css/grupos.css">
+    <link rel="stylesheet" href="css/ver_torneo.css?v=15">
+    <link rel="stylesheet" href="css/grupos.css?v=28">
+    <link rel="stylesheet" href="css/ranking.css?v=2">
 
 </head>
 
@@ -203,15 +536,83 @@ $mensajesAccion = [
 
     <div class="panel vt-panel-oscuro">
 
+        <!-- SIDEBAR (igual al panel del organizador) -->
+
+        <aside class="sidebar">
+
+            <div class="logo-panel">
+
+                <img
+                    src="img/ChatGPT Image 29 may 2026, 17_54_13.png"
+                    class="logo-panel-img"
+                    alt="Logo The Bull"
+                >
+
+                <h2>The Bull</h2>
+
+                <span><?php echo ($_SESSION['id_rol'] == 1) ? 'Administrador' : 'Organizador'; ?></span>
+
+            </div>
+
+            <ul class="menu">
+
+                <li>
+                    <a href="paneles.php?seccion=inicio">
+                        <i class="bi bi-house-door-fill"></i> Panel
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=torneos">
+                        <i class="bi bi-trophy-fill"></i> Torneos
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=canchas">
+                        <i class="bi bi-geo-alt-fill"></i> Canchas
+                    </a>
+                </li>
+
+                <li class="activo">
+                    <a href="paneles.php?seccion=grupos">
+                        <i class="bi bi-diagram-3"></i> Grupos
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=ranking">
+                        <i class="bi bi-bar-chart-fill"></i> Ranking
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=notificaciones">
+                        <i class="bi bi-bell-fill"></i> Notificaciones
+                    </a>
+                </li>
+
+                <li>
+                    <a href="funciones/logout.php">
+                        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+                    </a>
+                </li>
+
+            </ul>
+
+        </aside>
+
         <main class="contenido" style="width:100%; padding: 32px;">
 
-            <a href="gestionar_participantes.php?id_torneo=<?php echo (int) $id_torneo; ?>" class="vt-volver">
-                <i class="bi bi-arrow-left"></i> Volver a Participantes
+            <div class="grupos-cabecera">
+
+            <a href="paneles.php?seccion=torneos" class="vt-volver">
+                <i class="bi bi-arrow-left"></i> Volver a torneos
             </a>
 
-            <div class="vt-topbar" style="margin-top: 16px;">
+            <div class="grupos-hero">
 
-                <div>
+                <div class="grupos-hero-contenido">
 
                     <span class="vt-estado-badge"><?php echo htmlspecialchars($torneo['estado'], ENT_QUOTES, 'UTF-8'); ?></span>
 
@@ -225,277 +626,810 @@ $mensajesAccion = [
 
                 </div>
 
+                <div class="grupos-hero-info">
+
+                    <div class="grupos-hero-info-icono">
+                        <i class="bi bi-calendar-event-fill"></i>
+                    </div>
+
+                    <strong class="grupos-hero-fecha"><?php echo htmlspecialchars($fechaRangoTorneo, ENT_QUOTES, 'UTF-8'); ?></strong>
+
+                    <a href="ver_torneo.php?id=<?php echo (int) $id_torneo; ?>" class="grupos-hero-boton">
+                        Ver torneo <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+
+                </div>
+
             </div>
 
-            <?php if (isset($_GET['accion']) && isset($mensajesAccion[$_GET['accion']])) {
+            <?php
+                $etiquetaMiembro = $esIndividual ? 'participante' : 'pareja';
+                $etiquetaMiembroPlural = $esIndividual ? 'participantes' : 'parejas';
+            ?>
+
+
+            <!-- ========================================= -->
+            <!-- NAVEGACIÓN ENTRE SECCIONES -->
+            <!-- ========================================= -->
+
+            <nav class="grupos-subnav" id="gruposTabs" role="tablist" aria-label="Secciones de la página" data-torneo="<?php echo (int) $id_torneo; ?>">
+                <a href="#posiciones" role="tab" data-tab="posiciones"><i class="bi bi-bar-chart-fill"></i> Posiciones y resultados</a>
+                <?php if ($faseFinalDisponible) { ?>
+                    <a href="#fase-final" role="tab" data-tab="fase-final"><i class="bi bi-trophy-fill"></i> Fase final</a>
+                <?php } ?>
+                <a href="#ranking-puntos" role="tab" data-tab="ranking-puntos"><i class="bi bi-award-fill"></i> Puntos del ranking</a>
+                <a href="#administrar-grupos" role="tab" data-tab="administrar-grupos"><i class="bi bi-people-fill"></i> Administrar grupos</a>
+            </nav>
+
+            </div>
+
+            <?php if (!$avisoPartido && isset($_GET['accion']) && isset($mensajesAccion[$_GET['accion']])) {
                 $m = $mensajesAccion[$_GET['accion']];
                 $icono = $m['tipo'] === 'exito' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
                 $clase = $m['tipo'] === 'exito' ? 'mensaje-exito' : 'mensaje-error';
             ?>
-                <div class="<?php echo $clase; ?> mensaje-error-compacto">
+                <div class="<?php echo $clase; ?> mensaje-error-compacto" style="margin-top:16px;">
                     <i class="bi <?php echo $icono; ?>"></i> <?php echo htmlspecialchars($m['texto']); ?>
                 </div>
             <?php } ?>
 
 
-            <!-- ========================================= -->
-            <!-- CREAR GRUPO -->
-            <!-- ========================================= -->
-
-            <div class="vt-seccion-titulo" style="margin-top: 24px;">
-                <span class="vt-eyebrow">GRUPOS</span>
-                <h2>Crear grupo</h2>
-            </div>
-
-            <form
-                action="funciones/grupos_crear.php"
-                method="POST"
-                class="grupos-form-crear"
-            >
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-
-                <input
-                    type="text"
-                    name="nombre"
-                    placeholder="Ej: Grupo A"
-                    maxlength="50"
-                    required
-                >
-
-                <button type="submit" class="btn-torneo editar">
-                    <i class="bi bi-plus-lg"></i>
-                    <span>Crear</span>
-                </button>
-            </form>
-
 
             <!-- ========================================= -->
-            <!-- LISTADO DE GRUPOS -->
+            <!-- 1. POSICIONES Y RESULTADOS -->
             <!-- ========================================= -->
 
-            <div class="vt-seccion-titulo" style="margin-top: 28px;">
-                <span class="vt-eyebrow">DISTRIBUCIÓN</span>
-                <h2>Grupos del torneo</h2>
-            </div>
+            <section id="posiciones" class="grupos-bloque grupos-tab-panel">
 
-            <?php if (empty($grupos)) { ?>
+                <div class="grupos-seccion-header">
 
-                <div class="vt-card vt-estado-vacio">
-                    <i class="bi bi-diagram-3"></i>
-                    <p>Todavía no creaste ningún grupo para este torneo.</p>
+                    <div class="vt-seccion-titulo" style="margin:0;">
+                        <span class="vt-eyebrow">COMPETENCIA</span>
+                        <h2>Posiciones y resultados</h2>
+                        <p>Cargá los games de cada set directamente en el partido; la tabla se actualiza al guardar.</p>
+                    </div>
+
+                    <?php if (!empty($grupos)) { ?>
+                        <form action="funciones/grupos_generar_partidos_torneo.php" method="POST">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                            <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                            <button
+                                type="submit"
+                                class="btn-torneo editar grupos-btn-fixture"
+                                title="Arma todos los cruces de cada grupo. Los grupos que ya tienen resultados cargados no se tocan."
+                            >
+                                <i class="bi bi-shuffle"></i>
+                                <span><?php echo $hayAlgunPartido ? 'Regenerar partidos' : 'Generar partidos'; ?></span>
+                            </button>
+                        </form>
+                    <?php } ?>
+
                 </div>
 
-            <?php } else { ?>
+                <?php if (empty($grupos)) { ?>
 
-                <div class="grupos-grid">
+                    <div class="vt-card vt-estado-vacio">
+                        <i class="bi bi-diagram-3"></i>
+                        <p>Todavía no hay grupos. <a href="#administrar-grupos">Creá el primero</a> para empezar a cargar resultados.</p>
+                    </div>
 
-                    <?php foreach ($grupos as $indiceGrupo => $grupo) { ?>
+                <?php } else { ?>
 
-                        <div class="grupos-tarjeta">
+                    <!-- Sin JavaScript se muestran todos los grupos uno debajo del otro. -->
+                    <noscript><style>.grupos-panel[hidden] { display: block; }</style></noscript>
 
-                            <div class="grupos-tarjeta-header">
+                    <?php if (count($grupos) > 1) { ?>
+                        <div class="grupos-selector" role="tablist" aria-label="Grupos">
+                            <?php foreach ($grupos as $indiceChip => $grupoChip) {
 
-                                <form action="funciones/grupos_renombrar.php" method="POST" class="grupos-form-renombrar">
-                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                    <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-                                    <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
+                                $totalChip = count($grupoChip['partidos']);
+                                $jugadosChip = $totalChip - $grupoChip['partidos_pendientes'];
+                                $completoChip = $totalChip > 0 && $jugadosChip === $totalChip;
+                            ?>
+                                <button type="button" class="grupos-chip<?php echo $completoChip ? ' es-completo' : ''; ?>" data-grupo-chip="<?php echo (int) $indiceChip; ?>" role="tab"
+                                        title="<?php echo $jugadosChip; ?> de <?php echo $totalChip; ?> partidos con resultado">
+                                    <span><?php echo htmlspecialchars($grupoChip['nombre'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <i class="bi <?php echo $completoChip ? 'bi-check-circle-fill' : 'bi-circle'; ?>"></i>
+                                </button>
+                            <?php } ?>
+                        </div>
+                    <?php } ?>
 
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        value="<?php echo htmlspecialchars($grupo['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
-                                        maxlength="50"
-                                        required
-                                    >
+                    <div class="grupos-paneles grupos-carrusel" id="gruposCarrusel" data-torneo="<?php echo (int) $id_torneo; ?>">
 
-                                    <button type="submit" title="Guardar nombre">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </form>
+                        <?php foreach ($grupos as $indiceGrupo => $grupo) {
 
-                                <div class="grupos-tarjeta-acciones">
+                            $totalPartidos = count($grupo['partidos']);
 
-                                    <form action="funciones/grupos_reordenar.php" method="POST">
-                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                        <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-                                        <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
-                                        <input type="hidden" name="direccion" value="subir">
-                                        <button type="submit" title="Subir" <?php echo $indiceGrupo === 0 ? 'disabled' : ''; ?>>
-                                            <i class="bi bi-arrow-up"></i>
-                                        </button>
-                                    </form>
+                            // Letra de la insignia: la inicial del nombre sin el prefijo "Grupo".
+                            $nombreSinPrefijo = trim(preg_replace('/^grupo\s+/iu', '', $grupo['nombre']));
+                            $letraGrupo = preg_match('/[\p{L}\d]/u', $nombreSinPrefijo, $mLetra) ? strtoupper($mLetra[0]) : '#';
+                            $jugados = $totalPartidos - $grupo['partidos_pendientes'];
+                            $porcentaje = $totalPartidos > 0 ? round($jugados * 100 / $totalPartidos) : 0;
+                        ?>
 
-                                    <form action="funciones/grupos_reordenar.php" method="POST">
-                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                        <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-                                        <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
-                                        <input type="hidden" name="direccion" value="bajar">
-                                        <button type="submit" title="Bajar" <?php echo $indiceGrupo === count($grupos) - 1 ? 'disabled' : ''; ?>>
-                                            <i class="bi bi-arrow-down"></i>
-                                        </button>
-                                    </form>
+                            <article class="grupos-panel" data-indice="<?php echo (int) $indiceGrupo; ?>"<?php echo $indiceGrupo > 0 ? ' hidden' : ''; ?>>
 
-                                    <button
-                                        type="button"
-                                        class="btn-eliminar-grupo"
-                                        data-id="<?php echo (int) $grupo['id_grupo']; ?>"
-                                        data-nombre="<?php echo htmlspecialchars($grupo['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
-                                        title="Eliminar grupo"
-                                    >
-                                        <i class="bi bi-trash-fill"></i>
-                                    </button>
+                                <header class="grupos-panel-header">
+
+                                    <div class="grupos-panel-titulo">
+                                        <span class="grupos-letra" aria-hidden="true"><?php echo htmlspecialchars($letraGrupo, ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <h3><?php echo htmlspecialchars(preg_match('/^grupo\b/iu', $grupo['nombre']) ? $grupo['nombre'] : 'Grupo ' . $grupo['nombre'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                                        <span class="grupos-pill">
+                                            <?php echo count($grupo['miembros']); ?>
+                                            <?php echo count($grupo['miembros']) === 1 ? $etiquetaMiembro : $etiquetaMiembroPlural; ?>
+                                        </span>
+                                    </div>
+
+                                    <?php if ($totalPartidos > 0) { ?>
+                                        <div class="grupos-progreso" title="<?php echo $jugados; ?> de <?php echo $totalPartidos; ?> partidos con resultado">
+                                            <span><?php echo $jugados; ?>/<?php echo $totalPartidos; ?> partidos jugados</span>
+                                            <div class="grupos-progreso-barra">
+                                                <div style="width: <?php echo (int) $porcentaje; ?>%;"></div>
+                                            </div>
+                                        </div>
+                                    <?php } ?>
+
+                                    <?php if (count($grupos) > 1) { ?>
+                                        <div class="grupos-nav-carrusel">
+                                            <button type="button" data-grupo-dir="-1" aria-label="Grupo anterior"><i class="bi bi-arrow-left"></i></button>
+                                            <button type="button" data-grupo-dir="1" aria-label="Grupo siguiente"><i class="bi bi-arrow-right"></i></button>
+                                        </div>
+                                    <?php } ?>
+
+                                </header>
+
+                                <div class="grupos-panel-cuerpo">
+
+                                    <!-- Tabla de posiciones -->
+                                    <div class="grupos-panel-tabla">
+
+                                        <?php if (empty($grupo['standings'])) { ?>
+
+                                            <div class="grupos-posiciones-vacio">
+                                                <i class="bi bi-bar-chart"></i>
+                                                <span>Agregá <?php echo $etiquetaMiembroPlural; ?> al grupo en <a href="#administrar-grupos">Administrar grupos</a>.</span>
+                                            </div>
+
+                                        <?php } else { ?>
+
+                                            <div class="grupos-tabla-scroll">
+                                                <table class="grupos-tabla-standings">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="col-pos">#</th>
+                                                            <th class="col-nombre"><?php echo ucfirst($etiquetaMiembro); ?></th>
+                                                            <th class="col-num" title="Partidos jugados">PJ</th>
+                                                            <th class="col-num" title="Partidos ganados">PG</th>
+                                                            <th class="col-num col-extra" title="Partidos perdidos">PP</th>
+                                                            <th class="col-sets col-extra" title="Sets ganados - sets perdidos">Sets</th>
+                                                            <th class="col-num col-pts" title="Puntos (3 por victoria)">PTS</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($grupo['standings'] as $posicion => $fila) {
+
+                                                        ?>
+                                                            <tr class="<?php echo $posicion < CLASIFICAN_POR_GRUPO ? 'grupos-standings-clasifica' : ''; ?>">
+                                                                <td class="col-pos"><span class="grupos-posicion"><?php echo $posicion + 1; ?></span><?php if (!empty($fila['empate'])) { ?><span title="Empate sin resolver en todos los criterios" style="margin-left:4px;color:var(--gr-alerta);">=</span><?php } ?></td>
+                                                                <td class="col-nombre">
+                                                                    <span class="grupos-avatar" aria-hidden="true"><?php echo htmlspecialchars($letraGrupo, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                                    <span class="grupos-nombre-texto"><?php echo htmlspecialchars($grupo['nombres_entrantes'][$fila['id_entrante']] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+                                                                </td>
+                                                                <td class="col-num"><?php echo (int) $fila['pj']; ?></td>
+                                                                <td class="col-num"><?php echo (int) $fila['pg']; ?></td>
+                                                                <td class="col-num col-extra"><?php echo (int) $fila['pj'] - (int) $fila['pg']; ?></td>
+                                                                <td class="col-sets col-extra"><?php echo (int) $fila['sets_favor']; ?>-<?php echo (int) $fila['sets_contra']; ?></td>
+                                                                <td class="col-num col-pts"><?php echo (int) $fila['pts']; ?></td>
+                                                            </tr>
+                                                        <?php } ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <p class="grupos-nota-card">
+                                                <span class="grupos-leyenda-clasifica"></span>
+                                                Clasifican los <?php echo CLASIFICAN_POR_GRUPO; ?> primeros · Victoria 3 pts, derrota 0 · Desempate: dif. de sets, dif. de games, games ganados y enfrentamiento directo
+                                            </p>
+
+                                        <?php } ?>
+
+                                    </div>
+
+                                    <!-- Partidos del grupo -->
+                                    <div class="grupos-panel-partidos">
+
+                                        <h4 class="grupos-seccion-titulo">Partidos</h4>
+
+                                        <?php if (count($grupo['miembros']) < 2) { ?>
+
+                                            <p class="grupos-tarjeta-vacio">Con al menos 2 <?php echo $etiquetaMiembroPlural; ?> en el grupo se pueden generar sus partidos.</p>
+
+                                        <?php } elseif (empty($grupo['partidos'])) { ?>
+
+                                            <p class="grupos-tarjeta-vacio">Todavía no hay partidos. Usá <strong>Generar partidos</strong> (arriba) para armar el todos contra todos.</p>
+
+                                        <?php } else { ?>
+
+                                            <div class="grupos-marcadores">
+                                                <?php foreach ($grupo['partidos'] as $numeroPartido => $partido) {
+                                                    renderMarcador(
+                                                        $partido,
+                                                        $grupo['nombres_entrantes'][(int) $partido['id_entrante_1']] ?? '—',
+                                                        $grupo['nombres_entrantes'][(int) $partido['id_entrante_2']] ?? '—',
+                                                        'Partido ' . ($numeroPartido + 1),
+                                                        $esIndividual,
+                                                        $csrf_token,
+                                                        (int) $id_torneo,
+                                                        $avisoPartido
+                                                    );
+                                                } ?>
+                                            </div>
+
+                                        <?php } ?>
+
+                                    </div>
 
                                 </div>
 
-                            </div>
+                            </article>
 
-                            <?php if (empty($grupo['miembros'])) { ?>
+                        <?php } ?>
 
-                                <p class="grupos-tarjeta-vacio">Todavía no hay nadie en este grupo.</p>
+                    </div>
 
-                            <?php } else { ?>
+                <?php } ?>
 
-                                <ul class="grupos-miembros">
+            </section>
 
-                                    <?php foreach ($grupo['miembros'] as $miembro) {
 
-                                        $idElemento = $esIndividual ? (int) $miembro['id_inscripcion'] : (int) $miembro['id_pareja'];
-                                        $nombreMiembro = $esIndividual
-                                            ? trim($miembro['nombre'] . ' ' . $miembro['apellido'])
-                                            : trim($miembro['nombre1'] . ' ' . $miembro['apellido1']) . ' / ' . trim($miembro['nombre2'] . ' ' . $miembro['apellido2']);
+            <!-- ========================================= -->
+            <!-- 2. FASE FINAL (SEMIFINALES / FINAL) -->
+            <!-- ========================================= -->
+
+            <?php if ($faseFinalDisponible) { ?>
+
+                <section id="fase-final" class="grupos-bloque grupos-tab-panel">
+
+                    <div class="vt-seccion-titulo">
+                        <span class="vt-eyebrow">PLAYOFFS</span>
+                        <h2>Fase final</h2>
+                        <?php if ($modoCuadro) { ?>
+                            <p>
+                                Clasifican los 2 primeros de cada grupo. Cruces por pares de grupos
+                                (<?php echo htmlspecialchars($grupos[0]['nombre'], ENT_QUOTES, 'UTF-8'); ?>-<?php echo htmlspecialchars($grupos[1]['nombre'], ENT_QUOTES, 'UTF-8'); ?>:
+                                1° de uno vs 2° del otro y viceversa); después los ganadores avanzan en el orden del cuadro hasta la final.
+                            </p>
+                        <?php } else { ?>
+                        <p>
+                            1° de <?php echo htmlspecialchars($grupos[0]['nombre'], ENT_QUOTES, 'UTF-8'); ?> vs 2° de <?php echo htmlspecialchars($grupos[1]['nombre'], ENT_QUOTES, 'UTF-8'); ?>
+                            · 1° de <?php echo htmlspecialchars($grupos[1]['nombre'], ENT_QUOTES, 'UTF-8'); ?> vs 2° de <?php echo htmlspecialchars($grupos[0]['nombre'], ENT_QUOTES, 'UTF-8'); ?>
+                            · los ganadores juegan la final.
+                        </p>
+                        <?php } ?>
+                    </div>
+
+                    <div class="vt-card grupos-fase-final">
+
+                        <?php if ($modoCuadro) { ?>
+
+                            <?php
+                            // Pestañas por ronda: se muestra una ronda por vez (la última generada al entrar).
+                            $rondasGeneradas = [];
+                            foreach ($ordenRondasCuadro as $nombreRonda) {
+                                if (!empty($rondasCuadro[$nombreRonda])) {
+                                    $rondasGeneradas[] = $nombreRonda;
+                                }
+                            }
+                            $rondaActivaInicial = end($rondasGeneradas);
+                            ?>
+
+                            <?php if (!empty($rondasGeneradas)) { ?>
+
+                                <noscript><style>.grupos-ronda-panel[hidden] { display: block; }</style></noscript>
+
+                                <div class="grupos-selector grupos-subtabs" id="rondasTabs" role="tablist" aria-label="Rondas del cuadro" data-torneo="<?php echo (int) $id_torneo; ?>" data-rondas="<?php echo count($rondasGeneradas); ?>" data-inicial="<?php echo htmlspecialchars($rondaActivaInicial, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php foreach ($rondasGeneradas as $nombreRonda) {
+
+                                        $totalRonda = count($rondasCuadro[$nombreRonda]);
+                                        $jugadosRonda = 0;
+                                        foreach ($rondasCuadro[$nombreRonda] as $pr) {
+                                            if ($pr['estado'] === 'Jugado') {
+                                                $jugadosRonda++;
+                                            }
+                                        }
+                                        $completaRonda = $jugadosRonda === $totalRonda;
                                     ?>
+                                        <button type="button" class="grupos-chip<?php echo $completaRonda ? ' es-completo' : ''; ?>" data-ronda-tab="<?php echo htmlspecialchars($nombreRonda, ENT_QUOTES, 'UTF-8'); ?>" role="tab"
+                                                title="<?php echo $jugadosRonda; ?> de <?php echo $totalRonda; ?> partidos con resultado">
+                                            <span><?php echo htmlspecialchars($etiquetasRonda[$nombreRonda], ENT_QUOTES, 'UTF-8'); ?></span>
+                                            <i class="bi <?php echo $completaRonda ? 'bi-check-circle-fill' : 'bi-circle'; ?>"></i>
+                                        </button>
+                                    <?php } ?>
+                                </div>
 
-                                        <li class="grupos-miembro">
+                                <div class="grupos-rondas" id="gruposRondas">
 
-                                            <span><?php echo htmlspecialchars($nombreMiembro, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php foreach ($rondasGeneradas as $nombreRonda) { ?>
 
-                                            <div class="grupos-miembro-acciones">
+                                        <div class="grupos-ronda-panel" data-ronda-panel="<?php echo htmlspecialchars($nombreRonda, ENT_QUOTES, 'UTF-8'); ?>" role="tabpanel"<?php echo $nombreRonda !== $rondaActivaInicial ? ' hidden' : ''; ?>>
 
-                                                <?php if (count($grupos) > 1) { ?>
+                                            <div class="grupos-marcadores grupos-marcadores-final">
 
-                                                    <form action="funciones/grupos_mover.php" method="POST">
-                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                                        <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-                                                        <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
-                                                        <input type="hidden" name="id_elemento" value="<?php echo $idElemento; ?>">
+                                                <?php foreach ($rondasCuadro[$nombreRonda] as $partido) {
 
-                                                        <select name="id_grupo_destino">
-                                                            <?php foreach ($grupos as $otroGrupo) {
-                                                                if ((int) $otroGrupo['id_grupo'] === (int) $grupo['id_grupo']) {
-                                                                    continue;
-                                                                }
-                                                            ?>
-                                                                <option value="<?php echo (int) $otroGrupo['id_grupo']; ?>">
-                                                                    <?php echo htmlspecialchars($otroGrupo['nombre'], ENT_QUOTES, 'UTF-8'); ?>
-                                                                </option>
-                                                            <?php } ?>
-                                                        </select>
+                                                    $etiquetaPartido = $nombreRonda === 'Final'
+                                                        ? 'Final'
+                                                        : ($nombreRonda === 'Semifinal' ? 'Semifinal ' : ($nombreRonda === 'Cuartos' ? 'Cuartos ' : 'Octavos ')) . (int) $partido['orden'];
 
-                                                        <button type="submit" title="Mover a otro grupo">
-                                                            <i class="bi bi-arrow-left-right"></i>
-                                                        </button>
-                                                    </form>
-
-                                                <?php } ?>
-
-                                                <form action="funciones/grupos_quitar.php" method="POST">
-                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                                    <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-                                                    <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
-                                                    <input type="hidden" name="id_elemento" value="<?php echo $idElemento; ?>">
-
-                                                    <button type="submit" title="Quitar del grupo">
-                                                        <i class="bi bi-x-lg"></i>
-                                                    </button>
-                                                </form>
+                                                    renderMarcador(
+                                                        $partido,
+                                                        $nombresEntrantesTorneo[(int) $partido['id_entrante_1']] ?? '—',
+                                                        $nombresEntrantesTorneo[(int) $partido['id_entrante_2']] ?? '—',
+                                                        $etiquetaPartido,
+                                                        $esIndividual,
+                                                        $csrf_token,
+                                                        (int) $id_torneo,
+                                                        $avisoPartido
+                                                    );
+                                                } ?>
 
                                             </div>
 
-                                        </li>
+                                        </div>
 
                                     <?php } ?>
 
-                                </ul>
+                                </div>
+
+                            <?php } ?>
+                            <?php if ($campeonCuadro !== '') { ?>
+
+                                <div class="vt-campeon" style="margin-top:16px;">
+                                    <i class="bi bi-trophy-fill"></i>
+                                    <strong>CAMPEÓN: <?php echo htmlspecialchars($campeonCuadro, ENT_QUOTES, 'UTF-8'); ?></strong>
+                                </div>
+
+                            <?php } elseif ($proximaRonda !== null) {
+
+                                // La ronda se habilita cuando la anterior (o los grupos) está completa.
+                                $anteriorCompleta = true;
+                                $textoEspera = '';
+
+                                if (empty($rondasCuadro)) {
+                                    $anteriorCompleta = $gruposCompletosParaSemis;
+                                    $textoEspera = 'La primera ronda se habilita cuando cada grupo tenga al menos 2 integrantes y todos sus partidos con resultado.';
+                                } else {
+                                    foreach ($rondasCuadro as $partidosRonda) {
+                                        foreach ($partidosRonda as $pr) {
+                                            if ($pr['estado'] !== 'Jugado') {
+                                                $anteriorCompleta = false;
+                                            }
+                                        }
+                                    }
+                                    $textoEspera = 'La siguiente ronda se habilita cuando todos los partidos de la ronda actual tengan resultado.';
+                                }
+                            ?>
+
+                                <?php if ($anteriorCompleta) { ?>
+
+                                    <form action="funciones/grupos_generar_ronda.php" method="POST" style="margin-top:16px;">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                        <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                        <button type="submit" class="btn-torneo editar grupos-btn-fixture">
+                                            <i class="bi bi-diagram-3"></i>
+                                            <span><?php echo htmlspecialchars($etiquetasBoton[$proximaRonda], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        </button>
+                                    </form>
+
+                                <?php } else { ?>
+
+                                    <p class="grupos-tarjeta-vacio" style="margin-top:16px;"><?php echo htmlspecialchars($textoEspera, ENT_QUOTES, 'UTF-8'); ?></p>
+
+                                <?php } ?>
 
                             <?php } ?>
 
-                        </div>
+                        <?php } elseif (!$semifinalesGeneradas) { ?>
 
-                    <?php } ?>
+                            <?php if ($gruposCompletosParaSemis) { ?>
 
-                </div>
-
-            <?php } ?>
-
-
-            <!-- ========================================= -->
-            <!-- SIN ASIGNAR -->
-            <!-- ========================================= -->
-
-            <div class="vt-seccion-titulo" style="margin-top: 28px;">
-                <span class="vt-eyebrow"><?php echo $esIndividual ? 'PARTICIPANTES' : 'PAREJAS'; ?></span>
-                <h2>Confirmados sin asignar</h2>
-            </div>
-
-            <?php if (empty($sinAsignar)) { ?>
-
-                <div class="vt-card vt-estado-vacio">
-                    <i class="bi bi-people"></i>
-                    <p>
-                        <?php echo empty($grupos)
-                            ? 'Todavía no hay ' . ($esIndividual ? 'participantes' : 'parejas') . ' confirmados en este torneo.'
-                            : 'Todos los confirmados ya están asignados a un grupo.'; ?>
-                    </p>
-                </div>
-
-            <?php } else { ?>
-
-                <ul class="grupos-miembros grupos-sin-asignar">
-
-                    <?php foreach ($sinAsignar as $elemento) {
-
-                        $idElemento = $esIndividual ? (int) $elemento['id_inscripcion'] : (int) $elemento['id_pareja'];
-                        $nombreElemento = $esIndividual
-                            ? trim($elemento['nombre'] . ' ' . $elemento['apellido'])
-                            : trim($elemento['nombre1'] . ' ' . $elemento['apellido1']) . ' / ' . trim($elemento['nombre2'] . ' ' . $elemento['apellido2']);
-                    ?>
-
-                        <li class="grupos-miembro">
-
-                            <span><?php echo htmlspecialchars($nombreElemento, ENT_QUOTES, 'UTF-8'); ?></span>
-
-                            <?php if (!empty($grupos)) { ?>
-
-                                <form action="funciones/grupos_asignar.php" method="POST">
+                                <form action="funciones/grupos_generar_semifinales.php" method="POST">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                     <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
-                                    <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
-                                    <input type="hidden" name="id_elemento" value="<?php echo $idElemento; ?>">
-
-                                    <select name="id_grupo" required>
-                                        <option value="">Asignar a...</option>
-                                        <?php foreach ($grupos as $grupoDisponible) { ?>
-                                            <option value="<?php echo (int) $grupoDisponible['id_grupo']; ?>">
-                                                <?php echo htmlspecialchars($grupoDisponible['nombre'], ENT_QUOTES, 'UTF-8'); ?>
-                                            </option>
-                                        <?php } ?>
-                                    </select>
-
-                                    <button type="submit" title="Asignar al grupo">
-                                        <i class="bi bi-plus-lg"></i>
+                                    <button type="submit" class="btn-torneo editar grupos-btn-fixture">
+                                        <i class="bi bi-diagram-3"></i>
+                                        <span>Generar semifinales</span>
                                     </button>
                                 </form>
 
+                            <?php } else { ?>
+
+                                <p class="grupos-tarjeta-vacio">
+                                    Las semifinales se habilitan cuando cada grupo tenga al menos 2 integrantes y todos sus partidos con resultado.
+                                </p>
+
                             <?php } ?>
 
-                        </li>
+                        <?php } else { ?>
 
-                    <?php } ?>
+                            <div class="grupos-marcadores grupos-marcadores-final">
 
-                </ul>
+                                <?php
+                                $nombreCampeon = '';
+
+                                foreach ($partidosFaseFinal as $partido) {
+
+                                    $etiquetaFase = $partido['fase'] === 'Final'
+                                        ? 'Final'
+                                        : 'Semifinal ' . (int) $partido['orden'];
+
+                                    if ($partido['fase'] === 'Final' && $partido['estado'] === 'Jugado') {
+                                        $nombreCampeon = $nombresEntrantesTorneo[(int) $partido['id_ganador']] ?? '';
+                                    }
+
+                                    renderMarcador(
+                                        $partido,
+                                        $nombresEntrantesTorneo[(int) $partido['id_entrante_1']] ?? '—',
+                                        $nombresEntrantesTorneo[(int) $partido['id_entrante_2']] ?? '—',
+                                        $etiquetaFase,
+                                        $esIndividual,
+                                        $csrf_token,
+                                        (int) $id_torneo,
+                                        $avisoPartido
+                                    );
+                                }
+                                ?>
+
+                            </div>
+
+                            <?php if (!$finalGenerada) { ?>
+
+                                <?php if ($semifinalesCompletas) { ?>
+
+                                    <form action="funciones/grupos_generar_final.php" method="POST" style="margin-top:16px;">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                        <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                        <button type="submit" class="btn-torneo editar grupos-btn-fixture">
+                                            <i class="bi bi-trophy-fill"></i>
+                                            <span>Generar final</span>
+                                        </button>
+                                    </form>
+
+                                <?php } else { ?>
+
+                                    <p class="grupos-tarjeta-vacio" style="margin-top:16px;">La final se habilita cuando las dos semifinales tengan resultado.</p>
+
+                                <?php } ?>
+
+                            <?php } elseif ($nombreCampeon !== '') { ?>
+
+                                <div class="vt-campeon" style="margin-top:16px;">
+                                    <i class="bi bi-trophy-fill"></i>
+                                    <strong>CAMPEÓN: <?php echo htmlspecialchars($nombreCampeon, ENT_QUOTES, 'UTF-8'); ?></strong>
+                                </div>
+
+                            <?php } ?>
+
+                        <?php } ?>
+
+                    </div>
+
+                </section>
 
             <?php } ?>
+
+
+            <!-- ========================================= -->
+            <!-- 3. ADMINISTRAR GRUPOS -->
+            <!-- ========================================= -->
+
+            <section id="ranking-puntos" class="grupos-bloque grupos-tab-panel">
+
+                <div class="vt-seccion-titulo">
+                    <span class="vt-eyebrow">RANKING</span>
+                    <h2>Puntos del ranking</h2>
+                    <p>Puntos que este torneo le da a cada jugador en el ranking de <?php echo htmlspecialchars($torneo['categoria'], ENT_QUOTES, 'UTF-8'); ?>.</p>
+                </div>
+
+                <?php echo renderPuntosTorneo($conexion, (int) $id_torneo, $csrf_token); ?>
+
+            </section>
+
+            <section id="administrar-grupos" class="grupos-bloque grupos-tab-panel">
+
+                <div class="grupos-seccion-header">
+
+                    <div class="vt-seccion-titulo" style="margin:0;">
+                        <span class="vt-eyebrow">ORGANIZACIÓN</span>
+                        <h2>Administrar grupos</h2>
+                        <p>Creá grupos y asigná, mové o quitá <?php echo $etiquetaMiembroPlural; ?>.</p>
+                    </div>
+
+                    <?php if (!empty($grupos)) { ?>
+                        <div class="grupos-buscador">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="buscarGrupo" placeholder="Buscar grupo..." aria-label="Buscar grupo">
+                        </div>
+                    <?php } ?>
+
+                </div>
+
+                <div class="vt-card grupos-crear-card">
+
+                    <form
+                        action="funciones/grupos_crear.php"
+                        method="POST"
+                        class="grupos-form-crear"
+                    >
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                        <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+
+                        <input
+                            type="text"
+                            name="nombre"
+                            placeholder="Nombre del nuevo grupo (ej: Grupo C)"
+                            maxlength="50"
+                            required
+                            aria-label="Nombre del nuevo grupo"
+                        >
+
+                        <button type="submit" class="btn-torneo editar">
+                            <i class="bi bi-plus-lg"></i>
+                            <span>Crear grupo</span>
+                        </button>
+                    </form>
+
+                </div>
+
+                <?php if (!empty($grupos)) { ?>
+
+                    <div class="grupos-grid">
+
+                        <?php foreach ($grupos as $indiceGrupo => $grupo) {
+
+                            $grupoVacio = empty($grupo['miembros']);
+                        ?>
+
+                            <article
+                                class="grupos-tarjeta <?php echo $grupoVacio ? 'grupos-tarjeta-vacia' : ''; ?>"
+                                data-nombre-grupo="<?php echo htmlspecialchars(mb_strtolower($grupo['nombre']), ENT_QUOTES, 'UTF-8'); ?>"
+                            >
+
+                                <header class="grupos-tarjeta-header">
+
+                                    <div class="grupos-tarjeta-titulo">
+
+                                        <form action="funciones/grupos_renombrar.php" method="POST" class="grupos-form-renombrar">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                            <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                            <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
+
+                                            <input
+                                                type="text"
+                                                name="nombre"
+                                                id="nombreGrupo<?php echo (int) $grupo['id_grupo']; ?>"
+                                                value="<?php echo htmlspecialchars($grupo['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                size="<?php echo max(4, mb_strlen($grupo['nombre']) + 1); ?>"
+                                                maxlength="50"
+                                                required
+                                                class="grupos-nombre-input"
+                                                aria-label="Nombre del grupo"
+                                            >
+
+                                            <button type="submit" title="Guardar nombre" class="grupos-nombre-guardar">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                        </form>
+
+                                        <span class="grupos-pill">
+                                            <?php echo count($grupo['miembros']); ?>
+                                            <?php echo count($grupo['miembros']) === 1 ? $etiquetaMiembro : $etiquetaMiembroPlural; ?>
+                                        </span>
+
+                                    </div>
+
+                                    <div class="grupos-tarjeta-acciones">
+
+                                        <form action="funciones/grupos_reordenar.php" method="POST">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                            <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                            <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
+                                            <input type="hidden" name="direccion" value="subir">
+                                            <button type="submit" class="grupos-icono-btn" title="Mover grupo arriba" <?php echo $indiceGrupo === 0 ? 'disabled' : ''; ?>>
+                                                <i class="bi bi-arrow-up"></i>
+                                            </button>
+                                        </form>
+
+                                        <form action="funciones/grupos_reordenar.php" method="POST">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                            <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                            <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
+                                            <input type="hidden" name="direccion" value="bajar">
+                                            <button type="submit" class="grupos-icono-btn" title="Mover grupo abajo" <?php echo $indiceGrupo === count($grupos) - 1 ? 'disabled' : ''; ?>>
+                                                <i class="bi bi-arrow-down"></i>
+                                            </button>
+                                        </form>
+
+                                        <button
+                                            type="button"
+                                            class="grupos-icono-btn grupos-btn-editar-nombre"
+                                            data-focus-nombre="nombreGrupo<?php echo (int) $grupo['id_grupo']; ?>"
+                                            title="Renombrar grupo"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="grupos-icono-btn grupos-icono-btn-peligro btn-eliminar-grupo"
+                                            data-id="<?php echo (int) $grupo['id_grupo']; ?>"
+                                            data-nombre="<?php echo htmlspecialchars($grupo['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            title="Eliminar grupo"
+                                        >
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+
+                                    </div>
+
+                                </header>
+
+                                <section class="grupos-seccion">
+
+                                    <?php if ($grupoVacio) { ?>
+
+                                        <div class="grupos-tarjeta-vacio-estado">
+                                            <i class="bi bi-people"></i>
+                                            <strong>Aún no hay <?php echo $etiquetaMiembroPlural; ?> en este grupo</strong>
+                                            <p>Agregá <?php echo $esIndividual ? 'los' : 'las'; ?> <?php echo $etiquetaMiembroPlural; ?> que van a jugar en este grupo.</p>
+                                        </div>
+
+                                    <?php } else { ?>
+
+                                        <ul class="grupos-miembros">
+
+                                            <?php foreach ($grupo['miembros'] as $indiceMiembro => $miembro) {
+
+                                                $idElemento = $esIndividual ? (int) $miembro['id_inscripcion'] : (int) $miembro['id_pareja'];
+                                                $nombreMiembro = $esIndividual
+                                                    ? trim($miembro['nombre'] . ' ' . $miembro['apellido'])
+                                                    : trim($miembro['nombre1'] . ' ' . $miembro['apellido1']) . ' / ' . trim($miembro['nombre2'] . ' ' . $miembro['apellido2']);
+                                                $idMoverMiembro = 'mover' . $grupo['id_grupo'] . '_' . $idElemento;
+                                            ?>
+
+                                                <li class="grupos-miembro-item">
+
+                                                    <div class="grupos-miembro">
+
+                                                        <span class="grupos-miembro-numero"><?php echo $indiceMiembro + 1; ?></span>
+
+                                                        <span class="grupos-miembro-nombre"><?php echo htmlspecialchars($nombreMiembro, ENT_QUOTES, 'UTF-8'); ?></span>
+
+                                                        <div class="grupos-miembro-acciones">
+
+                                                            <?php if (count($grupos) > 1) { ?>
+                                                                <button
+                                                                    type="button"
+                                                                    class="grupos-icono-btn grupos-icono-btn-sm grupos-miembro-mover"
+                                                                    data-toggle-agregar="<?php echo $idMoverMiembro; ?>"
+                                                                    title="Mover a otro grupo"
+                                                                >
+                                                                    <i class="bi bi-arrow-left-right"></i>
+                                                                </button>
+                                                            <?php } ?>
+
+                                                            <form action="funciones/grupos_quitar.php" method="POST">
+                                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                                <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                                                <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
+                                                                <input type="hidden" name="id_elemento" value="<?php echo $idElemento; ?>">
+
+                                                                <button type="submit" class="grupos-icono-btn grupos-icono-btn-sm grupos-icono-btn-peligro" title="Quitar del grupo">
+                                                                    <i class="bi bi-x-lg"></i>
+                                                                </button>
+                                                            </form>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                    <?php if (count($grupos) > 1) { ?>
+
+                                                        <form
+                                                            action="funciones/grupos_mover.php"
+                                                            method="POST"
+                                                            class="grupos-form-agregar-inline"
+                                                            id="<?php echo $idMoverMiembro; ?>"
+                                                            hidden
+                                                        >
+                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                            <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                                            <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
+                                                            <input type="hidden" name="id_elemento" value="<?php echo $idElemento; ?>">
+
+                                                            <select name="id_grupo_destino" required aria-label="Grupo de destino">
+                                                                <option value="">Mover a...</option>
+                                                                <?php foreach ($grupos as $otroGrupo) {
+                                                                    if ((int) $otroGrupo['id_grupo'] === (int) $grupo['id_grupo']) {
+                                                                        continue;
+                                                                    }
+                                                                ?>
+                                                                    <option value="<?php echo (int) $otroGrupo['id_grupo']; ?>">
+                                                                        <?php echo htmlspecialchars($otroGrupo['nombre'], ENT_QUOTES, 'UTF-8'); ?>
+                                                                    </option>
+                                                                <?php } ?>
+                                                            </select>
+
+                                                            <button type="submit" class="grupos-btn-confirmar">Mover</button>
+                                                        </form>
+
+                                                    <?php } ?>
+
+                                                </li>
+
+                                            <?php } ?>
+
+                                        </ul>
+
+                                    <?php } ?>
+
+                                    <?php if (!empty($sinAsignar)) { ?>
+
+                                        <button
+                                            type="button"
+                                            class="grupos-btn-agregar <?php echo $grupoVacio ? 'grupos-btn-agregar-destacado' : ''; ?>"
+                                            data-toggle-agregar="agregarPareja<?php echo (int) $grupo['id_grupo']; ?>"
+                                        >
+                                            <i class="bi bi-plus-lg"></i> Agregar <?php echo $etiquetaMiembro; ?>
+                                        </button>
+
+                                        <form
+                                            action="funciones/grupos_asignar.php"
+                                            method="POST"
+                                            class="grupos-form-agregar-inline"
+                                            id="agregarPareja<?php echo (int) $grupo['id_grupo']; ?>"
+                                            hidden
+                                        >
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                            <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
+                                            <input type="hidden" name="tipo" value="<?php echo $esIndividual ? 'inscripcion' : 'pareja'; ?>">
+                                            <input type="hidden" name="id_grupo" value="<?php echo (int) $grupo['id_grupo']; ?>">
+
+                                            <select name="id_elemento" required aria-label="<?php echo ucfirst($etiquetaMiembro); ?> a agregar">
+                                                <option value="">Elegí <?php echo $esIndividual ? 'un participante' : 'una pareja'; ?>...</option>
+                                                <?php foreach ($sinAsignar as $elemento) {
+
+                                                    $idElementoSinAsignar = $esIndividual ? (int) $elemento['id_inscripcion'] : (int) $elemento['id_pareja'];
+                                                    $nombreElementoSinAsignar = $esIndividual
+                                                        ? trim($elemento['nombre'] . ' ' . $elemento['apellido'])
+                                                        : trim($elemento['nombre1'] . ' ' . $elemento['apellido1']) . ' / ' . trim($elemento['nombre2'] . ' ' . $elemento['apellido2']);
+                                                ?>
+                                                    <option value="<?php echo $idElementoSinAsignar; ?>">
+                                                        <?php echo htmlspecialchars($nombreElementoSinAsignar, ENT_QUOTES, 'UTF-8'); ?>
+                                                    </option>
+                                                <?php } ?>
+                                            </select>
+
+                                            <button type="submit" class="grupos-btn-confirmar">Agregar</button>
+                                        </form>
+
+                                    <?php } elseif ($grupoVacio) { ?>
+
+                                        <p class="grupos-tarjeta-vacio">No hay <?php echo $etiquetaMiembroPlural; ?> <?php echo $esIndividual ? 'confirmados' : 'confirmadas'; ?> sin asignar.</p>
+
+                                    <?php } ?>
+
+                                </section>
+
+                            </article>
+
+                        <?php } ?>
+
+                    </div>
+
+                <?php } ?>
+
+            </section>
 
         </main>
 
@@ -547,15 +1481,16 @@ $mensajesAccion = [
     </div>
 
 
+    <script src="js/pestanas.js?v=1"></script>
+    <script src="js/partidos_carrusel.js?v=1"></script>
+    <script src="js/grupos_carrusel.js?v=2"></script>
+    <script src="js/rondas_tabs.js?v=1"></script>
+
     <script>
 
         document.addEventListener("DOMContentLoaded", function () {
 
             var botonesEliminar = document.querySelectorAll(".btn-eliminar-grupo");
-
-            if (!botonesEliminar.length) {
-                return;
-            }
 
             var modal = document.getElementById("modalEliminarGrupo");
             var texto = document.getElementById("textoEliminarGrupo");
@@ -596,11 +1531,208 @@ $mensajesAccion = [
                 noEliminar.addEventListener("click", cerrarModalEliminar);
             }
 
+
+            // Marcadores de partidos: el set 3 sólo se habilita si los sets
+            // quedaron 1 a 1, y se valida antes de enviar con la misma regla
+            // que el servidor (que igual vuelve a validar).
+            function esSetValido(a, b) {
+                var mayor = Math.max(a, b);
+                var menor = Math.min(a, b);
+                return (mayor === 6 && menor <= 4) || (mayor === 7 && (menor === 5 || menor === 6));
+            }
+
+            document.querySelectorAll("[data-marcador]").forEach(function (form) {
+
+                var aviso = form.querySelector("[data-marcador-aviso]");
+                var selectWo = form.querySelector('[name="wo"]');
+
+                function esWo() {
+                    return !!selectWo && selectWo.value !== "";
+                }
+
+                // Con W.O. no hay sets: se deshabilitan (no se envían) y no se validan.
+                function aplicarWo() {
+                    var wo = esWo();
+
+                    form.classList.toggle("marcador-es-wo", wo);
+
+                    form.querySelectorAll(".marcador-input").forEach(function (input) {
+                        input.disabled = wo;
+                    });
+
+                    if (!wo) {
+                        actualizarSet3();
+                    }
+                }
+
+                function campo(set, lado) {
+                    return form.querySelector('[name="set' + set + '_' + lado + '"]');
+                }
+
+                function leerSet(set) {
+                    var a = campo(set, 1).value;
+                    var b = campo(set, 2).value;
+                    return (a === "" || b === "") ? null : [parseInt(a, 10), parseInt(b, 10)];
+                }
+
+                function mostrarAviso(texto) {
+                    aviso.textContent = texto;
+                    aviso.className = "marcador-aviso marcador-aviso-error";
+                    aviso.hidden = false;
+                }
+
+                function actualizarSet3() {
+                    var s1 = leerSet(1);
+                    var s2 = leerSet(2);
+                    var definido = !!(s1 && s2 && s1[0] !== s1[1] && s2[0] !== s2[1] && ((s1[0] > s1[1]) === (s2[0] > s2[1])));
+
+                    [campo(3, 1), campo(3, 2)].forEach(function (input) {
+                        input.disabled = definido;
+                        if (definido) {
+                            input.value = "";
+                        }
+                    });
+
+                    form.classList.toggle("marcador-sin-set3", definido);
+                }
+
+                function validar() {
+                    if (esWo()) {
+                        return "";
+                    }
+
+                    var s1 = leerSet(1);
+                    var s2 = leerSet(2);
+
+                    if (!s1 || !s2) {
+                        return "Completá los games del set 1 y del set 2.";
+                    }
+
+                    if (!esSetValido(s1[0], s1[1]) || !esSetValido(s2[0], s2[1])) {
+                        return "Hay un set con un marcador imposible. Un set termina 6-0 a 6-4, 7-5 o 7-6.";
+                    }
+
+                    if ((s1[0] > s1[1]) !== (s2[0] > s2[1])) {
+                        var s3 = leerSet(3);
+                        if (!s3) {
+                            return "Los sets quedaron 1 a 1: falta cargar el set 3.";
+                        }
+                        if (!esSetValido(s3[0], s3[1])) {
+                            return "El set 3 tiene un marcador imposible. Un set termina 6-0 a 6-4, 7-5 o 7-6.";
+                        }
+                    }
+
+                    return "";
+                }
+
+                form.addEventListener("input", function () {
+                    aplicarWo();
+                    if (aviso.classList.contains("marcador-aviso-error")) {
+                        aviso.hidden = true;
+                    }
+                });
+
+                form.addEventListener("submit", function (evento) {
+                    var error = validar();
+                    if (error) {
+                        evento.preventDefault();
+                        mostrarAviso(error);
+                    }
+                });
+
+                aplicarWo();
+
+            });
+
+
+            // Buscador de grupos por nombre.
+            var buscadorGrupo = document.getElementById("buscarGrupo");
+
+            if (buscadorGrupo) {
+
+                var tarjetasGrupo = document.querySelectorAll(".grupos-tarjeta[data-nombre-grupo]");
+
+                buscadorGrupo.addEventListener("input", function () {
+
+                    var consulta = buscadorGrupo.value.trim().toLowerCase();
+
+                    tarjetasGrupo.forEach(function (tarjeta) {
+
+                        var coincide = tarjeta.dataset.nombreGrupo.indexOf(consulta) !== -1;
+
+                        tarjeta.style.display = coincide ? "" : "none";
+
+                    });
+
+                });
+
+            }
+
+
+            // Botón "+ Agregar pareja/participante": despliega el selector inline.
+            var botonesAgregar = document.querySelectorAll("[data-toggle-agregar]");
+
+            botonesAgregar.forEach(function (boton) {
+
+                var formulario = document.getElementById(boton.dataset.toggleAgregar);
+
+                if (!formulario) {
+                    return;
+                }
+
+                var textoOriginal = boton.innerHTML;
+                var cambiarTexto = boton.classList.contains("grupos-btn-agregar");
+
+                boton.addEventListener("click", function () {
+
+                    var abierto = !formulario.hidden;
+
+                    formulario.hidden = abierto;
+
+                    boton.classList.toggle("grupos-toggle-activo", !abierto);
+
+                    if (cambiarTexto) {
+                        boton.innerHTML = abierto
+                            ? textoOriginal
+                            : '<i class="bi bi-x-lg"></i> Cancelar';
+                    }
+
+                });
+
+            });
+
+
+            // El campo del nombre se ensancha con el texto para que parezca un título.
+            document.querySelectorAll(".grupos-nombre-input").forEach(function (input) {
+                input.addEventListener("input", function () {
+                    input.size = Math.max(4, input.value.length + 1);
+                });
+            });
+
+
+            // Botón "editar nombre": enfoca y selecciona el input del nombre del grupo.
+            var botonesEditarNombre = document.querySelectorAll("[data-focus-nombre]");
+
+            botonesEditarNombre.forEach(function (boton) {
+
+                boton.addEventListener("click", function () {
+
+                    var input = document.getElementById(boton.dataset.focusNombre);
+
+                    if (input) {
+                        input.focus();
+                        input.select();
+                    }
+
+                });
+
+            });
+
         });
 
     </script>
 
-    <script src="js/padel.js?v=6"></script>
+    <script src="js/padel.js?v=12"></script>
 
 </body>
 

@@ -59,10 +59,14 @@ if (!in_array($torneo['tipo'], ['Parejas', 'Mixto'], true)) {
     responder(['ok' => false, 'mensaje' => 'Ese torneo no es de parejas ni mixto.']);
 }
 
-$stmtPropio = mysqli_prepare($conexion, "SELECT email FROM usuario WHERE id_usuario = ?");
+$stmtPropio = mysqli_prepare($conexion, "SELECT email, categoria_estado FROM usuario WHERE id_usuario = ?");
 mysqli_stmt_bind_param($stmtPropio, "i", $id_usuario_titular);
 mysqli_stmt_execute($stmtPropio);
 $propio = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtPropio));
+
+if ($propio && $propio['categoria_estado'] === 'Pendiente') {
+    responder(['ok' => false, 'mensaje' => 'Tu categoría está pendiente de revisión: todavía no podés formar pareja.']);
+}
 
 if ($propio && strcasecmp($propio['email'], $email) === 0) {
     responder([
@@ -75,7 +79,7 @@ if ($propio && strcasecmp($propio['email'], $email) === 0) {
 
 $stmtUsuario = mysqli_prepare(
     $conexion,
-    "SELECT id_usuario, nombre, apellido, id_categoria FROM usuario WHERE email = ?"
+    "SELECT id_usuario, nombre, apellido, id_categoria, categoria_estado FROM usuario WHERE email = ?"
 );
 mysqli_stmt_bind_param($stmtUsuario, "s", $email);
 mysqli_stmt_execute($stmtUsuario);
@@ -88,6 +92,18 @@ if (!$usuarioEncontrado) {
         'registrado' => false,
         'puede_invitar' => true,
         'mensaje' => 'Ese correo todavía no tiene cuenta. Si enviás la invitación, le vamos a mandar un mail para que se registre.',
+    ]);
+
+}
+
+if ($usuarioEncontrado['categoria_estado'] === 'Pendiente') {
+
+    responder([
+        'ok' => true,
+        'registrado' => true,
+        'puede_invitar' => false,
+        'nombre' => $usuarioEncontrado['nombre'] . ' ' . $usuarioEncontrado['apellido'],
+        'mensaje' => 'La categoría de esa persona está pendiente de revisión.',
     ]);
 
 }

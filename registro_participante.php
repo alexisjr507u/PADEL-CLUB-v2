@@ -16,7 +16,7 @@ $csrf_token = generar_csrf_token();
     <title>Registro - The Bull Padel Club</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="CSS/style.css">
+    <link rel="stylesheet" href="css/style.css">
 
 </head>
 
@@ -35,6 +35,13 @@ $csrf_token = generar_csrf_token();
 
 <div id="mensajeError" class="mensaje-error">
      <i class="bi bi-exclamation-circle-fill"></i> Este correo ya está registrado.
+</div>
+
+<?php } ?>
+              <?php if(isset($_GET['error']) && $_GET['error'] == 'nombre'){ ?>
+
+<div id="mensajeError" class="mensaje-error">
+     <i class="bi bi-exclamation-circle-fill"></i> El nombre y el apellido solo pueden tener letras, espacios, apóstrofes o guiones (entre 2 y 50 caracteres).
 </div>
 
 <?php } ?>
@@ -132,7 +139,7 @@ $csrf_token = generar_csrf_token();
         </div>
 
     </div>
-<script src="js/padel.js?v=6"></script>
+<script src="js/padel.js?v=9"></script>
 </body>
 
 </html>

@@ -1,0 +1,518 @@
+/* =========================================================
+   RANKING POR CATEGORÍAS — tema oscuro del panel
+   Misma paleta azul que grupos.css / dashboard.css.
+   Se usa en: sección "Ranking" del panel y pestaña "Puntos del ranking"
+   de gestionar_grupos.php.
+   ========================================================= */
+
+.rk {
+    --rk-superficie: rgba(7, 35, 62, 0.62);
+    --rk-superficie-alta: rgba(10, 48, 82, 0.55);
+    --rk-borde: rgba(105, 181, 255, 0.22);
+    --rk-borde-suave: rgba(105, 181, 255, 0.12);
+    --rk-texto: #e7edf5;
+    --rk-texto-suave: #9fb3c8;
+    --rk-texto-tenue: #7c8ba0;
+    --rk-acento: #2f7bff;
+    --rk-acento-claro: #8fb8ff;
+    --rk-verde: #4ade80;
+    --rk-verde-fondo: rgba(34, 197, 94, 0.12);
+    --rk-alerta: #f5c26b;
+    --rk-alerta-fondo: rgba(245, 166, 35, 0.14);
+    --rk-oro: #f5c542;
+    --rk-plata: #c3cfdc;
+    --rk-bronce: #d98c5f;
+
+    color: var(--rk-texto);
+}
+
+/* ---------- Selector de categorías ---------- */
+
+.rk-categorias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.rk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--rk-borde);
+    background: var(--rk-superficie);
+    color: var(--rk-texto-suave);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .15s, color .15s, border-color .15s;
+}
+
+.rk-chip small {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--rk-texto-tenue);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.rk-chip:hover {
+    color: #ffffff;
+    border-color: var(--rk-acento-claro);
+}
+
+.rk-chip.activo {
+    background: var(--rk-acento);
+    border-color: var(--rk-acento);
+    color: #ffffff;
+}
+
+.rk-chip.activo small {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+
+.rk-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 18px;
+    margin-bottom: 12px;
+    color: var(--rk-texto-suave);
+    font-size: 14px;
+}
+
+.rk-resumen strong {
+    color: #ffffff;
+    font-size: 20px;
+}
+
+/* ---------- Tabla ---------- */
+
+.rk-tabla-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--rk-borde);
+    border-radius: 14px;
+    background: var(--rk-superficie);
+}
+
+.rk-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.rk-tabla th {
+    padding: 12px 12px;
+    text-align: left;
+    color: var(--rk-texto-tenue);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--rk-borde);
+}
+
+.rk-tabla td {
+    padding: 11px 12px;
+    border-top: 1px solid var(--rk-borde-suave);
+    vertical-align: middle;
+    color: var(--rk-texto);
+}
+
+.rk-tabla tbody tr:first-child td {
+    border-top: 0;
+}
+
+.rk-tabla tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.rk-num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.rk-col-pos {
+    width: 64px;
+    white-space: nowrap;
+}
+
+.rk-pos {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--rk-texto-suave);
+    font-weight: 800;
+}
+
+.rk-empate {
+    margin-left: 4px;
+    color: var(--rk-texto-tenue);
+    font-size: 12px;
+}
+
+/* Podio: distinción visual para los 3 primeros puestos */
+.rk-podio-1 td:first-child { box-shadow: inset 3px 0 0 var(--rk-oro); }
+.rk-podio-2 td:first-child { box-shadow: inset 3px 0 0 var(--rk-plata); }
+.rk-podio-3 td:first-child { box-shadow: inset 3px 0 0 var(--rk-bronce); }
+
+.rk-podio-1 .rk-pos { background: var(--rk-oro); color: #3a2a00; }
+.rk-podio-2 .rk-pos { background: var(--rk-plata); color: #1f2a37; }
+.rk-podio-3 .rk-pos { background: var(--rk-bronce); color: #2f1708; }
+
+.rk-podio-1 td { background: rgba(245, 197, 66, 0.06); }
+
+/* Fila del propio participante */
+.rk-propia td {
+    background: var(--rk-acento-fondo, rgba(47, 123, 255, 0.16)) !important;
+}
+
+.rk-jugador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 180px;
+}
+
+.rk-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(47, 123, 255, 0.2);
+    color: var(--rk-acento-claro);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.rk-nombre em {
+    color: var(--rk-acento-claro);
+    font-style: normal;
+    font-size: 12px;
+}
+
+.rk-fuera {
+    color: var(--rk-alerta);
+    font-size: 13px;
+}
+
+/* Progreso hacia los 5000 puntos */
+.rk-col-progreso {
+    min-width: 150px;
+}
+
+.rk-barra {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.09);
+    overflow: hidden;
+}
+
+.rk-barra i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2f7bff, #7db4ff);
+}
+
+.rk-col-progreso small {
+    display: block;
+    margin-top: 3px;
+    color: var(--rk-texto-tenue);
+    font-size: 11px;
+}
+
+.rk-nota {
+    margin: 12px 2px 0;
+    color: var(--rk-texto-tenue);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.rk-vacio {
+    padding: 28px 16px;
+    border: 1px dashed var(--rk-borde);
+    border-radius: 14px;
+    color: var(--rk-texto-suave);
+    text-align: center;
+}
+
+.rk-vacio i {
+    margin-right: 6px;
+}
+
+/* ---------- Puntos de un torneo ---------- */
+
+.rk-reglas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.rk-reglas > div {
+    padding: 12px 14px;
+    border: 1px solid var(--rk-borde-suave);
+    border-radius: 12px;
+    background: var(--rk-superficie);
+}
+
+.rk-reglas strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.rk-reglas span {
+    color: var(--rk-texto-suave);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.rk-reglas b {
+    color: var(--rk-acento-claro);
+}
+
+.rk-estado {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--rk-borde);
+    background: var(--rk-superficie-alta);
+}
+
+.rk-estado > i {
+    flex: 0 0 auto;
+    font-size: 22px;
+}
+
+.rk-estado > div {
+    flex: 1 1 260px;
+}
+
+.rk-estado strong {
+    display: block;
+    color: #ffffff;
+}
+
+.rk-estado span {
+    color: var(--rk-texto-suave);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.rk-estado-ok { border-color: rgba(74, 222, 128, 0.35); background: var(--rk-verde-fondo); }
+.rk-estado-ok > i { color: var(--rk-verde); }
+.rk-estado-espera { border-color: rgba(245, 166, 35, 0.35); background: var(--rk-alerta-fondo); }
+.rk-estado-espera > i { color: var(--rk-alerta); }
+.rk-estado-listo > i { color: var(--rk-acento-claro); }
+
+.rk-ascensos {
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--rk-borde);
+    background: var(--rk-superficie);
+}
+
+.rk-ascensos strong {
+    color: #ffffff;
+}
+
+.rk-ascensos i {
+    color: var(--rk-verde);
+}
+
+.rk-ascensos ul {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    color: var(--rk-texto-suave);
+    font-size: 13.5px;
+    line-height: 1.7;
+}
+
+.rk-aviso {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--rk-alerta-fondo);
+    color: var(--rk-alerta);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+body.panel-body .rk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--rk-acento);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+body.panel-body .rk-btn:hover {
+    background: #4a8cff;
+}
+
+.rk-tabla-torneo {
+    max-height: 560px;
+    overflow-y: auto;
+}
+
+.rk-tabla-torneo thead th {
+    position: sticky;
+    top: 0;
+    background: #0a2a47;
+    z-index: 1;
+}
+
+@media (max-width: 900px) {
+    .rk-oculto-chico { display: none; }
+}
+
+@media (max-width: 640px) {
+    .rk-col-progreso { display: none; }
+    .rk-tabla th, .rk-tabla td { padding: 9px 8px; }
+}
+
+/* ---------- Temporada ---------- */
+
+.rk-temporada {
+    margin-bottom: 20px;
+    padding: 18px 20px;
+    border: 1px solid var(--rk-borde);
+    border-radius: 14px;
+    background: var(--rk-superficie);
+}
+
+.rk-temporada-cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.rk-etiqueta {
+    color: var(--rk-acento-claro);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.rk-temporada h2 {
+    margin: 2px 0 0;
+    color: #ffffff;
+    font-size: 24px;
+}
+
+.rk-temporada small {
+    color: var(--rk-texto-tenue);
+}
+
+.rk-temporada-texto {
+    margin: 12px 0 0;
+    color: var(--rk-texto-suave);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.rk-temporada-vacio {
+    margin: 12px 0 0;
+    color: var(--rk-texto-tenue);
+    font-size: 13.5px;
+}
+
+body.panel-body .rk-btn-peligro {
+    background: #d64545;
+}
+
+body.panel-body .rk-btn-peligro:hover {
+    background: #e55b5b;
+}
+
+.rk-descensos {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 107, 107, 0.10);
+    border: 1px solid rgba(255, 107, 107, 0.28);
+}
+
+.rk-descensos > strong {
+    color: #ff9b9b;
+}
+
+.rk-descensos ul {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+}
+
+.rk-descensos li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    font-size: 13.5px;
+}
+
+.rk-descensos li span {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.rk-descensos li em {
+    color: #ff9b9b;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.rk-descensos li small {
+    color: var(--rk-texto-tenue);
+}
+
+.rk-ultimo-cierre {
+    margin-top: 14px;
+    color: var(--rk-texto-suave);
+    font-size: 13.5px;
+}
+
+.rk-ultimo-cierre summary {
+    cursor: pointer;
+    color: var(--rk-acento-claro);
+}
+
+.rk-ultimo-cierre ul {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    line-height: 1.7;
+}

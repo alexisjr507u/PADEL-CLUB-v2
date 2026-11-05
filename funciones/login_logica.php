@@ -102,6 +102,10 @@ if (!password_verify($password, $usuario['pass'])) {
 // CREAR SESIÓN
 // ==========================================
 
+// Un ID de sesión nuevo al autenticar evita que alguien que haya fijado
+// el ID antes del login herede la sesión ya autenticada.
+session_regenerate_id(true);
+
 $_SESSION['id_usuario'] = $usuario['id_usuario'];
 
 $_SESSION['nombre'] = $usuario['nombre'];

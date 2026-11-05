@@ -1782,6 +1782,9 @@ document.addEventListener("DOMContentLoaded", function () {
             modal.classList.remove("mostrar");
         }
 
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+
     }
 
 
@@ -1812,22 +1815,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* =====================================================
-       CERRAR AL HACER CLICK FUERA
+       El modal NO se cierra al hacer click fuera del formulario:
+       solo con la X o con el botón Cancelar, para no perder lo escrito.
        ===================================================== */
-
-    if (modal) {
-
-        modal.addEventListener("click", function (evento) {
-
-            if (evento.target === modal) {
-
-                cerrarModalTorneo();
-
-            }
-
-        });
-
-    }
 
 
     /* =====================================================
@@ -1934,6 +1924,32 @@ const estadoTorneo = document.getElementById("estadoTorneo");
 
 
 /* =====================================================
+   FECHA DE INICIO
+   No puede ser anterior a hoy. Al crear se exige siempre; al editar solo si
+   la fecha cambia (un torneo que ya empezó puede seguir editándose).
+   "Hoy" es el de la computadora del usuario; el servidor lo vuelve a validar.
+   ===================================================== */
+
+let fechaInicioOriginalTorneo = null;
+
+function fechaDeHoy() {
+
+    const ahora = new Date();
+
+    return (
+        ahora.getFullYear() + "-" +
+        String(ahora.getMonth() + 1).padStart(2, "0") + "-" +
+        String(ahora.getDate()).padStart(2, "0")
+    );
+
+}
+
+if (fechaInicioTorneo) {
+    fechaInicioTorneo.min = fechaDeHoy();
+}
+
+
+/* =====================================================
    FECHA DE FINALIZACIÓN
    No puede ser anterior a la fecha de inicio
    ===================================================== */
@@ -2032,6 +2048,22 @@ if (formularioTorneo) {
             fechaInicioTorneo.focus();
 
             alert("Seleccioná la fecha de inicio.");
+
+            return;
+
+        }
+
+
+        if (
+            fechaInicioTorneo.value < fechaDeHoy() &&
+            fechaInicioTorneo.value !== fechaInicioOriginalTorneo
+        ) {
+
+            evento.preventDefault();
+
+            fechaInicioTorneo.focus();
+
+            alert("La fecha de inicio no puede ser anterior a hoy.");
 
             return;
 
@@ -2184,9 +2216,6 @@ const textoBotonGuardarTorneo =
 const horaInicioTorneo =
     document.getElementById("horaInicioTorneo");
 
-const horaFinTorneo =
-    document.getElementById("horaFinTorneo");
-
 const maxParticipantesTorneo =
     document.getElementById("maxParticipantes");
 
@@ -2202,6 +2231,16 @@ function activarModoCrearTorneo() {
 
         formularioTorneo.reset();
 
+    }
+
+    fechaInicioOriginalTorneo = null;
+
+    if (fechaInicioTorneo) {
+        fechaInicioTorneo.min = fechaDeHoy();
+    }
+
+    if (fechaFinTorneo) {
+        fechaFinTorneo.min = fechaDeHoy();
     }
 
     if (idTorneoEditar) {
@@ -2253,7 +2292,13 @@ function activarModoEditarTorneo(boton) {
         nombreTorneo.value = boton.dataset.nombre || "";
     }
 
+    fechaInicioOriginalTorneo = boton.dataset.fechaInicio || null;
+
     if (fechaInicioTorneo) {
+
+        // Sin "min": la fecha actual del torneo puede ser pasada y debe seguir siendo válida.
+        // Si se cambia a una pasada, lo frena la validación al enviar y el servidor.
+        fechaInicioTorneo.removeAttribute("min");
 
         fechaInicioTorneo.value =
             boton.dataset.fechaInicio || "";
@@ -2270,10 +2315,6 @@ function activarModoEditarTorneo(boton) {
 
         fechaFinTorneo.value = boton.dataset.fechaFin || "";
 
-    }
-
-    if (horaFinTorneo) {
-        horaFinTorneo.value = boton.dataset.horaFin || "";
     }
 
     if (categoriaTorneo) {
@@ -2395,7 +2436,7 @@ document.addEventListener("DOMContentLoaded", function () {
         fechas: "Completá las fechas del torneo.",
         fecha_invalida: "La fecha de finalización no puede ser anterior a la de inicio.",
         horas: "Completá los horarios del torneo.",
-        hora_invalida: "La hora de finalización no puede ser anterior a la de inicio.",
+        fecha_pasada: "La fecha de inicio no puede ser anterior a hoy.",
         categoria: "Seleccioná una categoría válida.",
         categoria_no_encontrada: "La categoría seleccionada no existe.",
         tipo: "Seleccioná un tipo de torneo válido.",
@@ -2938,6 +2979,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
         boton.addEventListener("click", function () {
 
+            // Categoría pendiente de revisión: se explica en el mismo modal de
+            // mensajes y no se abre el paso de inscripción ni se envía nada.
+            // (El servidor rechaza igual cualquier solicitud manual.)
+            if (boton.dataset.categoriaPendiente === "1") {
+
+                if (modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc) {
+
+                    tituloMensajeExitoInsc.textContent = "Categoría pendiente de revisión";
+                    textoMensajeExitoInsc.textContent = boton.dataset.mensaje || "";
+
+                    modalMensajeExitoInsc.classList.add("modo-aviso");
+                    modalMensajeExitoInsc.classList.add("mostrar");
+
+                    document.documentElement.style.overflow = "hidden";
+                    document.body.style.overflow = "hidden";
+
+                }
+
+                return;
+
+            }
+
             const nombre = boton.dataset.nombre || "este torneo";
             const tipo = boton.dataset.tipo || "";
 
@@ -3437,6 +3500,20 @@ document.addEventListener("DOMContentLoaded", function () {
         document.body.dataset.tipoTorneo || "Parejas";
 
 
+    // Todo texto que viene de la base (nombres, apellidos) se escapa antes
+    // de entrar a innerHTML, para que un nombre no pueda inyectar HTML.
+    function escaparHtml(valor) {
+
+        return String(valor === null || valor === undefined ? "" : valor)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+
+    }
+
+
     function pintarGrupo(indice) {
 
         const grupo = grupos[indice];
@@ -3495,13 +3572,13 @@ document.addEventListener("DOMContentLoaded", function () {
                             <div class="vt-pareja-fila">
 
                                 <div class="vt-avatar">
-                                    ${inicial}
+                                    ${escaparHtml(inicial)}
                                 </div>
 
                                 <div class="vt-pareja-nombres">
 
                                     <strong>
-                                        ${nombreParticipante}
+                                        ${escaparHtml(nombreParticipante)}
                                     </strong>
 
                                 </div>
@@ -3510,13 +3587,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         </td>
 
-                        <td>${participante.pj || 0}</td>
+                        <td>${escaparHtml(participante.pj || 0)}</td>
 
-                        <td>${participante.pg || 0}</td>
+                        <td>${escaparHtml(participante.pg || 0)}</td>
+
+                        <td>${escaparHtml(participante.pp || 0)}</td>
+
+                        <td>${escaparHtml(participante.sets || '0-0')}</td>
 
                         <td>
                             <strong>
-                                ${participante.pts || 0}
+                                ${escaparHtml(participante.pts || 0)}
                             </strong>
                         </td>
 
@@ -3556,6 +3637,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     const nombres =
                         pareja.nombres || [];
 
+                    const apellidos =
+                        pareja.apellidos || [];
+
 
                     const nombre1 =
                         nombres[0] || "";
@@ -3563,11 +3647,24 @@ document.addEventListener("DOMContentLoaded", function () {
                     const nombre2 =
                         nombres[1] || "";
 
+                    const apellido1 =
+                        apellidos[0] ||
+                        nombre1.trim().split(" ").pop() ||
+                        "";
+
+                    const apellido2 =
+                        apellidos[1] ||
+                        nombre2.trim().split(" ").pop() ||
+                        "";
+
+                    const apodo =
+                        (apellido1 + " / " + apellido2).toUpperCase();
+
 
                     const iniciales = (
 
-                        nombre1.charAt(0) +
-                        nombre2.charAt(0)
+                        apellido1.charAt(0) +
+                        apellido2.charAt(0)
 
                     ).toUpperCase();
 
@@ -3585,17 +3682,21 @@ document.addEventListener("DOMContentLoaded", function () {
                             <div class="vt-pareja-fila">
 
                                 <div class="vt-avatar">
-                                    ${iniciales}
+                                    ${escaparHtml(iniciales)}
                                 </div>
 
                                 <div class="vt-pareja-nombres">
 
-                                    <strong>
-                                        ${nombre1}
+                                    <strong class="vt-pareja-apodo">
+                                        ${escaparHtml(apodo)}
                                     </strong>
 
-                                    <span>
-                                        ${nombre2}
+                                    <span class="vt-pareja-completo">
+                                        ${escaparHtml(nombre1)}
+                                    </span>
+
+                                    <span class="vt-pareja-completo">
+                                        ${escaparHtml(nombre2)}
                                     </span>
 
                                 </div>
@@ -3604,13 +3705,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         </td>
 
-                        <td>${pareja.pj || 0}</td>
+                        <td>${escaparHtml(pareja.pj || 0)}</td>
 
-                        <td>${pareja.pg || 0}</td>
+                        <td>${escaparHtml(pareja.pg || 0)}</td>
+
+                        <td>${escaparHtml(pareja.pp || 0)}</td>
+
+                        <td>${escaparHtml(pareja.sets || '0-0')}</td>
 
                         <td>
                             <strong>
-                                ${pareja.pts || 0}
+                                ${escaparHtml(pareja.pts || 0)}
                             </strong>
                         </td>
 
@@ -3635,16 +3740,156 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
+    /*
+    --------------------------------------------------
+    TRANSICIÓN ENTRE GRUPOS
+    --------------------------------------------------
+
+    El nombre del grupo y la tabla salen deslizándose hacia un lado,
+    se cambia el contenido (pintarGrupo, sin tocar sus datos) y entran
+    desde el lado contrario. Las flechas no se mueven. La altura se
+    anima para que no haya saltos entre grupos de distinto tamaño.
+    Con prefers-reduced-motion el cambio es inmediato.
+    */
+
+    const TRANSICION_SALIDA_MS = 130;
+    const TRANSICION_ENTRADA_MS = 170;
+    const TRANSICION_ALTURA_MS = 260;
+    const DESPLAZAMIENTO_PX = 22;
+
+    const tablaGrupo = cuerpo.closest("table");
+    const bloqueNombre = nombre.closest(".vt-grupo-nombre") || nombre.parentElement;
+
+    // Envoltorio de la tabla (se crea acá para no cambiar el HTML de PHP).
+    const envoltorioTabla = document.createElement("div");
+    envoltorioTabla.className = "vt-grupo-tabla-wrap";
+    tablaGrupo.parentNode.insertBefore(envoltorioTabla, tablaGrupo);
+    envoltorioTabla.appendChild(tablaGrupo);
+
+    const reducirMovimiento = window.matchMedia
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : { matches: false };
+
+    let animando = false;
+    let grupoDestino = 0;       // grupo al que se está yendo (o en el que está)
+    let grupoPendiente = null;  // último clic recibido mientras se animaba
+
+    function actualizarFlechas(indice) {
+        anterior.disabled = indice === 0;
+        siguiente.disabled = indice === grupos.length - 1;
+    }
+
+    function cambiarConAnimacion(indice, direccion) {
+
+        animando = true;
+
+        const elementos = [bloqueNombre, envoltorioTabla];
+        const alturaInicial = envoltorioTabla.getBoundingClientRect().height;
+
+        envoltorioTabla.style.overflow = "hidden";
+        envoltorioTabla.style.height = alturaInicial + "px";
+
+        const salida = elementos.map(function (el) {
+            return el.animate(
+                [
+                    { transform: "translateX(0)", opacity: 1 },
+                    { transform: "translateX(" + (-direccion * DESPLAZAMIENTO_PX) + "px)", opacity: 0 }
+                ],
+                { duration: TRANSICION_SALIDA_MS, easing: "ease-in", fill: "forwards" }
+            );
+        });
+
+        Promise.all(salida.map(function (a) { return a.finished; }))
+            .catch(function () { })
+            .then(function () {
+
+                // Contenido nuevo, medido sin la altura fija para animar hasta ella.
+                pintarGrupo(indice);
+                actualizarFlechas(grupoDestino);
+
+                envoltorioTabla.style.height = "auto";
+                const alturaFinal = envoltorioTabla.getBoundingClientRect().height;
+                envoltorioTabla.style.height = alturaInicial + "px";
+
+                const entrada = elementos.map(function (el) {
+                    return el.animate(
+                        [
+                            { transform: "translateX(" + (direccion * DESPLAZAMIENTO_PX) + "px)", opacity: 0 },
+                            { transform: "translateX(0)", opacity: 1 }
+                        ],
+                        { duration: TRANSICION_ENTRADA_MS, easing: "ease-out", fill: "backwards" }
+                    );
+                });
+
+                salida.forEach(function (a) { a.cancel(); });
+
+                const altura = envoltorioTabla.animate(
+                    [{ height: alturaInicial + "px" }, { height: alturaFinal + "px" }],
+                    { duration: TRANSICION_ALTURA_MS, easing: "ease-in-out" }
+                );
+
+                return Promise.all(
+                    entrada.concat([altura]).map(function (a) { return a.finished; })
+                );
+
+            })
+            .catch(function () { })
+            .then(function () {
+
+                envoltorioTabla.style.height = "";
+                envoltorioTabla.style.overflow = "";
+                animando = false;
+
+                // Si hubo clics durante la animación, se resuelve el último.
+                if (grupoPendiente !== null && grupoPendiente !== grupoActual) {
+                    const siguienteIndice = grupoPendiente;
+                    grupoPendiente = null;
+                    irAGrupo(siguienteIndice);
+                } else {
+                    grupoPendiente = null;
+                }
+
+            });
+
+    }
+
+    function irAGrupo(indice) {
+
+        indice = Math.max(0, Math.min(grupos.length - 1, indice));
+
+        if (animando) {
+            // Se guarda el destino; las flechas ya reflejan el último pedido.
+            grupoPendiente = indice;
+            grupoDestino = indice;
+            actualizarFlechas(indice);
+            return;
+        }
+
+        if (indice === grupoActual) {
+            return;
+        }
+
+        const direccion = indice > grupoActual ? 1 : -1;
+
+        grupoDestino = indice;
+        actualizarFlechas(indice);
+
+        if (reducirMovimiento.matches || typeof Element.prototype.animate !== "function") {
+            pintarGrupo(indice);
+            return;
+        }
+
+        cambiarConAnimacion(indice, direccion);
+
+    }
+
+
     anterior.addEventListener(
         "click",
         function () {
 
-            if (grupoActual > 0) {
-
-                pintarGrupo(
-                    grupoActual - 1
-                );
-
+            if (grupoDestino > 0) {
+                irAGrupo(grupoDestino - 1);
             }
 
         }
@@ -3655,20 +3900,12 @@ document.addEventListener("DOMContentLoaded", function () {
         "click",
         function () {
 
-            if (
-                grupoActual <
-                grupos.length - 1
-            ) {
-
-                pintarGrupo(
-                    grupoActual + 1
-                );
-
+            if (grupoDestino < grupos.length - 1) {
+                irAGrupo(grupoDestino + 1);
             }
 
         }
     );
-
 
     pintarGrupo(0);
 

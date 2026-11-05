@@ -175,10 +175,14 @@ try {
         throw new Exception("cerrado");
     }
 
-    $stmtMiCategoria = mysqli_prepare($conexion, "SELECT id_categoria FROM usuario WHERE id_usuario = ?");
+    $stmtMiCategoria = mysqli_prepare($conexion, "SELECT id_categoria, categoria_estado FROM usuario WHERE id_usuario = ?");
     mysqli_stmt_bind_param($stmtMiCategoria, "i", $id_usuario_actual);
     mysqli_stmt_execute($stmtMiCategoria);
     $miCategoria = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtMiCategoria));
+
+    if ($miCategoria['categoria_estado'] === 'Pendiente') {
+        throw new Exception("categoria_pendiente");
+    }
 
     if ((int) $miCategoria['id_categoria'] !== (int) $invitacion['id_categoria']) {
         throw new Exception("categoria_incompatible");

@@ -1,2 +1,3 @@
 config/mail.php
 _backups/
+.playwright-mcp/

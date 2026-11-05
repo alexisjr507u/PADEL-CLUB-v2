@@ -5479,6 +5479,11 @@
         margin-bottom: 0;
     }
 
+    /* Fila con un solo campo (fecha de finalización): ancho completo */
+    .form-torneo-fila.form-torneo-fila-unica {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .campo-torneo label {
         display: block;
 

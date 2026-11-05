@@ -119,20 +119,22 @@ $stmtOtros = mysqli_prepare(
      FROM inscripcion insc
      INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
      WHERE insc.id_torneo = ? AND insc.estado != 'Confirmada'
+       AND NOT (insc.estado = 'Pendiente' AND ? = 'Individual')
      ORDER BY insc.id_inscripcion ASC"
 );
-mysqli_stmt_bind_param($stmtOtros, "i", $id_torneo);
+mysqli_stmt_bind_param($stmtOtros, "is", $id_torneo, $torneo['tipo']);
 mysqli_stmt_execute($stmtOtros);
 $otrasInscripciones = mysqli_fetch_all(mysqli_stmt_get_result($stmtOtros), MYSQLI_ASSOC);
 
 
 $mensajesAccion = [
     'cancelada'        => ['tipo' => 'exito', 'texto' => 'La inscripción se canceló correctamente.'],
+    'torneo_finalizado' => ['tipo' => 'error', 'texto' => 'El torneo ya finalizó: no se pueden cancelar inscripciones.'],
     'pareja_cancelada' => ['tipo' => 'exito', 'texto' => 'La pareja se canceló correctamente.'],
     'token'            => ['tipo' => 'error', 'texto' => 'Tu sesión expiró, volvé a intentarlo.'],
     'sin_permiso'      => ['tipo' => 'error', 'texto' => 'No tenés permiso sobre ese torneo.'],
     'no_existe'        => ['tipo' => 'error', 'texto' => 'Ese registro no existe o ya fue cancelado.'],
-    'error_bd'         => ['tipo' => 'error', 'texto' => 'Ocurrió un error al cancelar. Intentá nuevamente.'],
+    'error_bd'         => ['tipo' => 'error', 'texto' => 'Ocurrió un error al guardar la decisión. Intentá nuevamente.'],
 ];
 
 ?>
@@ -148,7 +150,8 @@ $mensajesAccion = [
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/ver_torneo.css">
+    <link rel="stylesheet" href="css/ver_torneo.css?v=15">
+    <link rel="stylesheet" href="css/dashboard.css?v=7">
 
 </head>
 
@@ -237,6 +240,7 @@ $mensajesAccion = [
 
                             </div>
 
+                            <?php if ($torneo['estado'] !== 'Finalizado') { // Torneo terminado: ya no se cancelan inscripciones ?>
                             <button
                                 type="button"
                                 class="btn-cancelar-inscripcion btn-cancelar-gestion"
@@ -248,6 +252,7 @@ $mensajesAccion = [
                                 <i class="bi bi-x-circle"></i>
                                 <?php echo $torneo['tipo'] === 'Individual' ? 'Cancelar inscripción' : 'Cancelar pareja'; ?>
                             </button>
+                            <?php } ?>
 
                         </div>
 
@@ -347,7 +352,8 @@ $mensajesAccion = [
     </div>
 
 
-    <script src="js/padel.js?v=6"></script>
+    <script src="js/padel.js?v=14"></script>
+
 
 </body>
 

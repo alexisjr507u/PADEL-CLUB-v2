@@ -54,7 +54,6 @@ $fecha_inicio = $_POST['fecha_inicio'] ?? '';
 $hora_inicio = $_POST['hora_inicio'] ?? '';
 
 $fecha_fin = $_POST['fecha_fin'] ?? '';
-$hora_fin = $_POST['hora_fin'] ?? '';
 
 $categoria = trim($_POST['categoria'] ?? '');
 $tipo = trim($_POST['tipo'] ?? '');
@@ -143,7 +142,7 @@ if ($fecha_fin < $fecha_inicio) {
    VALIDAR HORAS
    ========================================================= */
 
-if ($hora_inicio === '' || $hora_fin === '') {
+if ($hora_inicio === '') {
 
     header(
         "Location: ../paneles.php?seccion=torneos&error=horas"
@@ -153,24 +152,6 @@ if ($hora_inicio === '' || $hora_fin === '') {
 
 }
 
-
-/* =========================================================
-   SI ES EL MISMO DÍA
-   LA HORA FINAL NO PUEDE SER ANTERIOR
-   ========================================================= */
-
-if (
-    $fecha_inicio === $fecha_fin &&
-    $hora_fin <= $hora_inicio
-) {
-
-    header(
-        "Location: ../paneles.php?seccion=torneos&error=hora_invalida"
-    );
-
-    exit;
-
-}
 
 
 /* =========================================================
@@ -386,7 +367,7 @@ $lugar =
    ========================================================= */
 
 $sqlTorneoActual = "
-    SELECT imagen
+    SELECT imagen, fecha_inicio
     FROM torneos
     WHERE id_torneo = ?
       AND id_club = ?
@@ -433,6 +414,41 @@ if (!$torneoActual) {
     );
 
     exit;
+
+}
+
+/* =========================================================
+   LA FECHA DE INICIO NO PUEDE SER ANTERIOR A HOY
+   Solo se exige si la fecha cambió: un torneo que ya empezó puede
+   seguir editándose (estado, categoría...) sin tocar su fecha.
+   "Hoy" sale de MySQL (hora de este equipo); PHP trabaja en UTC.
+   ========================================================= */
+
+$fechaInicioValida = DateTime::createFromFormat('!Y-m-d', $fecha_inicio);
+
+if (!$fechaInicioValida || $fechaInicioValida->format('Y-m-d') !== $fecha_inicio) {
+
+    header(
+        "Location: ../paneles.php?seccion=torneos&error=fechas"
+    );
+
+    exit;
+
+}
+
+if ($fecha_inicio !== $torneoActual['fecha_inicio']) {
+
+    $hoy = mysqli_fetch_row(mysqli_query($conexion, "SELECT CURDATE()"))[0];
+
+    if ($fecha_inicio < $hoy) {
+
+        header(
+            "Location: ../paneles.php?seccion=torneos&error=fecha_pasada"
+        );
+
+        exit;
+
+    }
 
 }
 
@@ -591,7 +607,6 @@ $sql = "
         fecha_inicio = ?,
         hora_inicio = ?,
         fecha_fin = ?,
-        hora_fin = ?,
         lugar = ?,
         id_categoria = ?,
         tipo = ?,
@@ -633,13 +648,12 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "sssssssisisii",
+    "ssssssisisii",
     $nombre,
     $rutaImagen,
     $fecha_inicio,
     $hora_inicio,
     $fecha_fin,
-    $hora_fin,
     $lugar,
     $id_categoria,
     $tipo,

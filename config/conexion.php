@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $host = "localhost";
 $usuario = "root";
-$password = "";
+$password = "root";
 $bd = "bd_padel";
 
 $conexion = mysqli_connect($host, $usuario, $password, $bd);

@@ -34,7 +34,24 @@ $email = $_SESSION['email'];
 $codigo_verificacion = $_SESSION['codigo'];
 
 $id_rol = 3;
-$id_categoria = $_SESSION['id_categoria'];
+
+// La categoría sale de la encuesta (calculada en el servidor). Sin encuesta
+// completada no se crea la cuenta.
+$categoria_estado = $_SESSION['categoria_estado'] ?? null;
+
+if (!in_array($categoria_estado, ['Confirmada', 'Pendiente'], true)) {
+    header("Location: ../encuesta_categoria.php");
+    exit();
+}
+
+// Pendiente => id_categoria NULL hasta que el administrador la revise.
+$id_categoria = $categoria_estado === 'Confirmada' ? (int) $_SESSION['id_categoria'] : null;
+$clasificacion = $_SESSION['clasificacion'] ?? null;
+
+if ($categoria_estado === 'Pendiente' && !is_array($clasificacion)) {
+    header("Location: ../encuesta_categoria.php");
+    exit();
+}
 
 $sql = "INSERT INTO usuario
 (
@@ -47,16 +64,17 @@ pass,
 codigo_verificacion,
 verificado,
 id_rol,
-id_categoria
+id_categoria,
+categoria_estado
 )
 VALUES
-(?, ?, ?, ?, ?, ?, ?, 1, ?, ?)";
+(?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)";
 
 $stmt = mysqli_prepare($conexion, $sql);
 
 mysqli_stmt_bind_param(
     $stmt,
-    "sssssssii",
+    "sssssssiis",
     $nombre,
     $apellido,
     $fecha_nacimiento,
@@ -65,12 +83,46 @@ mysqli_stmt_bind_param(
     $password_hash,
     $codigo_verificacion,
     $id_rol,
-    $id_categoria
+    $id_categoria,
+    $categoria_estado
 );
 
 if (mysqli_stmt_execute($stmt)) {
 
     $id_usuario_nuevo = mysqli_insert_id($conexion);
+
+    // Guarda las respuestas y los puntajes por área para que el administrador pueda revisarlos.
+    if (is_array($clasificacion)) {
+
+        $l = $clasificacion['letras'];
+        $p = $clasificacion['puntos'];
+
+        $stmtClasif = mysqli_prepare(
+            $conexion,
+            "INSERT INTO clasificacion_categoria
+             (id_usuario, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10,
+              puntos_experiencia, puntos_competicion, puntos_tecnica, puntos_tactica, puntos_reglas,
+              puntos_total, id_categoria_estimada, motivos, version_encuesta)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        mysqli_stmt_bind_param(
+            $stmtClasif,
+            "issssssssssiiiiiiisi",
+            $id_usuario_nuevo,
+            $l[1], $l[2], $l[3], $l[4], $l[5], $l[6], $l[7], $l[8], $l[9], $l[10],
+            $p['experiencia'], $p['competicion'], $p['tecnica'], $p['tactica'], $p['reglas'],
+            $clasificacion['total'],
+            $clasificacion['id_categoria_estimada'],
+            $clasificacion['motivos'],
+            $clasificacion['version']
+        );
+
+        if (!mysqli_stmt_execute($stmtClasif)) {
+            error_log("Error al guardar la clasificación del usuario $id_usuario_nuevo: " . mysqli_stmt_error($stmtClasif));
+        }
+
+    }
 
     // Vincular invitaciones pendientes que esperaban este correo.
     // El email ya pasó por el flujo de verificación con código,

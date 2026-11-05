@@ -80,7 +80,7 @@ try {
         // (vía la inscripción), para no mover algo de otro torneo.
         $stmtActual = mysqli_prepare(
             $conexion,
-            "SELECT gi.id_grupo_inscripcion
+            "SELECT gi.id_grupo_inscripcion, gi.id_grupo
              FROM grupo_inscripcion gi
              INNER JOIN inscripcion insc ON insc.id_inscripcion = gi.id_inscripcion
              WHERE gi.id_inscripcion = ? AND insc.id_torneo = ?
@@ -88,9 +88,29 @@ try {
         );
         mysqli_stmt_bind_param($stmtActual, "ii", $id_elemento, $id_torneo);
         mysqli_stmt_execute($stmtActual);
+        $actual = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtActual));
 
-        if (!mysqli_fetch_assoc(mysqli_stmt_get_result($stmtActual))) {
+        if (!$actual) {
             throw new Exception("elemento_no_asignado");
+        }
+
+        // Si ya tiene partidos generados en su grupo actual, no se puede
+        // mover: esos partidos quedarían con un entrante que ya no
+        // pertenece a ese grupo y las posiciones dejarían de ser confiables.
+        $stmtTienePartidos = mysqli_prepare(
+            $conexion,
+            "SELECT id_partido FROM partido_individual
+             WHERE id_grupo = ? AND fase = 'Grupos'
+               AND (id_entrante_1 = ? OR id_entrante_2 = ?)
+             LIMIT 1"
+        );
+        $idGrupoActualElemento = (int) $actual['id_grupo'];
+        $idEntranteActual = (int) $actual['id_grupo_inscripcion'];
+        mysqli_stmt_bind_param($stmtTienePartidos, "iii", $idGrupoActualElemento, $idEntranteActual, $idEntranteActual);
+        mysqli_stmt_execute($stmtTienePartidos);
+
+        if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmtTienePartidos))) {
+            throw new Exception("tiene_partidos");
         }
 
         $stmtMover = mysqli_prepare(
@@ -103,7 +123,7 @@ try {
 
         $stmtActual = mysqli_prepare(
             $conexion,
-            "SELECT gp.id_grupo_pareja
+            "SELECT gp.id_grupo_pareja, gp.id_grupo
              FROM grupo_pareja gp
              INNER JOIN pareja p ON p.id_pareja = gp.id_pareja
              WHERE gp.id_pareja = ? AND p.id_torneo = ?
@@ -111,9 +131,26 @@ try {
         );
         mysqli_stmt_bind_param($stmtActual, "ii", $id_elemento, $id_torneo);
         mysqli_stmt_execute($stmtActual);
+        $actual = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtActual));
 
-        if (!mysqli_fetch_assoc(mysqli_stmt_get_result($stmtActual))) {
+        if (!$actual) {
             throw new Exception("elemento_no_asignado");
+        }
+
+        $stmtTienePartidos = mysqli_prepare(
+            $conexion,
+            "SELECT id_partido FROM partido_pareja
+             WHERE id_grupo = ? AND fase = 'Grupos'
+               AND (id_entrante_1 = ? OR id_entrante_2 = ?)
+             LIMIT 1"
+        );
+        $idGrupoActualElemento = (int) $actual['id_grupo'];
+        $idEntranteActual = (int) $actual['id_grupo_pareja'];
+        mysqli_stmt_bind_param($stmtTienePartidos, "iii", $idGrupoActualElemento, $idEntranteActual, $idEntranteActual);
+        mysqli_stmt_execute($stmtTienePartidos);
+
+        if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmtTienePartidos))) {
+            throw new Exception("tiene_partidos");
         }
 
         $stmtMover = mysqli_prepare(
