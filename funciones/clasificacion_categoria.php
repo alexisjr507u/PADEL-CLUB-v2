@@ -3,7 +3,7 @@
 /* =========================================================
    ENCUESTA DE CATEGORÍA — preguntas, puntajes y clasificación
    Única fuente de verdad: las pantallas de la encuesta, el cálculo
-   del servidor y la revisión del administrador usan este archivo.
+   del servidor usan este archivo. La categoría calculada se asigna directamente (sin revisión).
 
    Los puntos NUNCA viajan al navegador: el formulario solo envía la
    letra de la opción elegida y el servidor calcula el puntaje.
@@ -35,9 +35,6 @@ const PESO_AREAS_ENCUESTA = [
 // Por debajo del primero: Principiante. Los ids de categoria son 1..8 en ese orden.
 const UMBRALES_CATEGORIA = [20, 35, 50, 63, 75, 85, 93];
 
-// A partir de este índice (4 = 4ta) el resultado exige revisión del administrador.
-const INDICE_PRIMERA_CATEGORIA_A_REVISAR = 4;
-
 // Habilidad máxima (preguntas 5 a 9).
 const HABILIDAD_MAXIMA_ENCUESTA = 62;
 
@@ -48,7 +45,7 @@ const HABILIDAD_MAXIMA_ENCUESTA = 62;
        (máximo 50). Es la que se usa hoy para registrar participantes.
    2 = la encuesta con técnica y táctica (áreas y pesos de arriba). Ya no se
        muestra, pero queda definida porque hay clasificaciones guardadas con
-       ella y la revisión del administrador debe mostrarlas con sus textos.
+       ella y hay que poder mostrarlas con sus textos.
    Cada fila de clasificacion_categoria guarda su versión (version_encuesta).
    --------------------------------------------------------- */
 const VERSION_ENCUESTA_ORIGINAL = 1;
@@ -71,7 +68,7 @@ function preguntasEncuesta($version = VERSION_ENCUESTA_ACTIVA) {
 
 
 /**
- * Áreas que se muestran al revisar una clasificación: clave => [nombre, máximo].
+ * Áreas de una clasificación: clave => [nombre, máximo].
  * Solo las que existen en esa versión de la encuesta.
  */
 function areasEncuesta($version = VERSION_ENCUESTA_ACTIVA) {
@@ -286,8 +283,10 @@ function indiceCategoriaPorPorcentaje($porcentaje) {
  *    que corresponde solo a técnica + táctica (preguntas 5 a 9). Así las reglas,
  *    los años de juego o la competición no compensan una habilidad baja.
  *  - 2da y 1ra exigen la respuesta máxima de competición (pregunta 3); si no, 3ra.
- *  - Exige revisión: resultado de 4ta o superior, o incoherencia fuerte entre
- *    el puntaje total y la habilidad (2 escalones o más).
+ *  - Incoherencia fuerte entre el puntaje total y la habilidad (2 escalones o más): la
+ *    clasificación es inválida (valido = false, incoherente = true) y la persona debe
+ *    volver a completar la encuesta. No se asigna ninguna categoría.
+ *  - Cualquier otro resultado válido se asigna directamente, aunque sea 4ta, 3ra, 2da o 1ra.
  */
 function calcularClasificacionEncuesta(array $respuestas, $version = VERSION_ENCUESTA_ACTIVA) {
 
@@ -339,10 +338,9 @@ function calcularClasificacionEncuesta(array $respuestas, $version = VERSION_ENC
         $motivos[] = 'Respuestas incoherentes entre experiencia y habilidad';
     }
 
-    $requiereRevision = $incoherente || $indice >= INDICE_PRIMERA_CATEGORIA_A_REVISAR;
-
-    if ($indice >= INDICE_PRIMERA_CATEGORIA_A_REVISAR) {
-        $motivos[] = 'Categoría estimada de 4ta o superior';
+    // Respuestas incoherentes: no se asigna ninguna categoría; la persona vuelve a completar la encuesta.
+    if ($incoherente) {
+        return ['valido' => false, 'incoherente' => true];
     }
 
     return [
@@ -353,7 +351,6 @@ function calcularClasificacionEncuesta(array $respuestas, $version = VERSION_ENC
         'total' => $total,
         'habilidad_pct' => (int) round($habilidadPct),
         'id_categoria_estimada' => $indice + 1,
-        'requiere_revision' => $requiereRevision,
         'motivos' => implode('; ', $motivos),
     ];
 
@@ -365,13 +362,11 @@ function calcularClasificacionEncuesta(array $respuestas, $version = VERSION_ENC
  * cortes que tenía funciones/calcular_categoria.php (<=19 Principiante, <=34 7ma,
  * <=49 6ta, <=64 5ta, <=79 4ta, <=89 3ra, <=95 2da, más 1ra).
  *
- * Revisión del administrador: igual que en la encuesta actual, todo resultado de
- * 4ta o superior queda pendiente. Las reglas de tope por habilidad y de competición
- * no se pueden aplicar porque esta encuesta no pregunta técnica, táctica ni
- * competición; por eso tampoco hay "incoherencia" que detectar.
+ * La categoría se asigna directamente, sin revisión. Las reglas de tope por habilidad y
+ * de competición no se pueden aplicar porque esta encuesta no pregunta técnica, táctica
+ * ni competición; por eso tampoco hay "incoherencia" que detectar.
  *
- * puntos_total se guarda como porcentaje (0-100), la misma escala que usa la
- * pantalla de revisión.
+ * puntos_total se guarda como porcentaje (0-100).
  */
 function calcularClasificacionEncuestaOriginal(array $respuestas) {
 
@@ -403,8 +398,6 @@ function calcularClasificacionEncuestaOriginal(array $respuestas) {
         }
     }
 
-    $requiereRevision = $indice >= INDICE_PRIMERA_CATEGORIA_A_REVISAR;
-
     return [
         'valido' => true,
         'version' => VERSION_ENCUESTA_ORIGINAL,
@@ -413,10 +406,7 @@ function calcularClasificacionEncuestaOriginal(array $respuestas) {
         'total' => (int) round($porcentaje),
         'puntos_brutos' => $total,
         'id_categoria_estimada' => $indice + 1,
-        'requiere_revision' => $requiereRevision,
-        'motivos' => $requiereRevision
-            ? 'Categoría estimada de 4ta o superior (encuesta original: mide experiencia y reglas, no técnica ni táctica)'
-            : '',
+        'motivos' => '',
     ];
 
 }

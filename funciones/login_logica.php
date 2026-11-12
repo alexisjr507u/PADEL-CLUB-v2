@@ -2,10 +2,14 @@
 
 include("../config/no_cache.php");
 
-session_start();
-
+require_once __DIR__ . '/../config/sesion.php';
 include("../config/conexion.php");
 require_once("csrf.php");
+
+// Torneo de origen (consulta pública): solo un id entero positivo; si el login falla se conserva en la URL.
+$idTorneoDestino = filter_var($_POST['torneo'] ?? '', FILTER_VALIDATE_INT);
+$idTorneoDestino = ($idTorneoDestino !== false && $idTorneoDestino > 0) ? (int) $idTorneoDestino : 0;
+$paramTorneo = $idTorneoDestino ? '&torneo=' . $idTorneoDestino : '';
 
 
 // ==========================================
@@ -14,7 +18,7 @@ require_once("csrf.php");
 
 if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 
-    header("Location: ../login.php?error=1");
+    header("Location: ../login.php?error=1" . $paramTorneo);
     exit();
 
 }
@@ -34,7 +38,7 @@ $password = $_POST['password'] ?? '';
 
 if ($email === '' || $password === '') {
 
-    header("Location: ../login.php?error=1");
+    header("Location: ../login.php?error=1" . $paramTorneo);
     exit();
 
 }
@@ -55,7 +59,7 @@ $stmt = mysqli_prepare($conexion, $sql);
 
 if (!$stmt) {
 
-    header("Location: ../login.php?error=1");
+    header("Location: ../login.php?error=1" . $paramTorneo);
     exit();
 
 }
@@ -77,7 +81,7 @@ $resultado = mysqli_stmt_get_result($stmt);
 
 if (mysqli_num_rows($resultado) === 0) {
 
-    header("Location: ../login.php?error=1");
+    header("Location: ../login.php?error=1" . $paramTorneo);
     exit();
 
 }
@@ -92,7 +96,7 @@ $usuario = mysqli_fetch_assoc($resultado);
 
 if (!password_verify($password, $usuario['pass'])) {
 
-    header("Location: ../login.php?error=1");
+    header("Location: ../login.php?error=1" . $paramTorneo);
     exit();
 
 }
@@ -116,6 +120,24 @@ $_SESSION['id_rol'] = $usuario['id_rol'];
 // ==========================================
 // ENTRAR AL PANEL
 // ==========================================
+
+// Si venía de un torneo de la consulta pública y todavía existe, vuelve a él. No se inscribe a nadie:
+// la inscripción siempre la confirma el usuario después, desde el propio torneo.
+unset($_SESSION['torneo_destino']);
+
+if ($idTorneoDestino) {
+
+    $stmtDestino = mysqli_prepare($conexion, "SELECT id_torneo FROM torneos WHERE id_torneo = ?");
+    mysqli_stmt_bind_param($stmtDestino, "i", $idTorneoDestino);
+    mysqli_stmt_execute($stmtDestino);
+    $existeDestino = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtDestino));
+
+    if ($existeDestino) {
+        header("Location: ../ver_torneo.php?id=" . $idTorneoDestino);
+        exit();
+    }
+
+}
 
 header("Location: ../paneles.php");
 

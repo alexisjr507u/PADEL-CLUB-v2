@@ -6,6 +6,8 @@
    torneos de los clubes del organizador (club.id_usuario).
    ========================================================= */
 
+require_once __DIR__ . '/hora.php';   // «hoy» según MySQL (hora de Argentina)
+
 const DASH_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DASH_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
@@ -50,11 +52,12 @@ function dashFechaActividad($fecha) {
     $t = strtotime($fecha);
     $hora = date('H:i', $t);
 
-    if (date('Y-m-d', $t) === date('Y-m-d')) {
+    // «Hoy» y «ayer» según MySQL (hora de Argentina, la misma con la que se guardaron las actividades): PHP está en UTC.
+    if (date('Y-m-d', $t) === fechaHoyServidor()) {
         return 'Hoy - ' . $hora;
     }
 
-    if (date('Y-m-d', $t) === date('Y-m-d', strtotime('-1 day'))) {
+    if (date('Y-m-d', $t) === date('Y-m-d', strtotime(fechaHoyServidor() . ' -1 day'))) {
         return 'Ayer - ' . $hora;
     }
 
@@ -230,7 +233,9 @@ function renderDashboardOrganizador($conexion, $idUsuario, $nombreUsuario) {
     usort($eventos, fn($a, $b) => strcmp($b['fecha'], $a['fecha']));
     $eventos = array_slice($eventos, 0, 5);
 
-    $hoy = DASH_DIAS[(int) date('w')] . ', ' . date('j') . ' de ' . DASH_MESES[(int) date('n') - 1] . ' de ' . date('Y');
+    // Fecha de hoy según MySQL (hora de Argentina): con la hora de PHP (UTC) después de las 21:00 mostraba el día siguiente.
+    $tHoy = strtotime(fechaHoyServidor());
+    $hoy = DASH_DIAS[(int) date('w', $tHoy)] . ', ' . date('j', $tHoy) . ' de ' . DASH_MESES[(int) date('n', $tHoy) - 1] . ' de ' . date('Y', $tHoy);
 
     ob_start();
     ?>

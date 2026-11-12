@@ -1,8 +1,6 @@
 <?php
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/sesion.php';
 
 $host = "localhost";
 $usuario = "root";
@@ -14,3 +12,6 @@ $conexion = mysqli_connect($host, $usuario, $password, $bd);
 if (!$conexion) {
     die("Error de conexión");
 }
+
+// Registro del historial de actividades (ver funciones/actividad.php)
+require_once __DIR__ . '/../funciones/actividad.php';

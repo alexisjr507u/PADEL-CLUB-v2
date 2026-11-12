@@ -3,7 +3,10 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
 require_once("standings.php");
+require_once("descalificacion.php");
+require_once("ranking_puntos.php");
 
 /* =========================================================
    CUADRO DE ELIMINACIÓN DIRECTA PARA 4 U 8 GRUPOS
@@ -69,6 +72,9 @@ try {
         throw new Exception("sin_permiso");
     }
 
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'rondas');
+
     $esIndividual = ($torneo['tipo'] === 'Individual');
     $tablaPartidos = $esIndividual ? 'partido_individual' : 'partido_pareja';
     $tablaEntrantes = $esIndividual ? 'grupo_inscripcion' : 'grupo_pareja';
@@ -132,8 +138,15 @@ try {
 
             $tabla = calcularStandings($datos['miembros'], $datos['partidos']);
 
-            $primeros[$i] = (int) $tabla[0]['id_entrante'];
-            $segundos[$i] = (int) $tabla[1]['id_entrante'];
+            // Los descalificados no pasan de fase: clasifican los 2 mejores que siguen en el torneo.
+            $clasificados = clasificadosDeTabla($tabla);
+
+            if (count($clasificados) < CLASIFICAN_POR_GRUPO) {
+                throw new Exception("grupos_incompletos");
+            }
+
+            $primeros[$i] = $clasificados[0];
+            $segundos[$i] = $clasificados[1];
 
         }
 
@@ -206,6 +219,12 @@ try {
         }
 
     }
+
+    // Si un ganador de la ronda anterior fue descalificado después, su rival avanza por W.O.
+    resolverPartidosConDescalificados($conexion, $id_torneo);
+    sincronizarPuntosTorneo($conexion, $id_torneo, (int) $_SESSION['id_usuario']);
+
+    actividadFaseGenerada($conexion, $id_torneo, 'la ronda de ' . $rondaNueva);
 
     mysqli_commit($conexion);
 

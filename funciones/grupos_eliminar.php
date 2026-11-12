@@ -3,6 +3,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
 
 
 if (!isset($_SESSION['id_usuario']) || !in_array($_SESSION['id_rol'], [1, 2], true)) {
@@ -56,6 +57,9 @@ try {
         throw new Exception("sin_permiso");
     }
 
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'estructura');
+
     // El ON DELETE CASCADE de grupo_inscripcion/grupo_pareja hacia grupo
     // limpia las asignaciones solas; las inscripciones y parejas del
     // torneo no se tocan en ningún momento.
@@ -79,7 +83,7 @@ try {
 
     if ($e->getCode() === 1451 || mysqli_errno($conexion) === 1451) {
         $motivo = 'tiene_partidos';
-    } elseif (!in_array($motivo, ['no_existe', 'sin_permiso'], true)) {
+    } elseif (!in_array($motivo, ['no_existe', 'sin_permiso', 'torneo_finalizado_grupos', 'grupos_ya_generados'], true)) {
         error_log("Error al eliminar grupo $id_grupo: " . mysqli_error($conexion));
         $motivo = 'error_bd';
     }

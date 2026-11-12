@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/config/animacion.php';   // animación de entrada
 require_once("funciones/csrf.php");
 require_once("funciones/clasificacion_categoria.php");
 

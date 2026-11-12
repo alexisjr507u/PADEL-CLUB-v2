@@ -1,0 +1,48 @@
+/* =========================================================
+   ANIMACIÓN DE ENTRADA (fade in + pequeño desplazamiento vertical)
+
+   Única función: que el contenido principal aparezca suavemente al entrar en una página.
+   No cambia colores, fondos, tipografías, tamaños, bordes, tarjetas, iconos ni el menú lateral,
+   y no agrega ningún efecto hover.
+
+   Cómo funciona:
+   - js/animacion_entrada.js agrega la clase «ae-entrando» al <html> SOLO al entrar en la página y la quita
+     a los 0,9 s. Fuera de ese momento no hay ninguna animación (no se repite al abrir un modal, cambiar
+     de pestaña ni actualizar datos).
+   - Se anima el contenido que está DENTRO de <main> (no el <main> en sí, que lleva el fondo fijo, ni el
+     menú lateral).
+   - Los fotogramas solo definen el estado inicial («from»): el final es el estilo normal de cada elemento,
+     así que cualquier transformación u opacidad propia queda igual y no hay saltos al terminar.
+   - «backwards»: la página nace ya en el estado inicial (sin parpadeo) y al terminar no queda ningún
+     efecto residual (no crea capas de apilamiento ni cambia el posicionamiento de modales).
+   - Sin JavaScript o con «reducir movimiento» activado: la página aparece directamente.
+   - Inicio de sesión, registro, recuperación de contraseña y encuesta NO se tocan: sus cajas ya traen su propia
+     animación de entrada (animation: aparecer en style.css) y se conserva tal cual.
+   ========================================================= */
+
+@keyframes ae-entrada {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+}
+
+/* Paneles (administrador, organizador, participante), detalle y gestión de torneos, y secciones públicas */
+html.ae-entrando main.contenido > *,
+html.ae-entrando main.pub-contenedor > *,
+/* Inicio público */
+html.ae-entrando .landing-bienvenida,
+html.ae-entrando .landing-hero-contenido {
+    animation: ae-entrada 420ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    html.ae-entrando main.contenido > *,
+    html.ae-entrando main.pub-contenedor > *,
+    html.ae-entrando .landing-bienvenida,
+    html.ae-entrando .landing-hero-contenido {
+        animation: none;
+    }
+
+}

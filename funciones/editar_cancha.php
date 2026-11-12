@@ -282,6 +282,8 @@ if (mysqli_stmt_execute($stmtActualizar)) {
 
     mysqli_stmt_close($stmtActualizar);
 
+    actividadClubModificado($conexion, (int) $cancha['id_club'], 'editó la cancha «' . $nombre . '»');
+
     /* Si había una imagen nueva,
        eliminar la imagen anterior */
 

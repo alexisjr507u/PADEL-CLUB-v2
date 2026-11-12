@@ -1631,9 +1631,12 @@ body.modal-abierto {
     z-index: 1000;
 }
 
-/* El contenido deja espacio para la barra */
-.panel .contenido {
-    margin-left: 245px;
+/* El contenido deja espacio para la barra lateral FIJA: solo en escritorio. En celulares la barra se oculta (style.css) y el
+   contenido ocupa todo el ancho; antes este margen se aplicaba siempre y dejaba el contenido de ~130 px con scroll horizontal. */
+@media (min-width: 901px) {
+    .panel .contenido {
+        margin-left: 245px;
+    }
 }
 /* =========================================
    MODAL ELIMINAR CANCHA

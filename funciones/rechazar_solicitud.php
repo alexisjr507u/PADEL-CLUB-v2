@@ -88,6 +88,9 @@ if (!mysqli_stmt_execute($stmt)) {
 }
 
 
+actividadSolicitudRechazada($conexion, $id_solicitud);
+
+
 /* ==========================================
    VOLVER AL PANEL
 ========================================== */

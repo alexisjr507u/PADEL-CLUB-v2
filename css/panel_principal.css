@@ -665,6 +665,58 @@ body.landing-body {
 }
 
 
+/* Selector de club del top 3 */
+
+.landing-clubes {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 6px;
+
+    margin-bottom: 14px;
+
+}
+
+.landing-club {
+
+    color: #d9e2ec;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    text-decoration: none;
+
+    background: rgba(255, 255, 255, 0.10);
+
+    border: 1px solid rgba(255, 255, 255, 0.18);
+
+    padding: 6px 11px;
+
+    border-radius: 999px;
+
+    transition: 0.3s;
+
+}
+
+.landing-club:hover {
+
+    background: rgba(255, 255, 255, 0.22);
+
+}
+
+.landing-club.activo {
+
+    background: #0d8fe8;
+
+    border-color: #0d8fe8;
+
+    color: #ffffff;
+
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */

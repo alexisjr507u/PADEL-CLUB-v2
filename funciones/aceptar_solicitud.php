@@ -3,6 +3,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("temporada_club.php");
 
 /* ==========================================
    VERIFICAR QUE SEA ADMINISTRADOR
@@ -180,6 +181,10 @@ try {
 
     $id_club = mysqli_insert_id($conexion);
 
+    // Cada club tiene su propia temporada desde el primer día (los puntos del club se cuentan en ella).
+    $nombreTemporadaInicial = abrirTemporadaDeClub($conexion, $id_club);
+    actividadTemporada($conexion, 'temporada_creada', $nombreTemporadaInicial, null, '', $id_club);
+
 
     /* ==========================================
        4. BUSCAR TODAS LAS CANCHAS
@@ -278,6 +283,8 @@ try {
     /* ==========================================
        TODO CORRECTO
     ========================================== */
+
+    actividadClubRegistrado($conexion, $id_club, $id_usuario);
 
     mysqli_commit($conexion);
 

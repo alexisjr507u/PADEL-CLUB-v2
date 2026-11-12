@@ -3,6 +3,9 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
+require_once("descalificacion.php");
+require_once("ranking_puntos.php");
 require_once("standings.php");
 
 
@@ -54,6 +57,9 @@ try {
     if (!$esAdmin && (int) $torneo['id_organizador'] !== (int) $_SESSION['id_usuario']) {
         throw new Exception("sin_permiso");
     }
+
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'rondas');
 
     $esIndividual = ($torneo['tipo'] === 'Individual');
     $tablaPartidos = $esIndividual ? 'partido_individual' : 'partido_pareja';
@@ -107,10 +113,18 @@ try {
 
     }
 
-    $primeroA = (int) $standingsPorGrupo[0][0]['id_entrante'];
-    $segundoA = (int) $standingsPorGrupo[0][1]['id_entrante'];
-    $primeroB = (int) $standingsPorGrupo[1][0]['id_entrante'];
-    $segundoB = (int) $standingsPorGrupo[1][1]['id_entrante'];
+    // Los descalificados no pasan de fase: clasifican los 2 mejores que siguen en el torneo.
+    $clasificadosA = clasificadosDeTabla($standingsPorGrupo[0]);
+    $clasificadosB = clasificadosDeTabla($standingsPorGrupo[1]);
+
+    if (count($clasificadosA) < CLASIFICAN_POR_GRUPO || count($clasificadosB) < CLASIFICAN_POR_GRUPO) {
+        throw new Exception("grupos_incompletos");
+    }
+
+    $primeroA = $clasificadosA[0];
+    $segundoA = $clasificadosA[1];
+    $primeroB = $clasificadosB[0];
+    $segundoB = $clasificadosB[1];
 
     $stmtInsertar = mysqli_prepare(
         $conexion,
@@ -129,6 +143,11 @@ try {
     if (!mysqli_stmt_execute($stmtInsertar)) {
         throw new Exception("error_bd");
     }
+
+    resolverPartidosConDescalificados($conexion, $id_torneo);
+    sincronizarPuntosTorneo($conexion, $id_torneo, (int) $_SESSION['id_usuario']);
+
+    actividadFaseGenerada($conexion, $id_torneo, 'las semifinales');
 
     mysqli_commit($conexion);
 

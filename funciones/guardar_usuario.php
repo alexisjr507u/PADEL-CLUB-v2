@@ -39,19 +39,13 @@ $id_rol = 3;
 // completada no se crea la cuenta.
 $categoria_estado = $_SESSION['categoria_estado'] ?? null;
 
-if (!in_array($categoria_estado, ['Confirmada', 'Pendiente'], true)) {
+if ($categoria_estado !== 'Confirmada' || empty($_SESSION['id_categoria'])) {
     header("Location: ../encuesta_categoria.php");
     exit();
 }
 
-// Pendiente => id_categoria NULL hasta que el administrador la revise.
-$id_categoria = $categoria_estado === 'Confirmada' ? (int) $_SESSION['id_categoria'] : null;
+$id_categoria = (int) $_SESSION['id_categoria'];
 $clasificacion = $_SESSION['clasificacion'] ?? null;
-
-if ($categoria_estado === 'Pendiente' && !is_array($clasificacion)) {
-    header("Location: ../encuesta_categoria.php");
-    exit();
-}
 
 $sql = "INSERT INTO usuario
 (
@@ -91,7 +85,9 @@ if (mysqli_stmt_execute($stmt)) {
 
     $id_usuario_nuevo = mysqli_insert_id($conexion);
 
-    // Guarda las respuestas y los puntajes por área para que el administrador pueda revisarlos.
+    actividadUsuarioRegistrado($conexion, $id_usuario_nuevo);
+
+    // Guarda las respuestas y los puntajes por área de la encuesta.
     if (is_array($clasificacion)) {
 
         $l = $clasificacion['letras'];
@@ -180,6 +176,10 @@ if (mysqli_stmt_execute($stmt)) {
 
     }
 
+    // Torneo de origen (consulta pública): se lee antes de destruir la sesión y se pasa al login.
+    $idTorneoDestinoRegistro = (int) ($_SESSION['torneo_destino'] ?? 0);
+    $urlLoginRegistro = '../login.php' . ($idTorneoDestinoRegistro > 0 ? '?torneo=' . $idTorneoDestinoRegistro . '&registro=ok' : '');
+
     session_unset();
     session_destroy();
 
@@ -195,7 +195,7 @@ if (mysqli_stmt_execute($stmt)) {
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
         <link rel="stylesheet" href="../css/style.css">
 
-        <meta http-equiv="refresh" content="3;url=../login.php">
+        <meta http-equiv="refresh" content="3;url=<?php echo htmlspecialchars($urlLoginRegistro, ENT_QUOTES, 'UTF-8'); ?>">
     </head>
 
     <body>

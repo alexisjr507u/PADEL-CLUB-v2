@@ -1,0 +1,142 @@
+/* Descalificación de participantes: modal de confirmación y listado de descalificados.
+   Se carga después de style.css / dashboard.css, por eso algunas reglas llevan `body.panel-body`. */
+
+/* ---------- Modal ---------- */
+
+.descalificar-consecuencias {
+    list-style: none;
+    margin: 14px 0 6px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(239, 68, 68, .08);
+    border: 1px solid rgba(239, 68, 68, .28);
+    text-align: left;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #cbd5e1;
+}
+
+.descalificar-consecuencias li {
+    position: relative;
+    padding-left: 18px;
+}
+
+.descalificar-consecuencias li + li {
+    margin-top: 6px;
+}
+
+.descalificar-consecuencias li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: .55em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f87171;
+}
+
+.descalificar-etiqueta {
+    display: block;
+    margin: 14px 0 6px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+body.panel-body textarea.descalificar-motivo {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 74px;
+    max-height: 180px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, .35);
+    background: rgba(15, 23, 42, .6);
+    color: #e2e8f0;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+body.panel-body textarea.descalificar-motivo:focus {
+    border-color: #f87171;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, .22);
+}
+
+/* ---------- Listado de descalificados ---------- */
+
+.tarjeta-descalificado {
+    align-items: flex-start;
+}
+
+.tarjeta-descalificado .descalificado-datos {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.estado-mi-inscripcion.estado-descalificada {
+    background: rgba(239, 68, 68, .16);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, .45);
+    white-space: nowrap;
+}
+
+.descalificado-partidos {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #cbd5e1;
+}
+
+.descalificado-partidos summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #93c5fd;
+}
+
+.descalificado-partidos ul {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.descalificado-partidos li {
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: rgba(148, 163, 184, .08);
+    line-height: 1.4;
+}
+
+.descalificado-fase {
+    display: inline-block;
+    padding: 1px 8px;
+    margin-right: 4px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, .18);
+    color: #bfdbfe;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+@media (max-width: 640px) {
+
+    .tarjeta-descalificado {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+}
+
+/* Estado «Retirado» (retiro por la organización con el torneo abierto: no es una descalificación) */
+.estado-mi-inscripcion.estado-retirada {
+    background: rgba(148, 163, 184, .16);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, .45);
+    white-space: nowrap;
+}

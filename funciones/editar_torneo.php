@@ -1,7 +1,6 @@
 <?php
 
-session_start();
-
+require_once __DIR__ . '/../config/sesion.php';
 require_once "../config/conexion.php";
 require_once "../config/no_cache.php";
 require_once "csrf.php";
@@ -13,7 +12,7 @@ require_once "csrf.php";
 
 if (
     !isset($_SESSION['id_usuario']) ||
-    $_SESSION['id_rol'] != 2
+    !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 2], true)
 ) {
     header("Location: ../login.php");
     exit;
@@ -301,82 +300,20 @@ if (!in_array($estado, $estadosPermitidos, true)) {
 
 
 /* =========================================================
-   BUSCAR CLUB DEL ORGANIZADOR
+   TORNEO A EDITAR Y SU CLUB
+   - Organizador: el torneo tiene que ser de un club suyo (puede tener más de uno).
+   - Administrador: puede editar cualquier torneo.
+   El club y el lugar no cambian: salen del club del propio torneo.
    ========================================================= */
-
-$sqlClub = "
-    SELECT
-        id_club,
-        direccion
-    FROM club
-    WHERE id_usuario = ?
-    LIMIT 1
-";
-
-$stmtClub = mysqli_prepare(
-    $conexion,
-    $sqlClub
-);
-
-if (!$stmtClub) {
-
-    header(
-        "Location: ../paneles.php?seccion=torneos&error=servidor"
-    );
-
-    exit;
-
-}
-
-mysqli_stmt_bind_param(
-    $stmtClub,
-    "i",
-    $id_usuario
-);
-
-mysqli_stmt_execute($stmtClub);
-
-$resultadoClub =
-    mysqli_stmt_get_result($stmtClub);
-
-$datosClub =
-    mysqli_fetch_assoc($resultadoClub);
-
-mysqli_stmt_close($stmtClub);
-
-
-if (!$datosClub) {
-
-    header(
-        "Location: ../paneles.php?seccion=torneos&error=club_no_encontrado"
-    );
-
-    exit;
-
-}
-
-$id_club =
-    intval($datosClub['id_club']);
-
-$lugar =
-    trim($datosClub['direccion'] ?? '');
-
-
-/* =========================================================
-   VERIFICAR QUE EL TORNEO EXISTA Y SEA DEL CLUB
-   ========================================================= */
-
-$sqlTorneoActual = "
-    SELECT imagen, fecha_inicio
-    FROM torneos
-    WHERE id_torneo = ?
-      AND id_club = ?
-    LIMIT 1
-";
 
 $stmtTorneoActual = mysqli_prepare(
     $conexion,
-    $sqlTorneoActual
+    "SELECT t.imagen, t.fecha_inicio, t.id_categoria, t.tipo, t.id_club,
+            c.direccion, c.id_usuario AS id_dueno
+     FROM torneos t
+     INNER JOIN club c ON c.id_club = t.id_club
+     WHERE t.id_torneo = ?
+     LIMIT 1"
 );
 
 if (!$stmtTorneoActual) {
@@ -389,28 +326,60 @@ if (!$stmtTorneoActual) {
 
 }
 
-mysqli_stmt_bind_param(
-    $stmtTorneoActual,
-    "ii",
-    $id_torneo,
-    $id_club
-);
-
+mysqli_stmt_bind_param($stmtTorneoActual, "i", $id_torneo);
 mysqli_stmt_execute($stmtTorneoActual);
 
-$resultadoTorneoActual =
-    mysqli_stmt_get_result($stmtTorneoActual);
-
-$torneoActual =
-    mysqli_fetch_assoc($resultadoTorneoActual);
+$torneoActual = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtTorneoActual));
 
 mysqli_stmt_close($stmtTorneoActual);
 
 
-if (!$torneoActual) {
+if (
+    !$torneoActual ||
+    ((int) $_SESSION['id_rol'] === 2 && (int) $torneoActual['id_dueno'] !== $id_usuario)
+) {
 
     header(
         "Location: ../paneles.php?seccion=torneos&error=torneo_no_encontrado"
+    );
+
+    exit;
+
+}
+
+$id_club = (int) $torneoActual['id_club'];
+
+$lugar = trim($torneoActual['direccion'] ?? '');
+
+/* =========================================================
+   CATEGORÍA Y TIPO NO SE PUEDEN CAMBIAR CON PARTICIPANTES
+
+   Si el torneo ya tiene gente inscripta (confirmada, esperando a su compañero o descalificada,
+   que sigue figurando en el torneo), cambiar la categoría o el tipo dejaría inscripciones que no
+   corresponden (otra categoría, o individuales en un torneo de parejas). Se vuelve a comprobar
+   acá en el servidor, no solo en el formulario.
+   ========================================================= */
+
+$stmtInscriptos = mysqli_prepare(
+    $conexion,
+    "SELECT COUNT(*) AS n FROM inscripcion
+     WHERE id_torneo = ? AND estado IN ('Confirmada', 'Pendiente', 'Descalificada')"
+);
+mysqli_stmt_bind_param($stmtInscriptos, "i", $id_torneo);
+mysqli_stmt_execute($stmtInscriptos);
+$hayInscriptos = (int) mysqli_fetch_assoc(mysqli_stmt_get_result($stmtInscriptos))['n'] > 0;
+mysqli_stmt_close($stmtInscriptos);
+
+if (
+    $hayInscriptos &&
+    (
+        (int) $torneoActual['id_categoria'] !== $id_categoria ||
+        $torneoActual['tipo'] !== $tipo
+    )
+) {
+
+    header(
+        "Location: ../paneles.php?seccion=torneos&error=categoria_tipo_bloqueado"
     );
 
     exit;
@@ -671,6 +640,8 @@ mysqli_stmt_bind_param(
 if (mysqli_stmt_execute($stmt)) {
 
     mysqli_stmt_close($stmt);
+
+    actividadTorneoModificado($conexion, $id_torneo);
 
     /* Si se subió una imagen nueva, ahora sí se borra la vieja */
 

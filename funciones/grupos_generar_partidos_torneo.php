@@ -3,6 +3,8 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
+require_once("descalificacion.php");
 require_once("standings.php");
 
 
@@ -55,6 +57,9 @@ try {
         throw new Exception("sin_permiso");
     }
 
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'partidos');
+
     $esIndividual = ($torneo['tipo'] === 'Individual');
     $tablaPartidos = $esIndividual ? 'partido_individual' : 'partido_pareja';
 
@@ -76,6 +81,11 @@ try {
          VALUES (?, 'Grupos', ?, ?, ?)"
     );
 
+    // Antes de empezar (Abierto/Cerrado) se puede rearmar el fixture de los grupos sin resultados.
+    // Con el torneo En curso nunca se regenera ni se borra nada: solo se arman grupos que no tengan partidos.
+    $regenerable = in_array($estadoTorneoActual, ESTADOS_ANTES_DE_EMPEZAR, true);
+    $gruposArmados = 0;
+
     foreach ($grupos as $filaGrupo) {
 
         $idGrupoActual = (int) $filaGrupo['id_grupo'];
@@ -87,6 +97,10 @@ try {
         mysqli_stmt_bind_param($stmtExistentes, "i", $idGrupoActual);
         mysqli_stmt_execute($stmtExistentes);
         $existentes = mysqli_fetch_all(mysqli_stmt_get_result($stmtExistentes), MYSQLI_ASSOC);
+
+        if (!empty($existentes) && !$regenerable) {
+            continue;
+        }
 
         // Si ya hay algún resultado cargado en este grupo, lo dejamos como está
         // (no se pisan resultados ya jugados al regenerar el fixture completo).
@@ -103,7 +117,8 @@ try {
         }
 
         $datos = obtenerMiembrosYPartidosDeGrupo($conexion, $idGrupoActual, $esIndividual);
-        $miembros = $datos['miembros'];
+        // Los descalificados no juegan partidos nuevos.
+        $miembros = miembrosHabilitados($datos['miembros']);
 
         if (count($miembros) < 2) {
             continue;
@@ -115,6 +130,7 @@ try {
 
         $orden = 0;
         $cantidadMiembros = count($miembros);
+        $gruposArmados++;
 
         for ($i = 0; $i < $cantidadMiembros; $i++) {
             for ($j = $i + 1; $j < $cantidadMiembros; $j++) {
@@ -133,6 +149,13 @@ try {
         }
 
     }
+
+    // En curso, si todos los grupos ya tenían sus partidos no había nada que generar.
+    if (!$regenerable && $gruposArmados === 0) {
+        throw new Exception("partidos_ya_generados");
+    }
+
+    actividadFaseGenerada($conexion, $id_torneo, 'los partidos de la fase de grupos');
 
     mysqli_commit($conexion);
 

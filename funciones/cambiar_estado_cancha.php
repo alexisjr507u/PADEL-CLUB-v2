@@ -142,6 +142,12 @@ if (mysqli_stmt_execute($stmtActualizar)) {
 
     mysqli_stmt_close($stmtActualizar);
 
+    $datosCancha = actividadFila($conexion, "SELECT nombre, id_club FROM cancha WHERE id_cancha = ?", 'i', [(int) $idCancha]);
+
+    if ($datosCancha) {
+        actividadClubModificado($conexion, (int) $datosCancha['id_club'], 'cambió el estado de la cancha «' . $datosCancha['nombre'] . '» a ' . $estado);
+    }
+
     header("Location: ../paneles.php?seccion=canchas&ok=estado_actualizado");
     exit;
 

@@ -3,7 +3,9 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
 require_once("standings.php");
+require_once("ranking_puntos.php");
 
 
 if (!isset($_SESSION['id_usuario']) || !in_array($_SESSION['id_rol'], [1, 2], true)) {
@@ -88,12 +90,12 @@ try {
         throw new Exception("sin_permiso");
     }
 
-    // Puntos ya otorgados al ranking: los resultados del torneo quedan fijos.
-    $stmtLiquidado = mysqli_prepare($conexion, "SELECT COUNT(*) AS n FROM ranking_puntos WHERE id_torneo = ?");
-    mysqli_stmt_bind_param($stmtLiquidado, "i", $id_torneo);
-    mysqli_stmt_execute($stmtLiquidado);
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'resultados');
 
-    if ((int) mysqli_fetch_assoc(mysqli_stmt_get_result($stmtLiquidado))['n'] > 0) {
+    // Si los puntos de este torneo ya provocaron ascensos de categoría, los resultados quedan fijos.
+    // Mientras no haya ascensos se puede corregir un resultado: los puntos se recalculan solos.
+    if (torneoConAscensos($conexion, $id_torneo)) {
         throw new Exception("torneo_liquidado");
     }
 
@@ -118,6 +120,11 @@ try {
         if (!mysqli_stmt_execute($stmtWo)) {
             throw new Exception("error_bd");
         }
+
+        // Los puntos del ranking se suman en el acto (misma transacción que el resultado).
+        sincronizarPuntosTorneo($conexion, $id_torneo, (int) $_SESSION['id_usuario']);
+
+        actividadResultadoConfirmado($conexion, $tablaPartidos, $id_partido, $id_torneo);
 
         mysqli_commit($conexion);
 
@@ -163,6 +170,11 @@ try {
         throw new Exception("error_bd");
     }
 
+    // Los puntos del ranking se suman en el acto (misma transacción que el resultado).
+    sincronizarPuntosTorneo($conexion, $id_torneo, (int) $_SESSION['id_usuario']);
+
+    actividadResultadoConfirmado($conexion, $tablaPartidos, $id_partido, $id_torneo);
+
     mysqli_commit($conexion);
 
     header("Location: ../gestionar_grupos.php?id_torneo=$id_torneo&accion=resultado_cargado$volverAlPartido");
@@ -177,7 +189,7 @@ try {
     $motivosConocidos = [
         'partido_no_existe', 'sin_permiso',
         'faltan_sets', 'set_incompleto', 'set_invalido',
-        'falta_tercer_set', 'set_sobrante', 'resultado_inconcluso', 'torneo_liquidado',
+        'falta_tercer_set', 'set_sobrante', 'resultado_inconcluso', 'torneo_liquidado', 'torneo_finalizado_grupos',
     ];
 
     if (!in_array($motivo, $motivosConocidos, true)) {

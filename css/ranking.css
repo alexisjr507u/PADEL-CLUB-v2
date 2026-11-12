@@ -404,10 +404,17 @@ body.panel-body .rk-btn:hover {
 /* ---------- Temporada ---------- */
 
 .rk-temporada {
-    margin-bottom: 20px;
-    padding: 18px 20px;
+    --rk-sube: #4ade80;
+    --rk-sube-fondo: rgba(34, 197, 94, 0.12);
+    --rk-sube-borde: rgba(74, 222, 128, 0.35);
+    --rk-baja: #ff8a8a;
+    --rk-baja-fondo: rgba(255, 107, 107, 0.12);
+    --rk-baja-borde: rgba(255, 138, 138, 0.35);
+
+    margin-bottom: 22px;
+    padding: 20px 22px;
     border: 1px solid var(--rk-borde);
-    border-radius: 14px;
+    border-radius: 16px;
     background: var(--rk-superficie);
 }
 
@@ -421,7 +428,7 @@ body.panel-body .rk-btn:hover {
 
 .rk-etiqueta {
     color: var(--rk-acento-claro);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 1px;
 }
@@ -429,24 +436,13 @@ body.panel-body .rk-btn:hover {
 .rk-temporada h2 {
     margin: 2px 0 0;
     color: #ffffff;
-    font-size: 24px;
+    font-size: 28px;
+    line-height: 1.15;
 }
 
-.rk-temporada small {
-    color: var(--rk-texto-tenue);
-}
-
-.rk-temporada-texto {
-    margin: 12px 0 0;
-    color: var(--rk-texto-suave);
+.rk-temporada-cabecera small {
+    color: #b9c9db;
     font-size: 14px;
-    line-height: 1.6;
-}
-
-.rk-temporada-vacio {
-    margin: 12px 0 0;
-    color: var(--rk-texto-tenue);
-    font-size: 13.5px;
 }
 
 body.panel-body .rk-btn-peligro {
@@ -457,62 +453,651 @@ body.panel-body .rk-btn-peligro:hover {
     background: #e55b5b;
 }
 
-.rk-descensos {
-    margin-top: 14px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: rgba(255, 107, 107, 0.10);
-    border: 1px solid rgba(255, 107, 107, 0.28);
-}
-
-.rk-descensos > strong {
-    color: #ff9b9b;
-}
-
-.rk-descensos ul {
-    margin: 10px 0 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 6px;
-}
-
-.rk-descensos li {
+/* Qué pasa al finalizar: dos etiquetas cortas en lugar de un párrafo */
+.rk-efectos {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 12px;
-    font-size: 13.5px;
+    align-items: center;
+    gap: 8px 10px;
+    margin-top: 16px;
 }
 
-.rk-descensos li span {
-    color: #ffffff;
+.rk-efecto-titulo {
+    color: #b9c9db;
+    font-size: 14px;
     font-weight: 600;
 }
 
-.rk-descensos li em {
-    color: #ff9b9b;
-    font-style: normal;
-    font-weight: 700;
+.rk-efecto {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--rk-borde);
+    background: rgba(255, 255, 255, 0.05);
+    color: #eef3f9;
+    font-size: 14px;
+    font-weight: 600;
 }
 
-.rk-descensos li small {
-    color: var(--rk-texto-tenue);
-}
-
-.rk-ultimo-cierre {
-    margin-top: 14px;
-    color: var(--rk-texto-suave);
-    font-size: 13.5px;
-}
-
-.rk-ultimo-cierre summary {
-    cursor: pointer;
+.rk-efecto i {
     color: var(--rk-acento-claro);
 }
 
-.rk-ultimo-cierre ul {
-    margin: 8px 0 0;
-    padding-left: 20px;
-    line-height: 1.7;
+.rk-efecto-baja i {
+    color: var(--rk-baja);
+}
+
+/* Botones de detalle */
+.rk-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+body.panel-body .rk-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    width: auto;
+    padding: 11px 16px;
+    border: 1px solid var(--rk-borde);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #eef3f9;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .15s, box-shadow .2s;
+}
+
+body.panel-body .rk-tab:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: var(--rk-acento-claro);
+    transform: translateY(-1px);
+}
+
+body.panel-body .rk-tab:focus-visible {
+    outline: 2px solid var(--rk-acento-claro);
+    outline-offset: 2px;
+}
+
+.rk-tab-icono {
+    font-size: 17px;
+    color: var(--rk-acento-claro);
+}
+
+.rk-tab-sube .rk-tab-icono { color: var(--rk-sube); }
+.rk-tab-baja .rk-tab-icono { color: var(--rk-baja); }
+
+.rk-tab-cuenta {
+    min-width: 26px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.rk-tab-flecha {
+    margin-left: 2px;
+    font-size: 13px;
+    opacity: .75;
+    transition: transform .3s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+body.panel-body .rk-tab.activo {
+    background: var(--rk-acento);
+    border-color: var(--rk-acento);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(47, 123, 255, 0.35);
+}
+
+body.panel-body .rk-tab.activo.rk-tab-sube { background: #1f9d55; border-color: #1f9d55; box-shadow: 0 6px 18px rgba(34, 197, 94, 0.30); }
+body.panel-body .rk-tab.activo.rk-tab-baja { background: #d64545; border-color: #d64545; box-shadow: 0 6px 18px rgba(214, 69, 69, 0.30); }
+
+.rk-tab.activo .rk-tab-icono { color: #ffffff; }
+.rk-tab.activo .rk-tab-cuenta { background: rgba(255, 255, 255, 0.25); }
+.rk-tab.activo .rk-tab-flecha { transform: rotate(180deg); opacity: 1; }
+
+/* Paneles desplegables (el alto lo anima js/ranking_temporada.js) */
+.rk-paneles {
+    overflow: hidden;
+}
+
+.rk-panel {
+    padding-top: 16px;
+}
+
+.rk-panel[hidden] {
+    display: none;
+}
+
+.rk-panel-titulo {
+    margin: 0 0 12px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.rk-panel-vacio {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #dbe6f2;
+    font-size: 15px;
+    line-height: 1.55;
+}
+
+.rk-panel-vacio i {
+    margin-right: 6px;
+    color: var(--rk-acento-claro);
+}
+
+.rk-subtitulo {
+    margin: 18px 0 10px;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.rk-subtitulo-sube { color: var(--rk-sube); }
+.rk-subtitulo-baja { color: var(--rk-baja); }
+
+/* Filas de ascenso / descenso */
+.rk-movs {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+}
+
+.rk-mov {
+    display: grid;
+    grid-template-columns: 34px minmax(140px, 1.2fr) auto minmax(120px, 1fr);
+    align-items: center;
+    gap: 10px 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--rk-borde-suave);
+    background: rgba(255, 255, 255, 0.04);
+    color: #eef3f9;
+    font-size: 15px;
+}
+
+.rk-mov-sube { border-left: 3px solid var(--rk-sube); }
+.rk-mov-baja { border-left: 3px solid var(--rk-baja); }
+
+.rk-mov-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 16px;
+}
+
+.rk-mov-sube .rk-mov-icono { background: var(--rk-sube-fondo); color: var(--rk-sube); }
+.rk-mov-baja .rk-mov-icono { background: var(--rk-baja-fondo); color: var(--rk-baja); }
+
+.rk-mov-nombre {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.rk-mov-categorias {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.rk-mov-sube .rk-mov-categorias { background: var(--rk-sube-fondo); border: 1px solid var(--rk-sube-borde); color: #d9fbe6; }
+.rk-mov-baja .rk-mov-categorias { background: var(--rk-baja-fondo); border: 1px solid var(--rk-baja-borde); color: #ffe0e0; }
+
+.rk-mov-dato {
+    color: #c3d2e3;
+    font-size: 14px;
+    text-align: right;
+}
+
+@media (max-width: 760px) {
+    .rk-mov {
+        grid-template-columns: 34px 1fr;
+    }
+    .rk-mov-categorias,
+    .rk-mov-dato {
+        grid-column: 2;
+        justify-self: start;
+        text-align: left;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.panel-body .rk-tab,
+    .rk-tab-flecha {
+        transition: none;
+    }
+}
+
+/* ---------- Ranking general ---------- */
+
+.rk-chip-general i {
+    font-size: 15px;
+}
+
+.rk-barra-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 20px;
+    margin-bottom: 12px;
+}
+
+.rk-barra-filtros .rk-resumen {
+    margin-bottom: 0;
+}
+
+/* Filtro Histórico / Temporada actual */
+.rk-filtros {
+    display: inline-flex;
+    padding: 4px;
+    border: 1px solid var(--rk-borde);
+    border-radius: 12px;
+    background: var(--rk-superficie);
+}
+
+.rk-filtro {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 15px;
+    border-radius: 9px;
+    color: #c3d2e3;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background .2s, color .2s;
+}
+
+.rk-filtro:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.rk-filtro.activo {
+    background: var(--rk-acento);
+    color: #ffffff;
+}
+
+/* Categoría actual */
+.rk-etiqueta-cat {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--rk-borde);
+    background: rgba(47, 123, 255, 0.12);
+    color: #dbe8ff;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.rk-cat-movil {
+    display: none;
+}
+
+/* La columna del puntaje con el que se ordena se resalta */
+.rk-tabla-general th.rk-activa {
+    color: var(--rk-acento-claro);
+}
+
+.rk-tabla-general td.rk-activa {
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.rk-tabla-general td.rk-num:not(.rk-activa) {
+    color: #c3d2e3;
+}
+
+.rk-tabla-general .rk-col-total,
+.rk-tabla-general .rk-col-temporada {
+    min-width: 96px;
+    white-space: normal;
+}
+
+/* Ver más / Ver menos */
+.rk-mas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    margin-top: 14px;
+}
+
+.rk-mas[hidden] {
+    display: none;
+}
+
+.rk-mas-contador {
+    color: #c3d2e3;
+    font-size: 14px;
+}
+
+.rk-mas-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.rk-mas-botones [hidden] {
+    display: none;
+}
+
+body.panel-body .rk-btn-suave {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--rk-borde);
+    color: #eef3f9;
+}
+
+body.panel-body .rk-btn-suave:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+/* Resumen «Tu posición» (participante) */
+.rk-mi-posicion {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--rk-borde);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(47, 123, 255, 0.18), rgba(7, 35, 62, 0.62));
+}
+
+.rk-mi-posicion > div {
+    display: grid;
+    gap: 2px;
+}
+
+.rk-mi-posicion span {
+    color: #b9c9db;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rk-mi-posicion strong {
+    color: #ffffff;
+    font-size: 28px;
+    line-height: 1.1;
+}
+
+.rk-mi-posicion small {
+    color: #c3d2e3;
+    font-size: 13px;
+}
+
+.rk-destello td {
+    animation: rk-destello 1.6s ease-out;
+}
+
+@keyframes rk-destello {
+    0%, 30% { background: rgba(245, 197, 66, 0.35); }
+    100% { background: transparent; }
+}
+
+@media (max-width: 900px) {
+    .rk-mi-posicion {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .rk-mi-posicion .rk-btn {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 640px) {
+
+    .rk-barra-filtros {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rk-filtros {
+        display: flex;
+    }
+
+    .rk-filtro {
+        flex: 1 1 0;
+        justify-content: center;
+        padding: 9px 8px;
+        font-size: 13px;
+    }
+
+    /* La categoría pasa a una segunda línea bajo el nombre */
+    .rk-tabla-general .rk-col-cat {
+        display: none;
+    }
+
+    .rk-cat-movil {
+        display: block;
+        margin-top: 2px;
+        color: var(--rk-acento-claro);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .rk-tabla-general .rk-avatar {
+        display: none;
+    }
+
+    .rk-tabla-general .rk-jugador {
+        min-width: 0;
+    }
+
+    .rk-tabla-general .rk-col-pos {
+        width: 52px;
+    }
+
+    .rk-tabla-general .rk-col-total,
+    .rk-tabla-general .rk-col-temporada {
+        min-width: 0;
+    }
+
+    .rk-tabla-general th {
+        font-size: 10.5px;
+    }
+
+    .rk-mi-posicion {
+        grid-template-columns: 1fr;
+    }
+
+    .rk-mi-posicion > div {
+        grid-template-columns: 1fr auto;
+        align-items: baseline;
+    }
+
+    .rk-mi-posicion small {
+        grid-column: 1 / -1;
+    }
+
+    .rk-mas {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rk-mas-botones .rk-btn {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+}
+
+/* Los botones con atributo hidden deben ocultarse aunque .rk-btn defina display */
+body.panel-body .rk-btn[hidden],
+.rk-mas-botones .rk-btn[hidden] {
+    display: none;
+}
+
+/* En el ranking general la tabla no necesita scroll vertical propio: así las filas que entran
+   con un desplazamiento de 8 px no hacen aparecer una barra de scroll. */
+.rk-general .rk-tabla-scroll {
+    overflow-y: hidden;
+}
+
+/* Celulares: canchas.css define `.panel .contenido { margin-left: 245px }` sin media query y se carga
+   después de style.css, así que pisa el `margin-left: 0` que style.css prevé para pantallas chicas y el
+   contenido queda de ~130 px. En las pantallas que muestran el ranking se restablece el margen. */
+@media (max-width: 900px) {
+    body.panel-body:has(.rk) .panel .contenido {
+        margin-left: 0;
+        /* La barra superior del participante usa un ancho calculado para el padding de escritorio y se
+           pasa ~11 px en celular: se recorta ese borde para que la página no tenga scroll horizontal. */
+        overflow-x: hidden;
+        overflow-x: clip;
+    }
+}
+
+
+/* ---------- Descalificados ---------- */
+
+.rk-descalificado td {
+    opacity: .72;
+}
+
+.rk-etiqueta-desc {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, .16);
+    border: 1px solid rgba(239, 68, 68, .45);
+    color: #fca5a5;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    vertical-align: middle;
+}
+
+.rk-anulado-nota {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+
+/* ---------- Ranking por club ---------- */
+
+.rk-clubes {
+    align-items: center;
+    padding-top: 12px;
+    margin-top: -4px;
+    border-top: 1px dashed var(--rk-borde);
+}
+
+.rk-clubes-titulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--rk-texto-tenue);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    margin-right: 4px;
+}
+
+.rk-club .rk-resumen strong i {
+    margin-right: 6px;
+    color: var(--rk-acento-claro);
+}
+
+
+/* =========================================================
+   SELECTORES DE CLUB Y DE TEMPORADA (Fase 4)
+   El selector de club reutiliza las pestañas (.rk-chip); estos estilos solo agregan el selector de temporada y el aviso
+   «Elegí un club». Mismos colores y tipografías que el resto del ranking.
+   ========================================================= */
+
+.rk-selector-temporada {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+}
+
+.rk-selector-temporada label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #9fb7d4;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rk-selector-temporada select {
+    min-width: 0;
+    max-width: 100%;
+    padding: 8px 34px 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(105, 181, 255, 0.28);
+    background-color: rgba(3, 36, 61, 0.85);
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.rk-selector-temporada select:focus {
+    outline: 2px solid #0d8fe8;
+    outline-offset: 1px;
+}
+
+.rk-elegir-club {
+    margin-top: 6px;
+}
+
+@media (max-width: 700px) {
+
+    /* Pestañas de club y de categoría: una sola fila que se desliza en lugar de ocupar media pantalla */
+    .rk-categorias {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .rk-categorias::-webkit-scrollbar {
+        display: none;
+    }
+
+    .rk-categorias .rk-chip,
+    .rk-clubes-titulo {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .rk-selector-temporada,
+    .rk-selector-temporada select {
+        width: 100%;
+    }
+
+    .rk-selector-temporada label {
+        width: 100%;
+    }
 }

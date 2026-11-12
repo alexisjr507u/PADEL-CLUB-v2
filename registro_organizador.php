@@ -2,7 +2,7 @@
 
 include("config/no_cache.php");
 
-session_start();
+require_once __DIR__ . '/config/sesion.php';
 require_once("funciones/csrf.php");
 
 $csrf_token = generar_csrf_token();
@@ -623,7 +623,7 @@ unset($_SESSION['datos_registro']);
 <!-- ========================================= -->
 <!-- DATOS RECUPERADOS PARA JAVASCRIPT -->
 <!-- ========================================= -->
-<script src="js/padel.js?v=9"></script>
+<script src="js/padel.js?v=17"></script>
 <script src="js/organizador.js?v=3"></script>
 
 

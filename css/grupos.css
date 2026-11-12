@@ -1515,3 +1515,11 @@ body.panel-body .partidos-pag-flecha:disabled {
 .grupos-subtabs {
     margin-bottom: 16px;
 }
+
+
+/* Nombre de grupo cuando ya no se puede renombrar (torneo finalizado) */
+.grupos-nombre-estatico {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+}

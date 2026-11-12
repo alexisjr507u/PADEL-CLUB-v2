@@ -5,6 +5,9 @@ include("config/conexion.php");
 require_once("funciones/csrf.php");
 require_once("funciones/ranking_vista.php");
 require_once("funciones/ranking_temporada_vista.php");
+require_once("funciones/admin_vista.php");
+require_once("funciones/admin_panel_vista.php");
+require_once("funciones/club_categoria.php");
 
 
 // ==========================================
@@ -36,94 +39,48 @@ header("Expires: 0");
 // ==========================================
 
 $seccion = $_GET['seccion'] ?? 'inicio';
+
+// El «inicio» del administrador es su Panel principal.
+if (($_SESSION['id_rol'] ?? 0) == 1 && $seccion === 'inicio') {
+    $seccion = 'panel';
+}
+
+// «Panel», «Historial», «Clubes» y «Usuarios» son exclusivas del administrador. El rol se confirma contra la base
+// de datos; ocultar el menú no alcanza: un organizador o participante que escriba la URL vuelve a su panel.
+if (in_array($seccion, ['panel', 'historial', 'clubes', 'usuarios'], true)) {
+
+    $rolEnBase = isset($_SESSION['id_usuario'])
+        ? adminConsulta($conexion, "SELECT id_rol FROM usuario WHERE id_usuario = ?", 'i', [(int) $_SESSION['id_usuario']])
+        : [];
+
+    if (!$rolEnBase || (int) $rolEnBase[0]['id_rol'] !== 1 || (int) ($_SESSION['id_rol'] ?? 0) !== 1) {
+        header("Location: paneles.php");
+        exit;
+    }
+
+}
 /* =========================================================
    CATEGORÍA DEL PARTICIPANTE
    ========================================================= */
 
-$categoriaParticipante = 'Sin categoría asignada';
-$categoriaPendienteParticipante = false;
-$idCategoriaParticipante = null;
-$estadoCategoriaParticipante = null;
-$categoriaEstimadaParticipante = '';
+// ==========================================
+// CLUBES DEL PARTICIPANTE Y SU CATEGORÍA EN CADA UNO
+// Cada club tiene su propia categoría para el jugador (tabla usuario_club). No hay una categoría global:
+// la que cuenta para inscribirse es la del club del torneo.
+// ==========================================
+
+$membresiasParticipante = [];          // [id_club => fila de clubesDelUsuario()]
 
 if ($_SESSION['id_rol'] == 3) {
 
     $idUsuarioParticipante = intval($_SESSION['id_usuario']);
 
-    $sqlCategoriaParticipante = "
-        SELECT categoria.nombre,
-               usuario.id_categoria,
-               usuario.categoria_estado,
-               estimada.nombre AS categoria_estimada
-        FROM usuario
-        LEFT JOIN categoria
-            ON usuario.id_categoria = categoria.id_categoria
-        LEFT JOIN clasificacion_categoria cc
-            ON cc.id_usuario = usuario.id_usuario
-        LEFT JOIN categoria estimada
-            ON estimada.id_categoria = cc.id_categoria_estimada
-        WHERE usuario.id_usuario = ?
-        LIMIT 1
-    ";
+    foreach (clubesDelUsuario($conexion, $idUsuarioParticipante) as $membresiaFila) {
 
-    $stmtCategoriaParticipante = mysqli_prepare(
-        $conexion,
-        $sqlCategoriaParticipante
-    );
+        $membresiasParticipante[(int) $membresiaFila['id_club']] = $membresiaFila;
 
-    if ($stmtCategoriaParticipante) {
-
-        mysqli_stmt_bind_param(
-            $stmtCategoriaParticipante,
-            "i",
-            $idUsuarioParticipante
-        );
-
-        mysqli_stmt_execute(
-            $stmtCategoriaParticipante
-        );
-
-        $resultadoCategoriaParticipante =
-            mysqli_stmt_get_result(
-                $stmtCategoriaParticipante
-            );
-
-        $datosCategoriaParticipante =
-            mysqli_fetch_assoc(
-                $resultadoCategoriaParticipante
-            );
-
-        if ($datosCategoriaParticipante) {
-            $idCategoriaParticipante = $datosCategoriaParticipante['id_categoria'] === null
-                ? null
-                : (int) $datosCategoriaParticipante['id_categoria'];
-            $estadoCategoriaParticipante = $datosCategoriaParticipante['categoria_estado'];
-        }
-
-        if (
-            $datosCategoriaParticipante &&
-            $datosCategoriaParticipante['categoria_estado'] === 'Pendiente'
-        ) {
-
-            // Pendiente de revisión: no se muestra como categoría definitiva.
-            $categoriaPendienteParticipante = true;
-            $categoriaParticipante = 'Pendiente de revisión';
-            $categoriaEstimadaParticipante = $datosCategoriaParticipante['categoria_estimada'] ?? '';
-
-        } elseif (
-            $datosCategoriaParticipante &&
-            !empty($datosCategoriaParticipante['nombre'])
-        ) {
-
-            $categoriaParticipante =
-                $datosCategoriaParticipante['nombre'];
-
-        }
-
-        mysqli_stmt_close(
-            $stmtCategoriaParticipante
-        );
     }
+
 }
 
 
@@ -183,22 +140,22 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet"
-          href="css/style.css?v=2">
-          <link rel="stylesheet" href="css/canchas.css">
-          <link rel="stylesheet" href="css/ranking.css?v=2">
+          href="css/style.css?v=4">
+          <link rel="stylesheet" href="css/canchas.css?v=2">
+          <link rel="stylesheet" href="css/ranking.css?v=10">
+    <link rel="stylesheet" href="css/confirmar.css?v=1">
+    <link rel="stylesheet" href="css/descalificacion.css?v=2">
+    <link rel="stylesheet" href="css/admin_gestion.css?v=2">
+    <link rel="stylesheet" href="css/admin_panel.css?v=6">
           <link rel="stylesheet" href="css/ver_torneo.css?v=15">
           <link rel="stylesheet" href="css/grupos.css?v=27">
-          <link rel="stylesheet" href="css/dashboard.css?v=7">
+          <link rel="stylesheet" href="css/dashboard.css?v=14">
 
 </head>
 
 
-<body class="panel-body">
+<body class="panel-body<?php echo (($_SESSION['id_rol'] ?? 0) == 1) ? ' panel-admin' : ''; ?>">
 
-
-<?php if ($_SESSION['id_rol'] == 1) {
-    require_once("funciones/revision_categorias_vista.php");
-} ?>
 
 <?php if ($_SESSION['id_rol'] == 1) { ?>
 
@@ -213,6 +170,11 @@ $totalSolicitudes = $filaSolicitudes["total"];
     <!-- ===================================== -->
     <!-- SIDEBAR -->
     <!-- ===================================== -->
+
+    <!-- Menú móvil del administrador y del organizador: en celulares la barra lateral queda oculta y este botón la abre (js/padel.js) -->
+    <button type="button" class="btn-menu-movil btn-menu-movil-panel" id="btnMenuMovilPanel" aria-label="Abrir menú" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
 
     <aside class="sidebar">
 
@@ -233,11 +195,24 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <ul class="menu">
 
+    <!-- PANEL (solo administrador) -->
+
+    <li class="<?php echo in_array($seccion, ['panel', 'historial'], true) ? 'activo' : ''; ?>">
+
+        <a href="paneles.php?seccion=panel">
+
+            <i class="bi bi-house-door-fill icono-menu"></i> Panel
+
+        </a>
+
+    </li>
+
+
     <!-- TORNEOS -->
 
-    <li class="<?php echo ($seccion !== 'revision_categorias') ? 'activo' : ''; ?>">
+    <li class="<?php echo ($seccion == 'torneos') ? 'activo' : ''; ?>">
 
-        <a href="paneles.php">
+        <a href="paneles.php?seccion=torneos">
 
             <i class="bi bi-trophy-fill icono-menu"></i> Torneos
 
@@ -246,30 +221,26 @@ $totalSolicitudes = $filaSolicitudes["total"];
     </li>
 
 
-    <!-- REVISIÓN DE CATEGORÍAS (solo administrador) -->
+    <!-- CLUBES (solo administrador) -->
 
-    <li class="<?php echo ($seccion == 'revision_categorias') ? 'activo' : ''; ?>">
+    <li class="<?php echo ($seccion == 'clubes') ? 'activo' : ''; ?>">
 
-        <a href="paneles.php?seccion=revision_categorias">
+        <a href="paneles.php?seccion=clubes">
 
-            <i class="bi bi-patch-check-fill icono-menu"></i> Revisión de categorías
-
-            <?php $pendientesCategorias = cantidadCategoriasPendientes($conexion); if ($pendientesCategorias > 0) { ?>
-                <span class="badge-categorias"><?php echo $pendientesCategorias; ?></span>
-            <?php } ?>
+            <i class="bi bi-buildings-fill icono-menu"></i> Clubes
 
         </a>
 
     </li>
 
 
-    <!-- MIS INSCRIPCIONES -->
+    <!-- USUARIOS (solo administrador) -->
 
-    <li>
+    <li class="<?php echo ($seccion == 'usuarios') ? 'activo' : ''; ?>">
 
-        <a href="paneles.php?seccion=mis_inscripciones">
+        <a href="paneles.php?seccion=usuarios">
 
-            <i class="bi bi-clipboard-check-fill icono-menu"></i> Mis inscripciones
+            <i class="bi bi-people-fill icono-menu"></i> Usuarios
 
         </a>
 
@@ -278,7 +249,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
     <!-- RANKING -->
 
-    <li>
+    <li class="<?php echo ($seccion == 'ranking') ? 'activo' : ''; ?>">
 
         <a href="paneles.php?seccion=ranking">
 
@@ -291,7 +262,7 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
     <!-- NOTIFICACIONES -->
 
-    <li>
+    <li class="<?php echo ($seccion == 'notificaciones') ? 'activo' : ''; ?>">
 
         <a href="paneles.php?seccion=notificaciones">
 
@@ -325,6 +296,15 @@ $totalSolicitudes = $filaSolicitudes["total"];
     <!-- ===================================== -->
 
     <main class="contenido solicitudes-pagina">
+
+
+    <?php if ($seccion == 'panel') { echo renderAdminPanel($conexion); } ?>
+
+    <?php if ($seccion == 'historial') { echo renderAdminHistorial($conexion); } ?>
+
+    <?php if ($seccion == 'clubes') { echo renderAdminClubes($conexion); } ?>
+
+    <?php if ($seccion == 'usuarios') { echo renderAdminUsuarios($conexion, $csrf_token); } ?>
 
 
     <?php if ($seccion == 'inicio') { ?>
@@ -729,47 +709,6 @@ $totalSolicitudes = $filaSolicitudes["total"];
         <?php } ?>
 <?php } ?>
 
-    <?php if ($seccion == 'revision_categorias') {
-        // Sección exclusiva del administrador: este bloque solo existe dentro de la rama id_rol = 1.
-        echo renderRevisionCategorias($conexion, $csrf_token, $_GET['accion'] ?? '');
-    } ?>
-
-    <?php if ($seccion == 'usuarios') { ?>
-
-
-        <!-- ================================= -->
-        <!-- USUARIOS -->
-        <!-- ================================= -->
-
-        <header class="topbar">
-
-            <h1>Usuarios</h1>
-
-            <p>
-
-                Administración de usuarios registrados.
-
-            </p>
-
-        </header>
-
-
-        <div class="tabla">
-
-            <h2>Usuarios</h2>
-
-            <p>
-
-                Esta sección la vamos a desarrollar después.
-
-            </p>
-
-        </div>
-
-
-    <?php } ?>
-
-
     <?php if ($seccion == 'torneos') { ?>
 
 
@@ -833,6 +772,80 @@ $totalSolicitudes = $filaSolicitudes["total"];
             MYSQLI_ASSOC
         );
 
+        /* =========================================================
+           RESUMEN DE TORNEOS (tarjetas de arriba): consultas agregadas, todas reales
+           ========================================================= */
+
+        $resumenEstados = ['Abierto' => 0, 'Cerrado' => 0, 'En curso' => 0, 'Finalizado' => 0];
+
+        foreach (mysqli_fetch_all(mysqli_query($conexion, "SELECT estado, COUNT(*) AS n FROM torneos GROUP BY estado"), MYSQLI_ASSOC) as $filaEstado) {
+            $resumenEstados[$filaEstado['estado']] = (int) $filaEstado['n'];
+        }
+
+        $totalTorneosAdmin = array_sum($resumenEstados);
+
+        $resumenClubes = mysqli_fetch_assoc(mysqli_query(
+            $conexion,
+            "SELECT (SELECT COUNT(*) FROM club) AS total, (SELECT COUNT(DISTINCT id_club) FROM torneos) AS con_torneos"
+        ));
+
+        $resumenInscripciones = mysqli_fetch_assoc(mysqli_query(
+            $conexion,
+            "SELECT SUM(estado = 'Confirmada') AS confirmadas, SUM(estado = 'Descalificada') AS descalificadas FROM inscripcion"
+        ));
+
+        $resumenPartidos = mysqli_fetch_assoc(mysqli_query(
+            $conexion,
+            "SELECT (SELECT COUNT(*) FROM partido_individual WHERE estado = 'Jugado')
+                  + (SELECT COUNT(*) FROM partido_pareja WHERE estado = 'Jugado') AS jugados,
+                    (SELECT COUNT(*) FROM partido_individual) + (SELECT COUNT(*) FROM partido_pareja) AS total"
+        ));
+
+        $textoEstadosTorneos = [];
+
+        foreach (['Abierto' => 'abiertos', 'Cerrado' => 'cerrados', 'En curso' => 'en curso', 'Finalizado' => 'finalizados'] as $claveEstado => $etiquetaEstado) {
+            if ($resumenEstados[$claveEstado] > 0) {
+                $textoEstadosTorneos[] = $resumenEstados[$claveEstado] . ' ' . $etiquetaEstado;
+            }
+        }
+
+        ?>
+
+        <section class="cards cards-torneos-admin">
+
+            <div class="card">
+                <h3>Torneos</h3>
+                <span><?php echo $totalTorneosAdmin; ?></span>
+                <small><?php echo $textoEstadosTorneos ? htmlspecialchars(implode(' · ', $textoEstadosTorneos)) : 'Todavía no hay torneos'; ?></small>
+            </div>
+
+            <div class="card">
+                <h3>Clubes</h3>
+                <span><?php echo (int) $resumenClubes['total']; ?></span>
+                <small><?php echo (int) $resumenClubes['con_torneos']; ?> con torneos creados</small>
+            </div>
+
+            <div class="card">
+                <h3>Inscriptos</h3>
+                <span><?php echo (int) $resumenInscripciones['confirmadas']; ?></span>
+                <small><?php
+                    $descalificadasResumen = (int) $resumenInscripciones['descalificadas'];
+                    echo $descalificadasResumen > 0
+                        ? $descalificadasResumen . ($descalificadasResumen === 1 ? ' descalificado' : ' descalificados')
+                        : 'Inscripciones confirmadas';
+                ?></small>
+            </div>
+
+            <div class="card">
+                <h3>Partidos jugados</h3>
+                <span><?php echo (int) $resumenPartidos['jugados']; ?></span>
+                <small>de <?php echo (int) $resumenPartidos['total']; ?> programados</small>
+            </div>
+
+        </section>
+
+        <?php
+
         // Confirmados por torneo, una sola consulta agregada
         // (no una consulta dentro del bucle de tarjetas).
         $conteosConfirmadosAdmin = [];
@@ -844,6 +857,19 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         while ($filaConteoAdmin = mysqli_fetch_assoc($resultadoConteosAdmin)) {
             $conteosConfirmadosAdmin[(int) $filaConteoAdmin['id_torneo']] = (int) $filaConteoAdmin['n'];
+        }
+
+        // Inscriptos que impiden cambiar la categoría y el tipo (confirmados, esperando compañero o descalificados).
+        $inscriptosBloqueantesAdmin = [];
+
+        $resultadoBloqAdmin = mysqli_query(
+            $conexion,
+            "SELECT id_torneo, COUNT(*) AS n FROM inscripcion
+             WHERE estado IN ('Confirmada', 'Pendiente', 'Descalificada') GROUP BY id_torneo"
+        );
+
+        while ($filaBloqAdmin = mysqli_fetch_assoc($resultadoBloqAdmin)) {
+            $inscriptosBloqueantesAdmin[(int) $filaBloqAdmin['id_torneo']] = (int) $filaBloqAdmin['n'];
         }
 
         ?>
@@ -924,6 +950,10 @@ $totalSolicitudes = $filaSolicitudes["total"];
                                 <div class="torneo-card-sin-imagen">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M6 3H18V7C18 10.3137 15.3137 13 12 13C8.68629 13 6 10.3137 6 7V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                                        <path d="M6 5H3C3 9.41828 5.23858 12 8.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                        <path d="M18 5H21C21 9.41828 18.7614 12 15.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                        <path d="M12 13V18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                        <path d="M8 21H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                                     </svg>
                                     <span>Sin imagen</span>
                                 </div>
@@ -991,18 +1021,37 @@ $totalSolicitudes = $filaSolicitudes["total"];
                             </div>
 
 
-                            <!-- ACCIONES: el admin consulta y gestiona participantes,
-                                 no duplicamos editar/eliminar (son del organizador). -->
+                            <!-- ACCIONES: el admin consulta, edita y gestiona participantes.
+                                 No hay «eliminar torneo»: borraría el historial. -->
 
                             <div class="torneo-card-acciones">
 
-                                <a href="ver_torneo.php?id=<?php echo intval($torneo['id_torneo']); ?>" class="btn-torneo ver">
+                                <button type="button" class="btn-torneo ver" data-id="<?php echo intval($torneo['id_torneo']); ?>">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M2.5 12C4.8 7.5 8 5 12 5C16 5 19.2 7.5 21.5 12C19.2 16.5 16 19 12 19C8 19 4.8 16.5 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
                                         <circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/>
                                     </svg>
                                     <span>Ver</span>
-                                </a>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="btn-torneo editar"
+                                    data-id="<?php echo intval($torneo['id_torneo']); ?>"
+                                    data-nombre="<?php echo $nombreTorneo; ?>"
+                                    data-fecha-inicio="<?php echo htmlspecialchars($torneo['fecha_inicio'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-hora-inicio="<?php echo htmlspecialchars($horaInicio, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-fecha-fin="<?php echo htmlspecialchars($torneo['fecha_fin'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-categoria="<?php echo $categoriaTorneo; ?>"
+                                    data-tipo="<?php echo $tipoTorneo; ?>"
+                                    data-inscriptos="<?php echo (int) ($inscriptosBloqueantesAdmin[(int) $torneo['id_torneo']] ?? 0); ?>"
+                                    data-max-participantes="<?php echo intval($torneo['max_participantes']); ?>"
+                                    data-estado="<?php echo $estadoTorneo; ?>"
+                                    data-imagen="<?php echo htmlspecialchars($imagenTorneo, ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                                    <i class="bi bi-pencil-fill"></i>
+                                    <span>Editar</span>
+                                </button>
 
                                 <a
                                     href="gestionar_participantes.php?id_torneo=<?php echo intval($torneo['id_torneo']); ?>"
@@ -1044,6 +1093,8 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         </div>
 
+
+    <?php include __DIR__ . '/funciones/modal_torneo.php'; ?>
 
     <?php } ?>
 
@@ -1478,12 +1529,20 @@ $totalSolicitudes = $filaSolicitudes["total"];
             <h1>Ranking</h1>
 
             <p>
-
-                Ranking de jugadores.
-
+                Posiciones generales y de cada categoría. Los puntos se suman solos a medida que se cargan los resultados de cada torneo.
             </p>
 
         </header>
+
+        <?php echo renderTemporada($conexion, $csrf_token, $_GET['accion'] ?? '', rkClubContexto($conexion)); ?>
+
+        <?php echo renderRankingCategorias(
+            $conexion,
+            'paneles.php?seccion=ranking',
+            rkCategoriaDeGet(),
+            null,
+            rkFiltroDeGet()
+        ); ?>
 
 
     <?php } ?>
@@ -1531,7 +1590,12 @@ $totalSolicitudes = $filaSolicitudes["total"];
 
         <!-- SIDEBAR -->
 
-        <aside class="sidebar">
+        <!-- Menú móvil del administrador y del organizador: en celulares la barra lateral queda oculta y este botón la abre (js/padel.js) -->
+    <button type="button" class="btn-menu-movil btn-menu-movil-panel" id="btnMenuMovilPanel" aria-label="Abrir menú" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+
+    <aside class="sidebar">
 
             <div class="logo-panel">
 
@@ -1799,6 +1863,28 @@ if ($id_club_torneos > 0) {
    ========================================================= */
 
 $conteosConfirmados = [];
+
+// Inscriptos que bloquean el cambio de categoría y tipo (confirmados, esperando compañero o descalificados).
+$inscriptosBloqueantes = [];
+
+if ($id_club_torneos > 0) {
+
+    $stmtBloq = mysqli_prepare(
+        $conexion,
+        "SELECT insc.id_torneo, COUNT(*) AS n
+         FROM inscripcion insc
+         INNER JOIN torneos t ON t.id_torneo = insc.id_torneo
+         WHERE t.id_club = ? AND insc.estado IN ('Confirmada', 'Pendiente', 'Descalificada')
+         GROUP BY insc.id_torneo"
+    );
+    mysqli_stmt_bind_param($stmtBloq, "i", $id_club_torneos);
+    mysqli_stmt_execute($stmtBloq);
+
+    foreach (mysqli_fetch_all(mysqli_stmt_get_result($stmtBloq), MYSQLI_ASSOC) as $filaBloq) {
+        $inscriptosBloqueantes[(int) $filaBloq['id_torneo']] = (int) $filaBloq['n'];
+    }
+
+}
 
 if ($id_club_torneos > 0) {
 
@@ -2764,6 +2850,7 @@ foreach ($torneos as $torneo) {
                             ); ?>"
                             data-categoria="<?php echo $categoriaTorneo; ?>"
                             data-tipo="<?php echo $tipoTorneo; ?>"
+                            data-inscriptos="<?php echo (int) ($inscriptosBloqueantes[(int) $torneo['id_torneo']] ?? 0); ?>"
                             data-max-participantes="<?php echo intval(
                                 $torneo['max_participantes']
                             ); ?>"
@@ -2799,65 +2886,6 @@ foreach ($torneos as $torneo) {
 
                             <span>
                                 Editar
-                            </span>
-
-                        </button>
-
-
-                        <button
-                            type="button"
-                            class="btn-torneo eliminar"
-                            data-id="<?php echo intval(
-                                $torneo['id_torneo']
-                            ); ?>"
-                            data-nombre="<?php echo $nombreTorneo; ?>"
-                        >
-
-                            <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-
-                                <path
-                                    d="M5 7H19"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-
-                                <path
-                                    d="M9 7V5H15V7"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-
-                                <path
-                                    d="M7 7L8 20H16L17 7"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linejoin="round"
-                                />
-
-                                <path
-                                    d="M10 11V17"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-
-                                <path
-                                    d="M14 11V17"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-
-                            </svg>
-
-                            <span>
-                                Eliminar
                             </span>
 
                         </button>
@@ -2955,558 +2983,8 @@ foreach ($torneos as $torneo) {
         </div>
 
     </div>
-<!-- =========================================================
-     MODAL CREAR TORNEO
-     ========================================================= -->
+<?php include __DIR__ . '/funciones/modal_torneo.php'; ?>
 
-<div class="modal-torneo" id="modalCrearTorneo">
-
-    <div class="modal-torneo-contenido">
-
-        <!-- CERRAR -->
-
-        <button
-            type="button"
-            class="modal-torneo-cerrar"
-            id="cerrarCrearTorneo"
-        >
-            ×
-        </button>
-
-
-        <!-- ENCABEZADO -->
-
-        <div class="modal-torneo-header">
-
-            <div class="modal-torneo-icono">
-
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-
-                    <path
-                        d="M6 3H18V7C18 10.3137 15.3137 13 12 13C8.68629 13 6 10.3137 6 7V3Z"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linejoin="round"
-                    />
-
-                    <path
-                        d="M6 5H3C3 9.41828 5.23858 12 8.5 12"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                    />
-
-                    <path
-                        d="M18 5H21C21 9.41828 18.7614 12 15.5 12"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                    />
-
-                    <path
-                        d="M12 13V18"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                    />
-
-                    <path
-                        d="M8 21H16"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                    />
-
-                </svg>
-
-            </div>
-
-            <div>
-
-                <h2 id="modalTorneoTitulo">Crear torneo</h2>
-
-                <p id="modalTorneoSubtitulo">
-                    Completá los datos del nuevo torneo.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <!-- FORMULARIO -->
-
-        <form
-            action="funciones/crear_torneo.php"
-            method="POST"
-            enctype="multipart/form-data"
-            id="formCrearTorneo"
-        >
-        <input
-            type="hidden"
-            name="csrf_token"
-            value="<?php echo htmlspecialchars($csrf_token); ?>"
-        >
-        <input
-            type="hidden"
-            id="idTorneoEditar"
-            name="id_torneo"
-            value=""
-        >
-
-        <!-- NOMBRE DEL TORNEO -->
-
-<div class="campo-torneo">
-    <label for="nombreTorneo">
-        Nombre del torneo
-    </label>
-
-    <input
-        type="text"
-        id="nombreTorneo"
-        name="nombre"
-        maxlength="100"
-        placeholder="Ej. Copa The Bull"
-        required
-    >
-</div>
-
-
-            <!-- FILA 1 -->
-
-           <!-- =========================================
-     FECHA Y HORA
-     ========================================= -->
-
-<div class="form-torneo-fila">
-
-    <div class="campo-torneo">
-
-        <label for="fechaInicioTorneo">
-            Fecha de inicio
-        </label>
-
-        <input
-            type="date"
-            id="fechaInicioTorneo"
-            name="fecha_inicio"
-            required
-        >
-
-    </div>
-
-
-    <div class="campo-torneo">
-
-        <label for="horaInicioTorneo">
-            Hora de inicio
-        </label>
-
-        <input
-            type="time"
-            id="horaInicioTorneo"
-            name="hora_inicio"
-            required
-        >
-
-    </div>
-
-</div>
-
-
-<div class="form-torneo-fila form-torneo-fila-unica">
-
-    <div class="campo-torneo">
-
-        <label for="fechaFinTorneo">
-            Fecha de finalización
-        </label>
-
-        <input
-            type="date"
-            id="fechaFinTorneo"
-            name="fecha_fin"
-            required
-        >
-
-    </div>
-
-</div>  
-
-            <!-- IMAGEN -->
-
-            <div class="campo-torneo">
-
-                <label for="imagenTorneo">
-                    Imagen del torneo
-                </label>
-
-                <div
-                    class="subir-imagen-torneo"
-                    id="zonaImagenTorneo"
-                >
-
-                    <div class="subir-imagen-torneo-icono">
-
-                        <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-
-                            <rect
-                                x="3"
-                                y="4"
-                                width="18"
-                                height="16"
-                                rx="2"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                            />
-
-                            <circle
-                                cx="8.5"
-                                cy="9"
-                                r="1.5"
-                                stroke="currentColor"
-                                stroke-width="1.6"
-                            />
-
-                            <path
-                                d="M3 17L8 12L12 16L15 13L21 19"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-
-                        </svg>
-
-                    </div>
-
-                    <strong>
-                        Seleccionar imagen
-                    </strong>
-
-                    <span>
-                        JPG, PNG o WEBP · Máximo 5 MB
-                    </span>
-
-                    <input
-                        type="file"
-                        id="imagenTorneo"
-                        name="imagen"
-                        accept="image/jpeg,image/png,image/webp"
-                    >
-
-                </div>
-
-                <div
-                    class="preview-torneo"
-                    id="previewTorneo"
-                ></div>
-
-            </div>
-
-
-            
-
-
-            <!-- CATEGORÍA / TIPO -->
-
-            <div class="form-torneo-fila">
-
-                <div class="campo-torneo">
-
-                    <label for="categoriaTorneo">
-                        Categoría
-                    </label>
-
-                    <select
-                        id="categoriaTorneo"
-                        name="categoria"
-                        required
-                    >
-
-                        <option value="">
-                            Seleccionar categoría
-                        </option>
-
-                        <option value="Principiante">
-                            Principiante
-                        </option>
-
-                        <option value="7ta">
-                            7ta
-                        </option>
-
-                        <option value="6ta">
-                            6ta
-                        </option>
-
-                        <option value="5ta">
-                            5ta
-                        </option>
-
-                        <option value="4ta">
-                            4ta
-                        </option>
-
-                        <option value="3ra">
-                            3ra
-                        </option>
-
-                        <option value="2da">
-                            2da
-                        </option>
-
-                        <option value="1ra">
-                            1ra
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <div class="campo-torneo">
-
-                    <label for="tipoTorneo">
-                        Tipo de torneo
-                    </label>
-
-                    <select
-                        id="tipoTorneo"
-                        name="tipo"
-                        required
-                    >
-
-                        <option value="">
-                            Seleccionar tipo
-                        </option>
-
-                        <option value="Individual">
-                            Individual
-                        </option>
-
-                        <option value="Parejas">
-                            Parejas
-                        </option>
-
-                        <option value="Mixto">
-                            Mixto
-                        </option>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-
-            <!-- PARTICIPANTES / ESTADO -->
-
-            <div class="form-torneo-fila">
-
-                <div class="campo-torneo">
-
-                    <label for="maxParticipantes">
-                        Máximo de participantes
-                    </label>
-
-                    <input
-                        type="number"
-                        id="maxParticipantes"
-                        name="max_participantes"
-                        min="2"
-                        max="1000"
-                        placeholder="Ej. 32"
-                        required
-                    >
-
-                </div>
-
-
-                <div class="campo-torneo">
-
-                    <label for="estadoTorneo">
-                        Estado
-                    </label>
-
-                    <select
-                        id="estadoTorneo"
-                        name="estado"
-                        required
-                    >
-
-                        <option value="Abierto">
-                            Abierto
-                        </option>
-
-                        <option value="Cerrado">
-                            Cerrado
-                        </option>
-
-                        <option value="En curso">
-                            En curso
-                        </option>
-
-                        <option value="Finalizado">
-                            Finalizado
-                        </option>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-
-            <!-- BOTONES -->
-
-            <div class="modal-torneo-acciones">
-
-                <button
-                    type="button"
-                    class="btn-cancelar-torneo"
-                    id="cancelarCrearTorneo"
-                >
-                    Cancelar
-                </button>
-
-                <button
-                    type="submit"
-                    class="btn-guardar-torneo"
-                >
-
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-
-                        <path
-                            d="M5 12L10 17L19 7"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-
-                    </svg>
-
-                    <span id="textoBotonGuardarTorneo">Crear torneo</span>
-
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     MODAL ELIMINAR TORNEO
-     ========================================================= -->
-
-<div class="modal-eliminar-cancha" id="modalEliminarTorneo">
-
-    <div class="modal-eliminar-contenido">
-
-        <!-- CERRAR -->
-        <button
-            type="button"
-            class="modal-eliminar-cerrar"
-            id="cerrarEliminarTorneo"
-        >
-            ×
-        </button>
-
-        <!-- ICONO -->
-        <div class="modal-eliminar-icono">
-            <i class="bi bi-trash-fill"></i>
-        </div>
-
-        <!-- TITULO -->
-        <h2>
-            ¿Eliminar <span>torneo?</span>
-        </h2>
-
-        <p class="modal-eliminar-texto">
-            ¿Estás seguro de que querés eliminar el torneo
-            <strong id="nombreTorneoEliminar"></strong>?
-        </p>
-
-        <p class="modal-eliminar-aviso">
-            Esta acción no se puede deshacer.
-        </p>
-
-        <!-- ADVERTENCIA -->
-        <div class="modal-eliminar-advertencia">
-
-            <div class="modal-eliminar-advertencia-icono">
-                !
-            </div>
-
-            <p>
-                Se eliminará el torneo y toda la información
-                asociada a él.
-            </p>
-
-        </div>
-
-        <!-- FORMULARIO -->
-        <form
-            action="funciones/eliminar_torneo.php"
-            method="POST"
-            id="formEliminarTorneo"
-        >
-
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="<?php echo htmlspecialchars($csrf_token); ?>"
-            >
-
-            <input
-                type="hidden"
-                name="id_torneo"
-                id="idTorneoEliminar"
-            >
-
-            <div class="modal-eliminar-acciones">
-
-                <button
-                    type="button"
-                    class="btn-modal-cancelar"
-                    id="cancelarEliminarTorneo"
-                >
-                    <span>×</span>
-                    Cancelar
-                </button>
-
-                <button
-                    type="submit"
-                    class="btn-modal-eliminar"
-                >
-                    <span><i class="bi bi-trash-fill"></i></span>
-                    Sí, eliminar
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
 <?php } ?>
 
 
@@ -4487,19 +3965,21 @@ $canchasNoDisponibles =
                         <h1>Ranking</h1>
 
                         <p>
-                            Posiciones de cada categoría. Los puntos se otorgan desde cada torneo, en «Gestionar grupos».
+                            Posiciones generales y de cada categoría. Los puntos se suman solos a medida que se cargan los resultados de cada torneo.
                         </p>
 
                     </div>
 
                 </header>
 
-                <?php echo renderTemporada($conexion, $csrf_token, $_GET['accion'] ?? ''); ?>
+                <?php echo renderTemporada($conexion, $csrf_token, $_GET['accion'] ?? '', rkClubContexto($conexion)); ?>
 
                 <?php echo renderRankingCategorias(
                     $conexion,
                     'paneles.php?seccion=ranking',
-                    filter_input(INPUT_GET, 'categoria', FILTER_VALIDATE_INT) ?: null
+                    rkCategoriaDeGet(),
+                    null,
+                    rkFiltroDeGet()
                 ); ?>
 
             <?php } ?>
@@ -4679,7 +4159,7 @@ $canchasNoDisponibles =
 
                 <!-- TORNEOS -->
 
-                <li class="<?php echo ($seccion !== 'mis_inscripciones' && $seccion !== 'notificaciones') ? 'activo' : ''; ?>">
+                <li class="<?php echo ($seccion !== 'mis_inscripciones' && $seccion !== 'notificaciones' && $seccion !== 'ranking') ? 'activo' : ''; ?>">
 
                     <a href="paneles.php">
 
@@ -4705,7 +4185,7 @@ $canchasNoDisponibles =
 
                 <!-- RANKING -->
 
-                <li>
+                <li class="<?php echo ($seccion === 'ranking') ? 'activo' : ''; ?>">
 
                     <a href="paneles.php?seccion=ranking">
 
@@ -4762,18 +4242,21 @@ $canchasNoDisponibles =
 <div class="categoria-participante-barra">
 
     <span class="categoria-barra-label">
-        Mi categoría
+        Mis categorías
     </span>
 
-   <span class="categoria-barra-valor">
+    <?php if (empty($membresiasParticipante)) { ?>
 
-    <?php echo htmlspecialchars(
-        $categoriaParticipante,
-        ENT_QUOTES,
-        'UTF-8'
-    ); ?>
+        <span class="categoria-barra-valor" title="Usá «Unirme al club» en un torneo para sumarte a un club">Todavía no pertenecés a ningún club</span>
 
-</span>
+    <?php } else { foreach ($membresiasParticipante as $m) { ?>
+
+        <span class="categoria-barra-valor" title="Tu categoría en <?php echo htmlspecialchars($m['club'], ENT_QUOTES, 'UTF-8'); ?>">
+            <?php echo htmlspecialchars($m['club'], ENT_QUOTES, 'UTF-8'); ?>:
+            <?php echo htmlspecialchars((string) ($m['categoria'] ?? 'sin categoría'), ENT_QUOTES, 'UTF-8'); ?>
+        </span>
+
+    <?php } } ?>
 
 </div>
                 <button
@@ -4809,21 +4292,7 @@ $canchasNoDisponibles =
 
             </div>
 
-            <?php if ($categoriaPendienteParticipante) { ?>
-                <div class="aviso-categoria-pendiente">
-                    <i class="bi bi-hourglass-split"></i>
-                    <div>
-                        <strong>Tu categoría está pendiente de revisión.</strong>
-                        <span>
-                            Un administrador debe confirmarla
-                            <?php if ($categoriaEstimadaParticipante !== '') { ?>(la encuesta estimó <?php echo htmlspecialchars($categoriaEstimadaParticipante, ENT_QUOTES, 'UTF-8'); ?>, pero todavía no es definitiva)<?php } ?>.
-                            Mientras tanto no podés formar pareja ni aceptar invitaciones en torneos con categoría.
-                        </span>
-                    </div>
-                </div>
-            <?php } ?>
-
-            <?php if ($seccion !== 'mis_inscripciones' && $seccion !== 'notificaciones') { ?>
+            <?php if ($seccion !== 'mis_inscripciones' && $seccion !== 'notificaciones' && $seccion !== 'ranking') { ?>
 
             <!-- ENCABEZADO + FILTROS -->
 
@@ -4897,25 +4366,47 @@ $canchasNoDisponibles =
                 'cerrado'                        => 'Ese torneo ya no admite inscripciones.',
                 'no_individual'                  => 'La inscripción a torneos de parejas/mixto todavía no está disponible.',
                 'ya_inscripto'                   => 'Ya estás inscripto en este torneo.',
+                'descalificado'                  => 'Fuiste descalificado de ese torneo por la organización y no podés volver a inscribirte.',
                 'cupo_completo'                  => 'Ese torneo ya no tiene cupos disponibles.',
                 'error_bd'                       => 'Ocurrió un error al inscribirte. Intentá nuevamente.',
                 'email_invalido'                 => 'Ingresá un correo válido para tu compañero.',
                 'invitacion_a_si_mismo'          => 'No podés invitarte a vos mismo.',
                 'tipo_invalido'                  => 'Ese torneo no admite invitación de compañero.',
-                'categoria_incompatible'         => 'No podés inscribirte en este torneo porque tu categoría no coincide con la categoría requerida.',
-                'categoria_pendiente'            => 'Tu categoría está pendiente de revisión por un administrador. Cuando se confirme, podrás inscribirte en los torneos correspondientes a tu categoría.',
-                'sin_categoria'                  => 'Todavía no tenés una categoría asignada, por eso no podés inscribirte. Consultá con un administrador.',
+                'categoria_incompatible'         => 'No podés inscribirte en este torneo porque tu categoría en ese club no coincide con la categoría requerida.',
+                'sin_categoria'                  => 'Todavía no tenés una categoría asignada en ese club, por eso no podés inscribirte.',
+                'sin_categoria_inicial'          => 'Tu cuenta no tiene una categoría inicial: completá la encuesta de categoría para poder unirte a un club.',
+                'no_pertenece_club'              => 'No pertenecés al club de ese torneo. Usá «Unirme al club» para poder inscribirte.',
+                'companero_no_pertenece_club'    => 'Tu compañero todavía no pertenece al club de ese torneo.',
+                'club_no_existe'                 => 'Ese club no existe.',
+                'ya_pertenece'                   => 'Ya pertenecés a ese club.',
                 'no_autorizado'                  => 'No tenés permisos para inscribirte.',
-                'companero_categoria_pendiente'  => 'La categoría de tu compañero está pendiente de revisión.',
+                'companero_sin_categoria'        => 'Tu compañero todavía no tiene una categoría asignada en el club de ese torneo.',
                 'companero_categoria_incompatible' => 'Tu compañero no juega en la categoría de ese torneo.',
                 'companero_ya_inscripto'         => 'Tu compañero ya tiene una inscripción relacionada con ese torneo.',
-                'invitacion_duplicada'           => 'Ya tenés una invitación pendiente para ese torneo.',
+                'invitacion_duplicada'           => 'Ya tenés una invitación pendiente para este compañero.',
+                'torneo_lleno'                   => 'Este torneo ya alcanzó su capacidad máxima: no quedan lugares disponibles para una pareja nueva.',
+                'conflicto_temporal'             => 'Hubo mucha actividad, probá de nuevo.',
             ];
 
-            if (isset($_GET['error']) && isset($erroresInscripcion[$_GET['error']])) {
+            // Solo se muestra un mensaje PROPIO según el código; el texto del parámetro nunca se imprime. Un código que no
+            // conocemos muestra un mensaje genérico (antes no se mostraba nada).
+            $codigoErrorInscripcion = (isset($_GET['error']) && is_string($_GET['error'])) ? $_GET['error'] : '';
+
+            if ($codigoErrorInscripcion !== '') {
                 echo '<div id="mensajeError" class="mensaje-error mensaje-error-compacto">'
                     . '<i class="bi bi-exclamation-circle-fill"></i> '
-                    . htmlspecialchars($erroresInscripcion[$_GET['error']])
+                    . htmlspecialchars($erroresInscripcion[$codigoErrorInscripcion] ?? 'No pudimos completar la operación. Intentá de nuevo.')
+                    . '</div>';
+            }
+
+            if (($_GET['union'] ?? '') === 'exito') {
+                $catUnion = $membresiasParticipante[(int) ($_GET['club'] ?? 0)]['categoria'] ?? null;
+                echo '<div class="aviso-union-club">'
+                    . '<i class="bi bi-check-circle-fill"></i>'
+                    . '<div><strong>¡Te uniste al club!</strong>'
+                    . '<span>' . ($catUnion ? 'Tu categoría en este club es ' . htmlspecialchars($catUnion, ENT_QUOTES, 'UTF-8') . ' (la de tu encuesta de registro). ' : '')
+                    . 'Ya podés inscribirte en sus torneos. '
+                    . 'Tus categorías y puntos en otros clubes no cambiaron.</span></div>'
                     . '</div>';
             }
 
@@ -4957,6 +4448,23 @@ $canchasNoDisponibles =
                 // rechaza con ya_inscripto si existe una fila para ese torneo).
                 $misInscripcionesTorneo = [];
 
+                // Torneos donde el usuario (como titular) tiene una invitación de pareja todavía Pendiente de respuesta.
+                $torneosConInvitacionPendiente = [];
+
+                $stmtMisInvitaciones = mysqli_prepare(
+                    $conexion,
+                    "SELECT DISTINCT i.id_torneo
+                     FROM invitacion v
+                     INNER JOIN inscripcion i ON i.id_inscripcion = v.id_inscripcion_invita
+                     WHERE i.id_usuario = ? AND v.estado = 'Pendiente'"
+                );
+                mysqli_stmt_bind_param($stmtMisInvitaciones, "i", $idUsuarioParticipante);
+                mysqli_stmt_execute($stmtMisInvitaciones);
+
+                foreach (mysqli_fetch_all(mysqli_stmt_get_result($stmtMisInvitaciones), MYSQLI_ASSOC) as $filaMiInv) {
+                    $torneosConInvitacionPendiente[(int) $filaMiInv['id_torneo']] = true;
+                }
+
                 $stmtMisInscripciones = mysqli_prepare(
                     $conexion,
                     "SELECT id_torneo, estado FROM inscripcion WHERE id_usuario = ?"
@@ -4968,7 +4476,6 @@ $canchasNoDisponibles =
                     $misInscripcionesTorneo[(int) $filaMiInsc['id_torneo']] = $filaMiInsc['estado'];
                 }
 
-                $mensajeCategoriaPendiente = 'Tu categoría está pendiente de revisión por un administrador. Cuando se confirme, podrás inscribirte en los torneos correspondientes a tu categoría.';
 
                 $sqlTorneosParticipante = "
                     SELECT
@@ -4982,11 +4489,16 @@ $canchasNoDisponibles =
                         torneos.max_participantes,
                         torneos.estado,
                         torneos.id_categoria,
+                        torneos.id_club,
+                        club.nombre AS club,
                         categoria.nombre AS categoria
                     FROM torneos
 
                     INNER JOIN categoria
                         ON torneos.id_categoria = categoria.id_categoria
+
+                    INNER JOIN club
+                        ON club.id_club = torneos.id_club
 
                     ORDER BY torneos.fecha_inicio ASC
                 ";
@@ -5038,29 +4550,47 @@ $canchasNoDisponibles =
                         // el servidor vuelve a validar todo al inscribirse. Mismo orden que el servidor.
                         $idTorneoCard = (int) $torneo['id_torneo'];
                         $esIndividualCard = ($torneo['tipo'] === 'Individual');
-                        $compat = ['clase' => 'ok', 'icono' => 'bi-check-circle-fill', 'texto' => 'Categoría compatible', 'bloquea' => false, 'pendiente' => false];
+                        // Categoría del jugador EN EL CLUB DE ESTE TORNEO (cada club tiene la suya).
+                        $membresiaCard = $membresiasParticipante[(int) $torneo['id_club']] ?? null;
+                        $motivoCard = motivoSinCategoriaEnClub($membresiaCard, (int) $torneo['id_categoria']);
+                        $compat = ['clase' => 'ok', 'icono' => 'bi-check-circle-fill', 'texto' => 'Categoría compatible', 'bloquea' => false];
 
                         if ($torneo['estado'] !== 'Abierto') {
-                            $compat = ['clase' => 'info', 'icono' => 'bi-lock-fill', 'texto' => 'Inscripciones cerradas', 'bloquea' => true, 'pendiente' => false];
-                        } elseif (isset($misInscripcionesTorneo[$idTorneoCard]) && $misInscripcionesTorneo[$idTorneoCard] !== 'Rechazada') {
-                            if ($misInscripcionesTorneo[$idTorneoCard] === 'Cancelada') {
-                                $compat = ['clase' => 'info', 'icono' => 'bi-x-circle-fill', 'texto' => 'Tu inscripción anterior fue cancelada', 'bloquea' => true, 'pendiente' => false];
+                            $compat = ['clase' => 'info', 'icono' => 'bi-lock-fill', 'texto' => 'Inscripciones cerradas', 'bloquea' => true];
+                        } elseif (
+                            isset($misInscripcionesTorneo[$idTorneoCard])
+                            && !in_array($misInscripcionesTorneo[$idTorneoCard], ['Rechazada', 'Retirada'], true)
+                            && !($misInscripcionesTorneo[$idTorneoCard] === 'Pendiente' && empty($torneosConInvitacionPendiente[$idTorneoCard]))
+                        ) {
+                            // Una inscripción Pendiente SIN invitación pendiente (rechazada o vencida) no es una inscripción: se trata como
+                            // no inscripto (el servidor deja volver a invitar o inscribirse).
+                            if ($misInscripcionesTorneo[$idTorneoCard] === 'Descalificada') {
+                                $compat = ['clase' => 'error', 'icono' => 'bi-person-x-fill', 'texto' => 'Fuiste descalificado de este torneo', 'bloquea' => true];
+                            } elseif ($misInscripcionesTorneo[$idTorneoCard] === 'Cancelada') {
+                                $compat = ['clase' => 'info', 'icono' => 'bi-x-circle-fill', 'texto' => 'Tu inscripción anterior fue cancelada', 'bloquea' => true];
+                            } elseif ($misInscripcionesTorneo[$idTorneoCard] === 'Pendiente') {
+                                // Titular esperando la respuesta de su compañero: todavía NO está inscripto.
+                                // 'cambiar': puede elegir otro compañero (cancela la invitación pendiente) mientras quede lugar para una pareja.
+                                $compat = ['clase' => 'warn', 'icono' => 'bi-hourglass-split', 'texto' => 'Tenés una invitación pendiente', 'bloquea' => true,
+                                    'cambiar' => ((int) ($conteosConfirmadosParticipante[$idTorneoCard] ?? 0) + 2 <= (int) $torneo['max_participantes'])];
                             } else {
-                                $compat = ['clase' => 'info', 'icono' => 'bi-check2-circle', 'texto' => 'Ya estás inscripto en este torneo', 'bloquea' => true, 'pendiente' => false];
+                                $compat = ['clase' => 'info', 'icono' => 'bi-check2-circle', 'texto' => 'Ya estás inscripto en este torneo', 'bloquea' => true];
                             }
-                        } elseif ($estadoCategoriaParticipante === 'Pendiente') {
-                            $compat = ['clase' => 'warn', 'icono' => 'bi-hourglass-split', 'texto' => 'Categoría pendiente de revisión', 'bloquea' => false, 'pendiente' => true];
-                        } elseif ($idCategoriaParticipante === null) {
-                            $compat = ['clase' => 'error', 'icono' => 'bi-exclamation-triangle-fill', 'texto' => 'Todavía no tenés una categoría asignada', 'bloquea' => true, 'pendiente' => false];
-                        } elseif ($idCategoriaParticipante !== (int) $torneo['id_categoria']) {
-                            $compat = ['clase' => 'error', 'icono' => 'bi-x-octagon-fill', 'texto' => 'Tu categoría (' . $categoriaParticipante . ') no coincide con la del torneo', 'bloquea' => true, 'pendiente' => false];
-                        } elseif ($esIndividualCard && (int) ($conteosConfirmadosParticipante[$idTorneoCard] ?? 0) >= (int) $torneo['max_participantes']) {
-                            $compat = ['clase' => 'info', 'icono' => 'bi-people-fill', 'texto' => 'Cupo completo', 'bloquea' => true, 'pendiente' => false];
+                        } elseif ($motivoCard === 'no_pertenece_club') {
+                            $compat = ['clase' => 'warn', 'icono' => 'bi-door-open-fill', 'texto' => 'No pertenecés a ' . $torneo['club'] . ': unite al club para inscribirte', 'bloquea' => true, 'unirse' => true];
+                        } elseif ($motivoCard === 'sin_categoria') {
+                            $compat = ['clase' => 'error', 'icono' => 'bi-exclamation-triangle-fill', 'texto' => 'Todavía no tenés una categoría asignada en ' . $torneo['club'], 'bloquea' => true];
+                        } elseif ($motivoCard === 'categoria_incompatible') {
+                            $compat = ['clase' => 'error', 'icono' => 'bi-x-octagon-fill', 'texto' => 'Tu categoría en ' . $torneo['club'] . ' (' . ($membresiasParticipante[(int) $torneo['id_club']]['categoria'] ?? '?') . ') no coincide con la del torneo', 'bloquea' => true];
+                        } elseif ((int) ($conteosConfirmadosParticipante[$idTorneoCard] ?? 0) + ($esIndividualCard ? 1 : 2) > (int) $torneo['max_participantes']) {
+                            // Individual: falta 1 lugar; parejas/mixto: hacen falta 2.
+                            $compat = ['clase' => 'info', 'icono' => 'bi-people-fill', 'texto' => 'Cupo completo', 'bloquea' => true];
                         }
 
                 ?>
 
                     <article
+                        id="torneo-<?php echo (int) $torneo['id_torneo']; ?>"
                         class="torneo-card-participante"
                         data-nombre="<?php echo htmlspecialchars(
                             strtolower($torneo['nombre'])
@@ -5234,10 +4764,6 @@ $canchasNoDisponibles =
                                     <button
                                         type="button"
                                         class="btn-torneo-participante btn-inscribirse-participante"
-                                        <?php if ($compat['pendiente']) { ?>
-                                        data-categoria-pendiente="1"
-                                        data-mensaje="<?php echo htmlspecialchars($mensajeCategoriaPendiente, ENT_QUOTES, 'UTF-8'); ?>"
-                                        <?php } ?>
                                         data-id="<?php echo intval(
                                             $torneo['id_torneo']
                                         ); ?>"
@@ -5259,6 +4785,30 @@ $canchasNoDisponibles =
                                         </svg>
                                         Inscribirse
                                     </button>
+
+                                <?php } elseif (!empty($compat['cambiar'])) { ?>
+
+                                    <button
+                                        type="button"
+                                        class="btn-torneo-participante btn-inscribirse-participante"
+                                        data-id="<?php echo intval($torneo['id_torneo']); ?>"
+                                        data-nombre="<?php echo htmlspecialchars($torneo['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-tipo="<?php echo htmlspecialchars($torneo['tipo'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-cambiar="1"
+                                    >
+                                        <i class="bi bi-arrow-repeat"></i>
+                                        Cambiar compañero
+                                    </button>
+
+                                <?php } elseif (!empty($compat['unirse'])) { ?>
+
+                                    <form action="funciones/unirse_club.php" method="POST" class="form-unirse-club" data-loader="Uniéndote al club...">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <input type="hidden" name="id_club" value="<?php echo (int) $torneo['id_club']; ?>">
+                                        <button type="submit" class="btn-torneo-participante btn-unirse-club">
+                                            <i class="bi bi-door-open-fill"></i> Unirme al club
+                                        </button>
+                                    </form>
 
                                 <?php } else { ?>
 
@@ -5305,6 +4855,34 @@ $canchasNoDisponibles =
                     </div>
 
                 <?php } ?>
+
+            </section>
+
+            <?php } ?>
+
+            <?php if ($seccion === 'ranking') { ?>
+
+            <section class="ranking-participante">
+
+                <div class="cabecera-torneos-participante">
+
+                    <div>
+
+                        <h1>Ranking</h1>
+
+                        <p>Tu posición general y en tu categoría, y cómo viene toda la comunidad.</p>
+
+                    </div>
+
+                </div>
+
+                <?php echo renderRankingCategorias(
+                    $conexion,
+                    'paneles.php?seccion=ranking',
+                    rkCategoriaDeGet(),
+                    (int) $_SESSION['id_usuario'],
+                    rkFiltroDeGet()
+                ); ?>
 
             </section>
 
@@ -5414,6 +4992,8 @@ $canchasNoDisponibles =
                                 'Confirmada' => 'Confirmada',
                                 'Cancelada'  => 'Cancelada',
                                 'Rechazada'  => 'Rechazada por el organizador',
+                                'Descalificada' => 'Descalificado por la organización',
+                                'Retirada'   => 'Retirado por la organización (podés volver a inscribirte si el torneo sigue abierto)',
                             ];
 
                             ?>
@@ -5477,19 +5057,27 @@ $canchasNoDisponibles =
                     'no_existe'               => 'Esa invitación no existe.',
                     'no_autorizado'           => 'Esa invitación no te corresponde.',
                     'invitacion_no_pendiente' => 'Esa invitación ya fue respondida.',
+                    'invitacion_cancelada'    => 'Esa invitación fue cancelada por quien te invitó: ya no se puede aceptar ni rechazar.',
                     'invitacion_vencida'      => 'Esa invitación venció.',
                     'cerrado'                 => 'Ese torneo ya no admite inscripciones.',
-                    'categoria_incompatible'  => 'No jugás en la categoría de ese torneo.',
-                    'categoria_pendiente'     => 'Tu categoría está pendiente de revisión: todavía no podés aceptar invitaciones.',
+                    'categoria_incompatible'  => 'No jugás en la categoría de ese torneo (en su club).',
+                    'no_pertenece_club'       => 'Primero tenés que unirte al club de ese torneo (en Torneos, «Unirme al club»).',
+                    'sin_categoria'           => 'Todavía no tenés una categoría asignada en el club de ese torneo.',
                     'ya_inscripto'            => 'Ya estás inscripto a ese torneo.',
                     'cupo_completo'           => 'Ese torneo ya no tiene cupos disponibles para la pareja.',
                     'pareja_incompatible'     => 'No se pudo formar la pareja.',
+                    'error_bd'                => 'Ocurrió un error al responder la invitación. Intentá nuevamente.',
+                    'conflicto_temporal'      => 'Hubo mucha actividad, probá de nuevo.',
                 ];
 
-                if (isset($_GET['error']) && isset($erroresInvitacion[$_GET['error']])) {
+                // Solo se muestra un mensaje PROPIO según el código; el texto del parámetro nunca se imprime. Un código que no
+                // conocemos muestra un mensaje genérico (antes no se mostraba nada).
+                $codigoErrorInvitacion = (isset($_GET['error']) && is_string($_GET['error'])) ? $_GET['error'] : '';
+
+                if ($codigoErrorInvitacion !== '') {
                     echo '<div id="mensajeError" class="mensaje-error mensaje-error-compacto">'
                         . '<i class="bi bi-exclamation-circle-fill"></i> '
-                        . htmlspecialchars($erroresInvitacion[$_GET['error']])
+                        . htmlspecialchars($erroresInvitacion[$codigoErrorInvitacion] ?? 'No pudimos completar la operación. Intentá de nuevo.')
                         . '</div>';
                 }
 
@@ -5516,7 +5104,8 @@ $canchasNoDisponibles =
                 $stmtNotificaciones = mysqli_prepare(
                     $conexion,
                     "SELECT n.id_notificacion, n.tipo, n.mensaje, n.leida, n.fecha_creacion, n.id_invitacion,
-                            inv.estado AS estado_invitacion, inv.fecha_vencimiento
+                            inv.estado AS estado_invitacion, inv.fecha_vencimiento,
+                            (inv.fecha_vencimiento >= NOW()) AS vigente
                      FROM notificacion n
                      LEFT JOIN invitacion inv ON inv.id_invitacion = n.id_invitacion
                      WHERE n.id_usuario_destino = ?
@@ -5536,12 +5125,15 @@ $canchasNoDisponibles =
                     'invitacion_vencida'    => 'bi-clock-history',
                     'inscripcion_aceptada'  => 'bi-check-circle-fill',
                     'inscripcion_rechazada' => 'bi-x-circle-fill',
+                    'descalificacion'       => 'bi-person-x-fill',
+                    'retiro'                => 'bi-box-arrow-right',
                 ];
 
                 $estadoInvitacionLegible = [
                     'Aceptada'  => 'Ya respondida: la aceptaste',
                     'Rechazada' => 'Ya respondida: la rechazaste',
                     'Vencida'   => 'Esta invitación venció',
+                    'Cancelada' => 'Esta invitación fue cancelada por quien te invitó',
                 ];
 
                 ?>
@@ -5565,7 +5157,8 @@ $canchasNoDisponibles =
                                 !empty($notif['id_invitacion']) &&
                                 $notif['estado_invitacion'] === 'Pendiente' &&
                                 !empty($notif['fecha_vencimiento']) &&
-                                strtotime($notif['fecha_vencimiento']) >= time();
+                                // El vencimiento se compara en MySQL (hora de Argentina), no con time() de PHP (UTC).
+                                (int) ($notif['vigente'] ?? 0) === 1;
 
                             ?>
 
@@ -5646,7 +5239,10 @@ $canchasNoDisponibles =
 <?php } ?>
 
 
-<script src="js/padel.js?v=14"></script>
+<script src="js/padel.js?v=22"></script>
+<script src="js/ranking_temporada.js?v=1"></script>
+<script src="js/confirmar.js?v=1"></script>
+<script src="js/ranking_general.js?v=3"></script>
 
 <!-- =========================================================
      MODAL MENSAJE DE ÉXITO

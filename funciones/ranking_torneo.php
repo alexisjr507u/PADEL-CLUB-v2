@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/standings.php';
+require_once __DIR__ . '/ranking_puntos.php';
 
 /* =========================================================
    RANKING FINAL DEL TORNEO
@@ -69,7 +70,8 @@ function calcularRankingTorneo($conexion, $id_torneo, $esIndividual) {
 
         $nombres = [];
         foreach ($datos['miembros'] as $m) {
-            $nombres[(int) $m['id_entrante']] = nombreDeMiembro($m, $esIndividual);
+            $nombres[(int) $m['id_entrante']] = nombreDeMiembro($m, $esIndividual)
+                . (!empty($m['descalificado']) ? ' (descalificado)' : '');
         }
 
         $completo = count($datos['miembros']) >= 2 && !empty($datos['partidos']);
@@ -79,7 +81,7 @@ function calcularRankingTorneo($conexion, $id_torneo, $esIndividual) {
             }
         }
         $gruposCompletos[] = $completo;
-        $topPorGrupo[] = array_slice(array_column($standings, 'id_entrante'), 0, CLASIFICAN_POR_GRUPO);
+        $topPorGrupo[] = clasificadosDeTabla($standings);
 
         foreach ($standings as $fila) {
 
@@ -284,6 +286,10 @@ function calcularRankingTorneo($conexion, $id_torneo, $esIndividual) {
 
     });
 
+    // Puntos DEFINITIVOS que el torneo da en el ranking: la misma función que usa «Puntos del ranking» (no hay una segunda fórmula).
+    $calculoPuntos = calcularPuntosTorneo($conexion, $id_torneo);
+    $puntosPorEntrante = !empty($calculoPuntos['ok']) ? $calculoPuntos['entrantes'] : [];
+
     $filas = [];
 
     foreach ($lista as $k => $e) {
@@ -305,7 +311,8 @@ function calcularRankingTorneo($conexion, $id_torneo, $esIndividual) {
             'pj' => $e['total']['pj'],
             'pg' => $e['total']['pg'],
             'pp' => $e['total']['pp'],
-            'pts' => $e['total']['pts'],
+            'pts' => $e['total']['pts'],   // puntos de clasificación por partido (3 por victoria): solo para ordenar
+            'puntos_ranking' => (int) ($puntosPorEntrante[$e['id_entrante']]['puntos'] ?? 0),
             'sets_favor' => $e['total']['sets_favor'],
             'sets_contra' => $e['total']['sets_contra'],
             'games_favor' => $e['total']['games_favor'],

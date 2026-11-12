@@ -29,6 +29,16 @@ $clasificacion = calcularClasificacionEncuesta($respuestas);
 
 if (!$clasificacion['valido']) {
 
+    // Respuestas incoherentes: no se asigna ninguna categoría arbitraria; vuelve a completar la encuesta.
+    if (!empty($clasificacion['incoherente'])) {
+
+        unset($_SESSION["encuesta_parte1"], $_SESSION["clasificacion"], $_SESSION["id_categoria"], $_SESSION["categoria_estado"]);
+
+        header("Location: ../encuesta_categoria.php?error=incoherente");
+        exit();
+
+    }
+
     header("Location: ../encuesta_categoria2.php");
     exit();
 
@@ -37,19 +47,9 @@ if (!$clasificacion['valido']) {
 $_SESSION["clasificacion"] = $clasificacion;
 unset($_SESSION["encuesta_parte1"]);
 
-if ($clasificacion['requiere_revision']) {
-
-    // Pendiente: no hay categoría definitiva hasta que la revise el administrador.
-    // id_categoria queda vacío, así ninguna validación de categoría la da por buena.
-    $_SESSION["id_categoria"] = null;
-    $_SESSION["categoria_estado"] = 'Pendiente';
-
-} else {
-
-    $_SESSION["id_categoria"] = $clasificacion['id_categoria_estimada'];
-    $_SESSION["categoria_estado"] = 'Confirmada';
-
-}
+// La categoría calculada se asigna directamente (4ta, 3ra, 2da y 1ra incluidas): no hay revisión ni aprobación.
+$_SESSION["id_categoria"] = $clasificacion['id_categoria_estimada'];
+$_SESSION["categoria_estado"] = 'Confirmada';
 
 header("Location: guardar_usuario.php");
 exit();

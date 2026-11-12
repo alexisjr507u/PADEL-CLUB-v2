@@ -7,6 +7,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("club_categoria.php");
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -41,7 +42,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 $stmtTorneo = mysqli_prepare(
     $conexion,
-    "SELECT tipo, estado, id_categoria FROM torneos WHERE id_torneo = ?"
+    "SELECT tipo, estado, id_categoria, id_club, max_participantes FROM torneos WHERE id_torneo = ?"
 );
 mysqli_stmt_bind_param($stmtTorneo, "i", $id_torneo);
 mysqli_stmt_execute($stmtTorneo);
@@ -59,13 +60,44 @@ if (!in_array($torneo['tipo'], ['Parejas', 'Mixto'], true)) {
     responder(['ok' => false, 'mensaje' => 'Ese torneo no es de parejas ni mixto.']);
 }
 
-$stmtPropio = mysqli_prepare($conexion, "SELECT email, categoria_estado FROM usuario WHERE id_usuario = ?");
+// Sin lugar para una pareja nueva (2 jugadores), no tiene sentido buscar compañero. El servidor lo vuelve a comprobar al invitar.
+$stmtCupoBusqueda = mysqli_prepare($conexion, "SELECT COUNT(*) AS n FROM inscripcion WHERE id_torneo = ? AND estado = 'Confirmada'");
+mysqli_stmt_bind_param($stmtCupoBusqueda, "i", $id_torneo);
+mysqli_stmt_execute($stmtCupoBusqueda);
+$confirmadosBusqueda = (int) mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCupoBusqueda))['n'];
+
+if ($confirmadosBusqueda + 2 > (int) $torneo['max_participantes']) {
+    responder(['ok' => false, 'mensaje' => 'Este torneo ya alcanzó su capacidad máxima: no quedan lugares disponibles para una pareja nueva.']);
+}
+
+// ¿El titular ya tiene una invitación pendiente (vigente) en este torneo? Sirve para avisar que enviar otra la reemplaza.
+$stmtPendienteBusqueda = mysqli_prepare(
+    $conexion,
+    "SELECT v.email_invitado, v.id_usuario_invitado
+     FROM invitacion v
+     INNER JOIN inscripcion i ON i.id_inscripcion = v.id_inscripcion_invita
+     WHERE v.id_torneo = ? AND i.id_usuario = ? AND v.estado = 'Pendiente' AND v.fecha_vencimiento >= NOW()
+     LIMIT 1"
+);
+mysqli_stmt_bind_param($stmtPendienteBusqueda, "ii", $id_torneo, $id_usuario_titular);
+mysqli_stmt_execute($stmtPendienteBusqueda);
+$pendienteBusqueda = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtPendienteBusqueda));
+$avisoReemplazo = ' Tu invitación pendiente anterior se cancelará al enviar esta.';
+
+$stmtPropio = mysqli_prepare($conexion, "SELECT email FROM usuario WHERE id_usuario = ?");
 mysqli_stmt_bind_param($stmtPropio, "i", $id_usuario_titular);
 mysqli_stmt_execute($stmtPropio);
 $propio = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtPropio));
 
-if ($propio && $propio['categoria_estado'] === 'Pendiente') {
-    responder(['ok' => false, 'mensaje' => 'Tu categoría está pendiente de revisión: todavía no podés formar pareja.']);
+// Tu categoría EN EL CLUB DEL TORNEO.
+$motivoPropio = motivoSinCategoriaEnClub(membresiaEnClub($conexion, $id_usuario_titular, (int) $torneo['id_club']), (int) $torneo['id_categoria']);
+
+if ($motivoPropio !== '') {
+    responder(['ok' => false, 'mensaje' => [
+        'no_pertenece_club' => 'Todavía no pertenecés al club de este torneo: usá «Unirme al club» antes de formar pareja.',
+        'sin_categoria' => 'Todavía no tenés una categoría asignada en este club: todavía no podés formar pareja.',
+        'categoria_incompatible' => 'Tu categoría en este club no coincide con la de este torneo.',
+    ][$motivoPropio]]);
 }
 
 if ($propio && strcasecmp($propio['email'], $email) === 0) {
@@ -79,11 +111,22 @@ if ($propio && strcasecmp($propio['email'], $email) === 0) {
 
 $stmtUsuario = mysqli_prepare(
     $conexion,
-    "SELECT id_usuario, nombre, apellido, id_categoria, categoria_estado FROM usuario WHERE email = ?"
+    "SELECT id_usuario, nombre, apellido FROM usuario WHERE email = ?"
 );
 mysqli_stmt_bind_param($stmtUsuario, "s", $email);
 mysqli_stmt_execute($stmtUsuario);
 $usuarioEncontrado = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtUsuario));
+
+if ($pendienteBusqueda && strcasecmp($pendienteBusqueda['email_invitado'], $email) === 0) {
+
+    responder([
+        'ok' => true,
+        'registrado' => $usuarioEncontrado ? true : false,
+        'puede_invitar' => false,
+        'mensaje' => 'Ya tenés una invitación pendiente para este compañero.',
+    ]);
+
+}
 
 if (!$usuarioEncontrado) {
 
@@ -91,31 +134,29 @@ if (!$usuarioEncontrado) {
         'ok' => true,
         'registrado' => false,
         'puede_invitar' => true,
-        'mensaje' => 'Ese correo todavía no tiene cuenta. Si enviás la invitación, le vamos a mandar un mail para que se registre.',
+        'mensaje' => 'Ese correo todavía no tiene cuenta. Si enviás la invitación, le vamos a mandar un mail para que se registre.' . ($pendienteBusqueda ? $avisoReemplazo : ''),
     ]);
 
 }
 
-if ($usuarioEncontrado['categoria_estado'] === 'Pendiente') {
+// La categoría de esa persona EN EL CLUB DEL TORNEO.
+$motivoOtro = motivoSinCategoriaEnClub(
+    membresiaEnClub($conexion, (int) $usuarioEncontrado['id_usuario'], (int) $torneo['id_club']),
+    (int) $torneo['id_categoria']
+);
+
+if ($motivoOtro !== '') {
 
     responder([
         'ok' => true,
         'registrado' => true,
         'puede_invitar' => false,
         'nombre' => $usuarioEncontrado['nombre'] . ' ' . $usuarioEncontrado['apellido'],
-        'mensaje' => 'La categoría de esa persona está pendiente de revisión.',
-    ]);
-
-}
-
-if ((int) $usuarioEncontrado['id_categoria'] !== (int) $torneo['id_categoria']) {
-
-    responder([
-        'ok' => true,
-        'registrado' => true,
-        'puede_invitar' => false,
-        'nombre' => $usuarioEncontrado['nombre'] . ' ' . $usuarioEncontrado['apellido'],
-        'mensaje' => 'Esa persona no juega en la categoría de este torneo.',
+        'mensaje' => [
+            'no_pertenece_club' => 'Esa persona todavía no pertenece al club de este torneo.',
+            'sin_categoria' => 'Esa persona todavía no tiene una categoría asignada en este club.',
+            'categoria_incompatible' => 'Esa persona no juega en la categoría de este torneo.',
+        ][$motivoOtro],
     ]);
 
 }
@@ -144,5 +185,5 @@ responder([
     'registrado' => true,
     'puede_invitar' => true,
     'nombre' => $usuarioEncontrado['nombre'] . ' ' . $usuarioEncontrado['apellido'],
-    'mensaje' => 'Se encontró la cuenta de ' . $usuarioEncontrado['nombre'] . ' ' . $usuarioEncontrado['apellido'] . '.',
+    'mensaje' => 'Se encontró la cuenta de ' . $usuarioEncontrado['nombre'] . ' ' . $usuarioEncontrado['apellido'] . '.' . ($pendienteBusqueda ? $avisoReemplazo : ''),
 ]);

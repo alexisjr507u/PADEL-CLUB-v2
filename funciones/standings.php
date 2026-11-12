@@ -177,8 +177,11 @@ function resultadoDePartido(array $partido) {
 
 
 /**
- * Trae los miembros de un grupo (participantes o parejas, ya confirmados)
- * junto con sus partidos de fase de Grupos. $esIndividual define la tabla.
+ * Trae los miembros de un grupo (participantes o parejas confirmados, y los descalificados,
+ * marcados con 'descalificado') junto con sus partidos de fase de Grupos. $esIndividual define la tabla.
+ *
+ * Los descalificados se conservan en la tabla para no alterar los resultados de sus rivales,
+ * pero no clasifican ni se les generan partidos nuevos (ver miembrosHabilitados / clasificadosDeTabla).
  */
 function obtenerMiembrosYPartidosDeGrupo($conexion, $id_grupo, $esIndividual) {
 
@@ -186,11 +189,12 @@ function obtenerMiembrosYPartidosDeGrupo($conexion, $id_grupo, $esIndividual) {
 
         $stmtMiembros = mysqli_prepare(
             $conexion,
-            "SELECT gi.id_grupo_inscripcion AS id_entrante, u.nombre, u.apellido
+            "SELECT gi.id_grupo_inscripcion AS id_entrante, u.nombre, u.apellido,
+                    (insc.estado = 'Descalificada') AS descalificado
              FROM grupo_inscripcion gi
              INNER JOIN inscripcion insc ON insc.id_inscripcion = gi.id_inscripcion
              INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
-             WHERE gi.id_grupo = ? AND insc.estado = 'Confirmada'
+             WHERE gi.id_grupo = ? AND insc.estado IN ('Confirmada', 'Descalificada')
              ORDER BY gi.orden ASC, gi.id_grupo_inscripcion ASC"
         );
 
@@ -200,7 +204,8 @@ function obtenerMiembrosYPartidosDeGrupo($conexion, $id_grupo, $esIndividual) {
             $conexion,
             "SELECT gp.id_grupo_pareja AS id_entrante,
                     u1.nombre AS nombre1, u1.apellido AS apellido1,
-                    u2.nombre AS nombre2, u2.apellido AS apellido2
+                    u2.nombre AS nombre2, u2.apellido AS apellido2,
+                    (i1.estado = 'Descalificada' OR i2.estado = 'Descalificada') AS descalificado
              FROM grupo_pareja gp
              INNER JOIN pareja p ON p.id_pareja = gp.id_pareja
              INNER JOIN inscripcion i1 ON i1.id_inscripcion = p.id_inscripcion_1
@@ -249,6 +254,7 @@ function calcularStandings(array $miembros, array $partidos) {
     foreach ($miembros as $miembro) {
         $stats[(int) $miembro['id_entrante']] = [
             'id_entrante' => (int) $miembro['id_entrante'],
+            'descalificado' => !empty($miembro['descalificado']),
             'pj' => 0,
             'pg' => 0,
             'pp' => 0,
@@ -401,5 +407,42 @@ function calcularStandings(array $miembros, array $partidos) {
     }
 
     return $resultadoFinal;
+
+}
+
+
+/** Miembros que todavía pueden jugar (sin los descalificados). Sirve para generar partidos nuevos. */
+function miembrosHabilitados(array $miembros) {
+
+    return array_values(array_filter($miembros, function ($m) {
+        return empty($m['descalificado']);
+    }));
+
+}
+
+
+/**
+ * Ids de los primeros $cantidad de una tabla de posiciones que PUEDEN clasificar:
+ * un descalificado no pasa de fase aunque haya quedado arriba, lo reemplaza el siguiente.
+ */
+function clasificadosDeTabla(array $tabla, $cantidad = CLASIFICAN_POR_GRUPO) {
+
+    $ids = [];
+
+    foreach ($tabla as $fila) {
+
+        if (!empty($fila['descalificado'])) {
+            continue;
+        }
+
+        $ids[] = (int) $fila['id_entrante'];
+
+        if (count($ids) === $cantidad) {
+            break;
+        }
+
+    }
+
+    return $ids;
 
 }

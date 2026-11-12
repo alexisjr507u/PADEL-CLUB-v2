@@ -3,6 +3,8 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
+require_once("descalificacion.php");
 require_once("standings.php");
 
 
@@ -56,6 +58,9 @@ try {
         throw new Exception("sin_permiso");
     }
 
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'partidos');
+
     $stmtGrupo = mysqli_prepare(
         $conexion,
         "SELECT id_grupo FROM grupo WHERE id_grupo = ? AND id_torneo = ? FOR UPDATE"
@@ -78,6 +83,12 @@ try {
     mysqli_stmt_execute($stmtExistentes);
     $existentes = mysqli_fetch_all(mysqli_stmt_get_result($stmtExistentes), MYSQLI_ASSOC);
 
+    // Con el torneo En curso (ya empezó) los partidos de grupos no se regeneran: no se borra ni se duplica nada.
+    // Solo antes de empezar (Abierto/Cerrado) se puede volver a armar el fixture de un grupo sin resultados.
+    if (!empty($existentes) && !in_array($estadoTorneoActual, ESTADOS_ANTES_DE_EMPEZAR, true)) {
+        throw new Exception("partidos_ya_generados");
+    }
+
     foreach ($existentes as $partidoExistente) {
         if ($partidoExistente['estado'] === 'Jugado') {
             throw new Exception("partidos_con_resultados");
@@ -85,7 +96,8 @@ try {
     }
 
     $datos = obtenerMiembrosYPartidosDeGrupo($conexion, $id_grupo, $esIndividual);
-    $miembros = $datos['miembros'];
+    // Los descalificados no juegan partidos nuevos.
+    $miembros = miembrosHabilitados($datos['miembros']);
 
     if (count($miembros) < 2) {
         throw new Exception("miembros_insuficientes");
@@ -119,6 +131,8 @@ try {
 
         }
     }
+
+    actividadFaseGenerada($conexion, $id_torneo, 'los partidos de un grupo');
 
     mysqli_commit($conexion);
 

@@ -1,5 +1,5 @@
 // ==========================================
-// GESTIONAR PARTICIPANTES - MODAL DE CANCELACIÓN
+// GESTIONAR PARTICIPANTES - MODAL DE DESCALIFICACIÓN
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -35,11 +35,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const nombre = boton.dataset.nombre || "esta participación";
 
-            texto.textContent = "¿Seguro que querés cancelar a \"" + nombre + "\"?";
+            const verbo = boton.dataset.verbo === "retirar" ? "retirar" : "descalificar";
+
+            texto.textContent = "¿Seguro que querés " + verbo + " a \"" + nombre + "\"?";
 
             idOculto.value = boton.dataset.id || "";
 
+            // El motivo no se arrastra de una descalificación a otra.
+            const motivo = document.getElementById("motivoDescalificacion");
+
+            if (motivo) {
+                motivo.value = "";
+            }
+
             modal.classList.add("mostrar");
+
+            if (motivo) {
+                window.setTimeout(function () { motivo.focus(); }, 60);
+            }
 
             document.documentElement.style.overflow = "hidden";
             document.body.style.overflow = "hidden";
@@ -235,7 +248,10 @@ if(nuevaPassword){
     });
 
 }
-//cache
+// Volver con «Atrás/Adelante»: el navegador puede restaurar la página desde su caché sin pedirla de nuevo.
+// Se recarga para que el servidor decida: con la sesión abierta muestra la página (actualizada) y, si la
+// sesión ya se cerró, manda al login. NO se manda al login a ciegas: eso (un segundo manejador de
+// «pageshow» que redirigía siempre a la pantalla de login) era lo que "cerraba la sesión" al volver atrás.
 window.addEventListener("pageshow", function(event) {
 
     if (event.persisted) {
@@ -252,14 +268,7 @@ window.onload = function() {
     });
 
 }
-//ventanas de navegacion
-window.addEventListener("pageshow", function(event) {
 
-    if (event.persisted) {
-        window.location.href = "login.php";
-    }
-
-});
 //encuesta pregunta nunca
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -1630,112 +1639,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 
-// =========================================
-// ELIMINAR TORNEO - MODAL PERSONALIZADO
-// =========================================
-
-document.addEventListener("DOMContentLoaded", function () {
-
-    const modal = document.getElementById("modalEliminarTorneo");
-    const cerrar = document.getElementById("cerrarEliminarTorneo");
-    const cancelar = document.getElementById("cancelarEliminarTorneo");
-
-    const idTorneo = document.getElementById("idTorneoEliminar");
-    const nombreTorneo = document.getElementById("nombreTorneoEliminar");
-
-    const botonesEliminar = document.querySelectorAll(
-        ".btn-torneo.eliminar"
-    );
-
-
-    // =========================================
-    // ABRIR MODAL
-    // =========================================
-
-    botonesEliminar.forEach(function (boton) {
-
-        boton.addEventListener("click", function () {
-
-            const id = this.dataset.id;
-            const nombre = this.dataset.nombre;
-
-            if (idTorneo) {
-                idTorneo.value = id;
-            }
-
-            if (nombreTorneo) {
-                nombreTorneo.textContent = '"' + nombre + '"';
-            }
-
-            if (modal) {
-                modal.classList.add("mostrar");
-            }
-
-        });
-
-    });
-
-
-    // =========================================
-    // CERRAR MODAL
-    // =========================================
-
-    function cerrarModalEliminarTorneo() {
-
-        if (modal) {
-            modal.classList.remove("mostrar");
-        }
-
-    }
-
-
-    // BOTÓN X
-
-    if (cerrar) {
-
-        cerrar.addEventListener("click", function (e) {
-
-            e.preventDefault();
-
-            cerrarModalEliminarTorneo();
-
-        });
-
-    }
-
-
-    // BOTÓN CANCELAR
-
-    if (cancelar) {
-
-        cancelar.addEventListener("click", function (e) {
-
-            e.preventDefault();
-
-            cerrarModalEliminarTorneo();
-
-        });
-
-    }
-
-
-    // CERRAR HACIENDO CLICK FUERA
-
-    if (modal) {
-
-        modal.addEventListener("click", function (e) {
-
-            if (e.target === modal) {
-
-                cerrarModalEliminarTorneo();
-
-            }
-
-        });
-
-    }
-
-});
 /* =========================================================
    MODAL CREAR TORNEO
    ========================================================= */
@@ -2024,7 +1927,8 @@ if (formularioTorneo) {
            LUGAR
            --------------------------------------------- */
 
-        if (!lugarTorneo.value.trim()) {
+        // (el formulario no tiene campo «lugar»: el lugar sale del club del organizador)
+        if (lugarTorneo && !lugarTorneo.value.trim()) {
 
             evento.preventDefault();
 
@@ -2220,6 +2124,126 @@ const maxParticipantesTorneo =
     document.getElementById("maxParticipantes");
 
 
+/* ---------------------------------------------------------
+   CATEGORÍA Y TIPO BLOQUEADOS CUANDO EL TORNEO YA TIENE INSCRIPTOS
+   (el servidor lo vuelve a comprobar al guardar: esto es solo el aviso)
+   --------------------------------------------------------- */
+
+const notaCategoriaBloqueada =
+    document.getElementById("notaCategoriaBloqueada");
+
+const notaTipoBloqueado =
+    document.getElementById("notaTipoBloqueado");
+
+let inscriptosBloqueantesTorneo = 0;
+let categoriaOriginalTorneo = "";
+let tipoOriginalTorneo = "";
+
+
+function mostrarNotaBloqueoTorneo(nota, queCampo) {
+
+    if (!nota) {
+        return;
+    }
+
+    const n = inscriptosBloqueantesTorneo;
+
+    nota.textContent =
+        "No se puede cambiar " + queCampo + " de este torneo: ya tiene " +
+        n + (n === 1 ? " participante inscripto." : " participantes inscriptos.");
+
+    nota.hidden = false;
+
+    // Reinicia la animación cada vez que se intenta cambiar.
+    nota.classList.remove("campo-torneo-nota-animar");
+    void nota.offsetWidth;
+    nota.classList.add("campo-torneo-nota-animar");
+
+}
+
+
+function bloquearCategoriaYTipoTorneo(cantidad) {
+
+    inscriptosBloqueantesTorneo = cantidad;
+
+    categoriaOriginalTorneo = categoriaTorneo ? categoriaTorneo.value : "";
+    tipoOriginalTorneo = tipoTorneo ? tipoTorneo.value : "";
+
+    [categoriaTorneo, tipoTorneo].forEach(function (campo) {
+
+        if (campo) {
+            campo.classList.toggle("campo-bloqueado", cantidad > 0);
+            campo.title = cantidad > 0
+                ? "No se puede cambiar: el torneo ya tiene participantes inscriptos."
+                : "";
+        }
+
+    });
+
+    [notaCategoriaBloqueada, notaTipoBloqueado].forEach(function (nota) {
+
+        if (nota) {
+            nota.hidden = true;
+            nota.textContent = "";
+        }
+
+    });
+
+}
+
+
+function proteger(campo, nota, queCampo, valorOriginal) {
+
+    if (!campo) {
+        return;
+    }
+
+    function frenar(evento) {
+
+        if (inscriptosBloqueantesTorneo <= 0) {
+            return;
+        }
+
+        evento.preventDefault();
+
+        if (typeof campo.blur === "function") {
+            campo.blur();
+        }
+
+        mostrarNotaBloqueoTorneo(nota, queCampo);
+
+    }
+
+    campo.addEventListener("mousedown", frenar);
+    campo.addEventListener("click", frenar);
+
+    campo.addEventListener("keydown", function (evento) {
+
+        // Se puede salir del campo con Tab o Escape; cualquier otra tecla intentaría cambiarlo.
+        if (evento.key === "Tab" || evento.key === "Escape" || evento.key.indexOf("Shift") === 0) {
+            return;
+        }
+
+        frenar(evento);
+
+    });
+
+    // Por si algún navegador igual dejara cambiar el valor: se vuelve al original y se avisa.
+    campo.addEventListener("change", function () {
+
+        if (inscriptosBloqueantesTorneo > 0) {
+            campo.value = valorOriginal();
+            mostrarNotaBloqueoTorneo(nota, queCampo);
+        }
+
+    });
+
+}
+
+proteger(categoriaTorneo, notaCategoriaBloqueada, "la categoría", function () { return categoriaOriginalTorneo; });
+proteger(tipoTorneo, notaTipoBloqueado, "el tipo", function () { return tipoOriginalTorneo; });
+
+
 function activarModoCrearTorneo() {
 
     if (formularioTorneo) {
@@ -2232,6 +2256,8 @@ function activarModoCrearTorneo() {
         formularioTorneo.reset();
 
     }
+
+    bloquearCategoriaYTipoTorneo(0);
 
     fechaInicioOriginalTorneo = null;
 
@@ -2324,6 +2350,9 @@ function activarModoEditarTorneo(boton) {
     if (tipoTorneo) {
         tipoTorneo.value = boton.dataset.tipo || "";
     }
+
+    // Con participantes inscriptos no se puede cambiar la categoría ni el tipo.
+    bloquearCategoriaYTipoTorneo(parseInt(boton.dataset.inscriptos || "0", 10) || 0);
 
     if (maxParticipantesTorneo) {
 
@@ -2427,7 +2456,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const mensajesOk = {
         torneo_creado: "El torneo se creó correctamente.",
         torneo_actualizado: "Los cambios del torneo se guardaron correctamente.",
-        torneo_eliminado: "El torneo se eliminó correctamente."
     };
 
     const mensajesError = {
@@ -2440,6 +2468,7 @@ document.addEventListener("DOMContentLoaded", function () {
         categoria: "Seleccioná una categoría válida.",
         categoria_no_encontrada: "La categoría seleccionada no existe.",
         tipo: "Seleccioná un tipo de torneo válido.",
+        categoria_tipo_bloqueado: "Este torneo ya tiene participantes inscriptos, por eso no se puede cambiar su categoría ni su tipo. El resto de los datos sí se pueden modificar.",
         participantes: "La cantidad máxima de participantes no es válida.",
         estado: "Seleccioná un estado válido.",
         club_no_encontrado: "No se encontró el club asociado a tu cuenta.",
@@ -2560,6 +2589,44 @@ if (
         {},
         document.title,
         url.pathname + url.search
+    );
+
+}
+
+
+/* ---------------------------------------------
+   ERRORES AL CREAR / EDITAR / ELIMINAR
+   (se muestran en el mismo cuadro de mensajes, en modo aviso)
+   --------------------------------------------- */
+
+if (
+    modalMensajeExito &&
+    error &&
+    mensajesError[error] &&
+    !document.getElementById("mensajeError")   // las pantallas que ya muestran su propio mensaje no lo repiten
+) {
+
+    tituloMensajeExito.textContent =
+        error === "categoria_tipo_bloqueado"
+            ? "No se puede cambiar la categoría ni el tipo"
+            : "No se pudo completar la acción";
+
+    textoMensajeExito.textContent = mensajesError[error];
+
+    modalMensajeExito.classList.add("modo-aviso");
+    modalMensajeExito.classList.add("mostrar");
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    const urlError = new URL(window.location.href);
+
+    urlError.searchParams.delete("error");
+
+    window.history.replaceState(
+        {},
+        document.title,
+        urlError.pathname + urlError.search
     );
 
 }
@@ -2788,6 +2855,35 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
+    // Administrador y organizador: el mismo botón en celulares (la barra lateral queda oculta fuera de la pantalla).
+    const btnMenuPanel = document.getElementById("btnMenuMovilPanel");
+    const sidebarPanel = document.querySelector(".panel .sidebar");
+
+    if (btnMenuPanel && sidebarPanel) {
+
+        const cambiarMenuPanel = function (abierto) {
+            sidebarPanel.classList.toggle("mostrar-movil", abierto);
+            btnMenuPanel.setAttribute("aria-expanded", abierto ? "true" : "false");
+        };
+
+        btnMenuPanel.addEventListener("click", function () {
+            cambiarMenuPanel(!sidebarPanel.classList.contains("mostrar-movil"));
+        });
+
+        // Tocar el contenido (fuera del menú) lo cierra.
+        const contenidoPanel = document.querySelector(".panel .contenido");
+
+        if (contenidoPanel) {
+            contenidoPanel.addEventListener("click", function () {
+                if (sidebarPanel.classList.contains("mostrar-movil")) {
+                    cambiarMenuPanel(false);
+                }
+            });
+        }
+
+    }
+
+
     /* ---------------------------------------------
        BUSCADOR Y FILTRO DE ESTADO
        --------------------------------------------- */
@@ -2975,30 +3071,44 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    // «Cambiar compañero»: el titular ya tiene una invitación pendiente. Va directo al paso de elegir compañero
+    // (no hay nada que confirmar: no se inscribe de nuevo). El servidor cancela la invitación anterior al enviar la nueva.
+    function abrirCambioCompanero(boton) {
+
+        if (!modalInvitarCompanero || !idTorneoInvitar || !textoInvitarCompanero) {
+            return;
+        }
+
+        const nombre = boton.dataset.nombre || "este torneo";
+
+        tipoTorneoActual = boton.dataset.tipo || "";
+
+        idTorneoInvitar.value = boton.dataset.id || "";
+
+        textoInvitarCompanero.textContent =
+            "Ya tenés una invitación pendiente en el torneo \"" + nombre + "\". " +
+            "Si elegís a otro compañero, la invitación anterior se cancela y se envía una nueva.";
+
+        if (emailCompaneroInput) emailCompaneroInput.value = "";
+        if (emailCompaneroOculto) emailCompaneroOculto.value = "";
+        if (resultadoBusquedaCompanero) resultadoBusquedaCompanero.textContent = "";
+        if (resultadoBusquedaCompanero) resultadoBusquedaCompanero.className = "resultado-busqueda-companero";
+        if (enviarInvitacionBtn) enviarInvitacionBtn.disabled = true;
+
+        modalInvitarCompanero.classList.add("mostrar");
+
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
+    }
+
     botonesInscribirse.forEach(function (boton) {
 
         boton.addEventListener("click", function () {
 
-            // Categoría pendiente de revisión: se explica en el mismo modal de
-            // mensajes y no se abre el paso de inscripción ni se envía nada.
-            // (El servidor rechaza igual cualquier solicitud manual.)
-            if (boton.dataset.categoriaPendiente === "1") {
-
-                if (modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc) {
-
-                    tituloMensajeExitoInsc.textContent = "Categoría pendiente de revisión";
-                    textoMensajeExitoInsc.textContent = boton.dataset.mensaje || "";
-
-                    modalMensajeExitoInsc.classList.add("modo-aviso");
-                    modalMensajeExitoInsc.classList.add("mostrar");
-
-                    document.documentElement.style.overflow = "hidden";
-                    document.body.style.overflow = "hidden";
-
-                }
-
+            if (boton.dataset.cambiar === "1") {
+                abrirCambioCompanero(boton);
                 return;
-
             }
 
             const nombre = boton.dataset.nombre || "este torneo";
@@ -3026,6 +3136,66 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
     });
+
+    // Llegada desde la consulta pública (?inscribirme=ID): se abre la confirmación de ese torneo.
+    // Solo se ABRE el aviso: la inscripción se crea únicamente cuando la persona pulsa «Inscribirme»
+    // en él, y el servidor vuelve a validar estado, categoría, cupo y modalidad.
+    (function () {
+
+        let idPedido = null;
+
+        try {
+            idPedido = new URLSearchParams(window.location.search).get("inscribirme");
+        } catch (e) {
+            return;
+        }
+
+        if (!idPedido || !/^[0-9]+$/.test(idPedido)) {
+            return;
+        }
+
+        // Se limpia la URL para que recargar la página no vuelva a abrir el aviso.
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("inscribirme");
+            window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        } catch (e) { }
+
+        const tarjeta = document.getElementById("torneo-" + idPedido);
+        const botonPedido = tarjeta ? tarjeta.querySelector(".btn-inscribirse-participante") : null;
+
+        if (tarjeta) {
+            tarjeta.scrollIntoView({ block: "center" });
+        }
+
+        if (botonPedido) {
+            botonPedido.click();
+            return;
+        }
+
+        // No se puede inscribir: se explica el motivo real que ya muestra la tarjeta.
+        if (modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc) {
+
+            let motivo = "Este torneo no está disponible para inscribirte.";
+
+            const compat = tarjeta ? tarjeta.querySelector(".torneo-compat") : null;
+
+            if (compat && compat.textContent.trim() !== "") {
+                motivo = compat.textContent.replace(/\s+/g, " ").trim() + ".";
+            }
+
+            tituloMensajeExitoInsc.textContent = "No podés inscribirte a este torneo";
+            textoMensajeExitoInsc.textContent = motivo;
+
+            modalMensajeExitoInsc.classList.add("modo-aviso");
+            modalMensajeExitoInsc.classList.add("mostrar");
+
+            document.documentElement.style.overflow = "hidden";
+            document.body.style.overflow = "hidden";
+
+        }
+
+    })();
 
     // El "Inscribirme" del paso 1 solo se envía directo si es Individual.
     // En Parejas/Mixto abre el paso 2 en vez de mandar el formulario.
@@ -3180,6 +3350,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
         textoMensajeExitoInsc.textContent =
             "Le avisamos a tu compañero. En cuanto responda vas a ver la novedad en Notificaciones.";
+
+        modalMensajeExitoInsc.classList.add("mostrar");
+
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
+    }
+
+    if (
+        window.location.search.includes("invitacion=reemplazada") &&
+        modalMensajeExitoInsc && tituloMensajeExitoInsc && textoMensajeExitoInsc
+    ) {
+
+        tituloMensajeExitoInsc.textContent = "¡Compañero cambiado!";
+
+        textoMensajeExitoInsc.textContent =
+            "Tu invitación anterior fue cancelada y se envió una nueva invitación.";
 
         modalMensajeExitoInsc.classList.add("mostrar");
 

@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/config/animacion.php';   // animación de entrada
 require_once("funciones/csrf.php");
 require_once("funciones/clasificacion_categoria.php");
 
@@ -33,6 +34,13 @@ $csrf_token = generar_csrf_token();
             <p>Parte 1 de 2</p>
 
         </div>
+
+        <?php if (($_GET['error'] ?? '') === 'incoherente') { ?>
+            <div class="mensaje-error">
+                Tus respuestas resultaron incoherentes entre sí y no se pudo calcular tu categoría.
+                Por favor, volvé a completar la encuesta.
+            </div>
+        <?php } ?>
 
         <div class="progreso">
             <div class="barra"></div>
@@ -123,6 +131,6 @@ $csrf_token = generar_csrf_token();
     </div>
 
 </div>
-<script src="js/padel.js?v=9"></script>
+<script src="js/padel.js?v=17"></script>
 </body>
 </html>

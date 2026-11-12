@@ -1,0 +1,20 @@
+/* Confirmación con el modal del sitio (js/confirmar.js).
+   En las pantallas del panel, `body.panel-body button` (degradado azul) tiene más especificidad que
+   `.btn-confirmar-cancelacion`, así que el botón de una acción delicada se veía azul: acá se fuerza el rojo. */
+
+body.panel-body .modal-mensaje-exito .modal-inscripcion-botones .btn-confirmar-cancelacion {
+    background: linear-gradient(135deg, #e5484d, #c62a38);
+    box-shadow: 0 8px 22px rgba(220, 53, 69, 0.35);
+}
+
+body.panel-body .modal-mensaje-exito .modal-inscripcion-botones .btn-confirmar-cancelacion:hover {
+    filter: brightness(1.1);
+}
+
+body.panel-body .modal-mensaje-exito .modal-inscripcion-botones .btn-confirmar-cancelacion:disabled,
+body.panel-body .modal-mensaje-exito .modal-inscripcion-botones .btn-confirmar-inscripcion:disabled,
+body.panel-body .modal-mensaje-exito .modal-inscripcion-botones .btn-cancelar-inscripcion:disabled {
+    opacity: .6;
+    cursor: default;
+    filter: none;
+}

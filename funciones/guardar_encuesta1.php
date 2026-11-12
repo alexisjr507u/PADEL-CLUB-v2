@@ -18,7 +18,7 @@ $p1 = $_POST["p1"] ?? '';
 
 if ($p1 === "nunca") {
 
-    // Nunca jugó: Principiante, confirmada, sin revisión.
+    // Nunca jugó: Principiante.
     $_SESSION["id_categoria"] = 1;
     $_SESSION["categoria_estado"] = 'Confirmada';
 

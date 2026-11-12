@@ -1376,3 +1376,26 @@
     left: auto;
     right: 100%;
 }
+
+
+/* ---- Cuadro corto (torneos de 2 grupos: solo SEMIFINAL · FINAL · SEMIFINAL) ----
+   Mismo estilo que el cuadro de cuartos/octavos; partidos más anchos (no se cortan los nombres) y lugar arriba para el campeón. */
+.br-cuadro.br-corto {
+    --w: 230px;
+}
+
+.br-cuadro.br-corto .br-arbol {
+    padding-top: 104px;
+}
+
+
+/* ---- Copa sin campeón todavía (torneo en curso): misma copa, atenuada ---- */
+.br-campeon.br-campeon-pendiente {
+    border-color: #1f4f7c;
+    color: #5f7d9c;
+}
+
+.br-campeon.br-campeon-pendiente strong {
+    color: #7c8ba0;
+    font-weight: normal;
+}

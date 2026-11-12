@@ -2,8 +2,7 @@
 
 include("config/no_cache.php");
 
-session_start();
-
+require_once __DIR__ . '/config/sesion.php';
 if (!isset($_SESSION['id_usuario'])) {
     header("Location: login.php");
     exit();
@@ -141,7 +140,7 @@ $csrf_token = generar_csrf_token();
 
     </div>
 
-    <script src="js/padel.js?v=9"></script>
+    <script src="js/padel.js?v=17"></script>
 
 </body>
 

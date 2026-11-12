@@ -3,6 +3,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("club_categoria.php");
 require_once("enviar_invitacion.php");
 
 
@@ -41,7 +42,7 @@ if ($id_torneo <= 0 || !filter_var($email_invitado, FILTER_VALIDATE_EMAIL)) {
 
 $stmtTitular = mysqli_prepare(
     $conexion,
-    "SELECT nombre, apellido, email, id_categoria, categoria_estado FROM usuario WHERE id_usuario = ?"
+    "SELECT nombre, apellido, email FROM usuario WHERE id_usuario = ?"
 );
 mysqli_stmt_bind_param($stmtTitular, "i", $id_usuario_titular);
 mysqli_stmt_execute($stmtTitular);
@@ -68,7 +69,7 @@ try {
 
     $stmtTorneo = mysqli_prepare(
         $conexion,
-        "SELECT nombre, tipo, estado, id_categoria FROM torneos WHERE id_torneo = ? FOR UPDATE"
+        "SELECT nombre, tipo, estado, id_categoria, id_club, max_participantes FROM torneos WHERE id_torneo = ? FOR UPDATE"
     );
     mysqli_stmt_bind_param($stmtTorneo, "i", $id_torneo);
     mysqli_stmt_execute($stmtTorneo);
@@ -86,13 +87,14 @@ try {
         throw new Exception("tipo_invalido");
     }
 
-    // Una categoría pendiente de revisión no cuenta como confirmada.
-    if ($titular['categoria_estado'] === 'Pendiente') {
-        throw new Exception("categoria_pendiente");
-    }
+    // La categoría del titular se valida EN EL CLUB DEL TORNEO (pertenencia y categoría).
+    $motivoTitular = motivoSinCategoriaEnClub(
+        membresiaEnClub($conexion, $id_usuario_titular, (int) $torneo['id_club'], true),
+        (int) $torneo['id_categoria']
+    );
 
-    if ((int) $titular['id_categoria'] !== (int) $torneo['id_categoria']) {
-        throw new Exception("categoria_incompatible");
+    if ($motivoTitular !== '') {
+        throw new Exception($motivoTitular);
     }
 
 
@@ -110,6 +112,25 @@ try {
 
     if ($inscripcionExistente && $inscripcionExistente['estado'] === 'Confirmada') {
         throw new Exception("ya_inscripto");
+    }
+
+    // Una descalificación no se revierte reinscribiéndose.
+    if ($inscripcionExistente && $inscripcionExistente['estado'] === 'Descalificada') {
+        throw new Exception("descalificado");
+    }
+
+    // CUPO: la pareja necesita 2 lugares. La fila del torneo está bloqueada (FOR UPDATE) desde el principio, así que dos
+    // pedidos simultáneos (invitar, inscribirse o aceptar) se atienden de a uno y no pueden pasarse del máximo.
+    $stmtCupo = mysqli_prepare(
+        $conexion,
+        "SELECT COUNT(*) AS n FROM inscripcion WHERE id_torneo = ? AND estado = 'Confirmada'"
+    );
+    mysqli_stmt_bind_param($stmtCupo, "i", $id_torneo);
+    mysqli_stmt_execute($stmtCupo);
+    $confirmados = (int) mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCupo))['n'];
+
+    if ($confirmados + 2 > (int) $torneo['max_participantes']) {
+        throw new Exception("torneo_lleno");
     }
 
     if ($inscripcionExistente) {
@@ -146,7 +167,7 @@ try {
 
     $stmtInvitado = mysqli_prepare(
         $conexion,
-        "SELECT id_usuario, nombre, apellido, id_categoria, categoria_estado FROM usuario WHERE email = ?"
+        "SELECT id_usuario, nombre, apellido FROM usuario WHERE email = ?"
     );
     mysqli_stmt_bind_param($stmtInvitado, "s", $email_invitado);
     mysqli_stmt_execute($stmtInvitado);
@@ -156,17 +177,20 @@ try {
 
     if ($invitado) {
 
-        if ($invitado['categoria_estado'] === 'Pendiente') {
-            throw new Exception("companero_categoria_pendiente");
-        }
+        // Si ya tiene cuenta, su categoría también se valida EN EL CLUB DEL TORNEO. (Quien todavía no tiene cuenta
+        // se valida cuando acepte la invitación: ahí debe unirse al club para tener su categoría en él.)
+        $motivoInvitado = motivoSinCategoriaEnClub(
+            membresiaEnClub($conexion, (int) $invitado['id_usuario'], (int) $torneo['id_club']),
+            (int) $torneo['id_categoria']
+        );
 
-        if ((int) $invitado['id_categoria'] !== (int) $torneo['id_categoria']) {
-            throw new Exception("companero_categoria_incompatible");
+        if ($motivoInvitado !== '') {
+            throw new Exception('companero_' . $motivoInvitado);
         }
 
         $stmtInvitadoInscripto = mysqli_prepare(
             $conexion,
-            "SELECT id_inscripcion FROM inscripcion WHERE id_torneo = ? AND id_usuario = ?"
+            "SELECT id_inscripcion FROM inscripcion WHERE id_torneo = ? AND id_usuario = ? AND estado <> 'Retirada'"
         );
         mysqli_stmt_bind_param($stmtInvitadoInscripto, "ii", $id_torneo, $invitado['id_usuario']);
         mysqli_stmt_execute($stmtInvitadoInscripto);
@@ -186,6 +210,62 @@ try {
     // unico de invitacion.pendiente_marca va a rechazar el INSERT)
     // ==========================================
 
+    // Como máximo UNA invitación pendiente por titular y torneo. Si ya hay otra:
+    //  - a la MISMA persona: no se hace nada (invitacion_duplicada; la original queda intacta);
+    //  - ya vencida (pasaron los 7 días): se marca Vencida, que es lo que es;
+    //  - a OTRA persona, todavía vigente: se CANCELA (queda en la base con estado Cancelada) y se crea la nueva.
+    // Todo dentro de la misma transacción: si la nueva invitación no se puede crear, la anterior sigue Pendiente
+    // (el rollback del catch deshace la cancelación). El torneo está bloqueado (FOR UPDATE) desde el principio, así que dos
+    // pedidos simultáneos del mismo titular se atienden de a uno.
+    $invitacionReemplazada = false;
+
+    $stmtPendiente = mysqli_prepare(
+        $conexion,
+        "SELECT id_invitacion, id_usuario_invitado, email_invitado, (fecha_vencimiento < NOW()) AS vencida
+         FROM invitacion
+         WHERE id_inscripcion_invita = ? AND estado = 'Pendiente'
+         FOR UPDATE"
+    );
+    mysqli_stmt_bind_param($stmtPendiente, "i", $id_inscripcion_titular);
+    mysqli_stmt_execute($stmtPendiente);
+    $invitacionPendiente = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtPendiente));
+
+    if ($invitacionPendiente) {
+
+        if ((int) $invitacionPendiente['vencida'] === 1) {
+
+            $nuevoEstadoAnterior = 'Vencida';
+
+        } else {
+
+            $mismaPersona =
+                strcasecmp($invitacionPendiente['email_invitado'], $email_invitado) === 0
+                || ($id_usuario_invitado !== null
+                    && $invitacionPendiente['id_usuario_invitado'] !== null
+                    && (int) $invitacionPendiente['id_usuario_invitado'] === (int) $id_usuario_invitado);
+
+            if ($mismaPersona) {
+                throw new Exception("invitacion_duplicada");
+            }
+
+            $nuevoEstadoAnterior = 'Cancelada';
+            $invitacionReemplazada = true;
+
+        }
+
+        $stmtCerrarAnterior = mysqli_prepare(
+            $conexion,
+            "UPDATE invitacion SET estado = ? WHERE id_invitacion = ? AND estado = 'Pendiente'"
+        );
+        mysqli_stmt_bind_param($stmtCerrarAnterior, "si", $nuevoEstadoAnterior, $invitacionPendiente['id_invitacion']);
+        mysqli_stmt_execute($stmtCerrarAnterior);
+
+        if (mysqli_stmt_affected_rows($stmtCerrarAnterior) !== 1) {
+            throw new Exception("error_bd");
+        }
+
+    }
+
     $stmtInvitacion = mysqli_prepare(
         $conexion,
         "INSERT INTO invitacion (id_torneo, id_inscripcion_invita, email_invitado, id_usuario_invitado)
@@ -200,14 +280,16 @@ try {
         $id_usuario_invitado
     );
 
-    if (!mysqli_stmt_execute($stmtInvitacion)) {
-
-        if (mysqli_errno($conexion) === 1062) {
+    // mysqli lanza excepción ante un error de SQL: el índice único (una pendiente por inscripción) también protege de pedidos
+    // simultáneos que pasen la comprobación anterior. El error SQL nunca sale hacia el usuario.
+    try {
+        mysqli_stmt_execute($stmtInvitacion);
+    } catch (mysqli_sql_exception $e) {
+        if ((int) $e->getCode() === 1062) {
             throw new Exception("invitacion_duplicada");
         }
-
+        error_log("Error SQL al crear invitacion (torneo $id_torneo): " . $e->getMessage());
         throw new Exception("error_bd");
-
     }
 
     $id_invitacion = mysqli_insert_id($conexion);
@@ -261,7 +343,7 @@ try {
         // invitación sigue siendo visible y accionable desde sus
         // Notificaciones, así que esto no deja de ser una operación
         // exitosa para el titular.
-        header("Location: ../paneles.php?seccion=torneos&invitacion=exito");
+        header("Location: ../paneles.php?seccion=torneos&invitacion=" . ($invitacionReemplazada ? 'reemplazada' : 'exito'));
         exit;
 
     }
@@ -287,7 +369,7 @@ try {
 
     }
 
-    header("Location: ../paneles.php?seccion=torneos&invitacion=exito");
+    header("Location: ../paneles.php?seccion=torneos&invitacion=" . ($invitacionReemplazada ? 'reemplazada' : 'exito'));
     exit;
 
 } catch (Exception $e) {
@@ -295,6 +377,13 @@ try {
     mysqli_rollback($conexion);
 
     $motivo = $e->getMessage();
+
+    // Solo salen códigos propios de este flujo. Cualquier error interno (SQL u otro) se registra y se muestra como error_bd,
+    // sin mensajes de MySQL ni datos internos en la URL.
+    if ($e instanceof mysqli_sql_exception || !preg_match('/^[a-z_]+$/', $motivo)) {
+        error_log("Error inesperado al invitar companero (torneo $id_torneo): " . $e->getMessage());
+        $motivo = 'error_bd';
+    }
 
     if ($motivo === 'error_bd' || $motivo === 'no_existe') {
         error_log("Error al invitar companero (torneo $id_torneo): " . $motivo);

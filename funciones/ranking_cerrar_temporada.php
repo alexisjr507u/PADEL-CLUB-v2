@@ -7,7 +7,8 @@ require_once("ranking_temporada.php");
 
 
 // ==========================================
-// SEGURIDAD: organizador o administrador (se valida en el servidor)
+// SEGURIDAD: organizador o administrador (se valida en el servidor). Además, el organizador solo puede finalizar la temporada de SUS clubes:
+// cerrarTemporada() lo confirma contra la base (administrador: cualquier club).
 // ==========================================
 
 if (!isset($_SESSION['id_usuario']) || !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 2], true)) {
@@ -26,15 +27,19 @@ if (!verificar_csrf_token($_POST['csrf_token'] ?? '')) {
 }
 
 $idTemporada = intval($_POST['id_temporada'] ?? 0);
+$idClub = intval($_POST['id_club'] ?? 0);
 
-if ($idTemporada <= 0) {
+if ($idTemporada <= 0 || $idClub <= 0) {
     header("Location: ../paneles.php?seccion=ranking&accion=datos_invalidos");
     exit;
 }
 
-$resultado = cerrarTemporada($conexion, (int) $_SESSION['id_usuario'], $idTemporada);
+$resultado = cerrarTemporada($conexion, (int) $_SESSION['id_usuario'], $idClub, $idTemporada);
 
 $accion = $resultado['ok'] ? 'temporada_cerrada' : $resultado['error'];
 
-header("Location: ../paneles.php?seccion=ranking&accion=" . urlencode($accion));
+// Se vuelve al ranking del mismo club (si no tenía permiso sobre ese club, se vuelve sin club para no revelar nada).
+$club = $resultado['ok'] || $resultado['error'] !== 'sin_permiso' ? '&club=' . $idClub : '';
+
+header("Location: ../paneles.php?seccion=ranking&accion=" . urlencode($accion) . $club);
 exit;

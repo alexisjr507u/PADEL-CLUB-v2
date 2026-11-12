@@ -1,12 +1,11 @@
 <?php
 include("../config/no_cache.php");
-session_start();
-session_destroy();
+require_once __DIR__ . '/../config/sesion.php';
 
 // Eliminar todas las variables de sesión
 $_SESSION = array();
 
-// Destruir la sesión
+// Destruir la sesión (una sola vez: antes se destruía dos veces y PHP avisaba en cada cierre)
 session_destroy();
 
 // Eliminar cookie de sesión

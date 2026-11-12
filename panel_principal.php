@@ -18,39 +18,33 @@ if (isset($_SESSION['id_usuario'])) {
 
 
 /* =========================================================
-   TOP 3 JUGADORES POR CATEGORÍA
-   (todavía no hay un sistema de puntos/partidos,
-   así que se muestra por categoría como referencia)
+   TOP 3 DE UN CLUB
+   Cada club tiene su propio ranking: el top 3 sale de los puntos REALES ganados en torneos de ese club (nunca de otros
+   clubes ni de la categoría de registro). El club se elige con ?club=ID entre los clubes registrados (público).
+   Con un solo club se elige solo; con varios hay que elegir uno: no se elige ninguno por el visitante.
    ========================================================= */
 
+require_once("funciones/ranking_vista.php");
+
+$clubesLanding = rankingClubesRegistrados($conexion);
+$clubLanding = rkElegirClub(array_column($clubesLanding, 'id_club'), rkClubDeGet());
+$nombreClubLanding = '';
 $ranking = [];
 
-$sqlRanking = "
-    SELECT
-        usuario.nombre,
-        usuario.apellido,
-        categoria.nombre AS categoria
-    FROM usuario
-    INNER JOIN categoria
-        ON usuario.id_categoria = categoria.id_categoria
-    WHERE usuario.id_rol = 3
-      AND usuario.verificado = 1
-    ORDER BY
-        categoria.id_categoria DESC,
-        usuario.id_usuario ASC
-    LIMIT 3
-";
+if ($clubLanding !== null) {
 
-$resultadoRanking = mysqli_query($conexion, $sqlRanking);
+    $datosClub = rankingDeClubPublico($conexion, $clubLanding, 'historico');
 
-if ($resultadoRanking) {
+    if ($datosClub !== null) {
 
-    while ($fila = mysqli_fetch_assoc($resultadoRanking)) {
-        $ranking[] = $fila;
+        $nombreClubLanding = $datosClub['club']['nombre'];
+
+        // Los tres primeros con puntos (los empatados comparten posición; las filas ya vienen ordenadas).
+        $ranking = array_slice(array_values(array_filter($datosClub['filas'], fn($f) => $f['puntos'] > 0)), 0, 3);
+
     }
 
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -68,7 +62,7 @@ if ($resultadoRanking) {
     <title>The Bull Padel Club</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/panel_principal.css">
+    <link rel="stylesheet" href="css/panel_principal.css?v=2">
 
 </head>
 
@@ -102,14 +96,14 @@ if ($resultadoRanking) {
             </li>
 
             <li>
-                <a href="#torneos">
+                <a href="torneos_publicos.php">
                     <i class="bi bi-trophy-fill"></i>
                     Torneos
                 </a>
             </li>
 
             <li>
-                <a href="#ranking">
+                <a href="ranking_publico.php">
                     <i class="bi bi-bar-chart-fill"></i>
                     Ranking
                 </a>
@@ -185,8 +179,8 @@ if ($resultadoRanking) {
                         <i class="bi bi-arrow-right"></i>
                     </a>
 
-                    <a href="login.php" class="btn-landing-secundario">
-                        Explorar
+                    <a href="torneos_publicos.php" class="btn-landing-secundario">
+                        Explorar torneos
                     </a>
 
                 </div>
@@ -202,9 +196,21 @@ if ($resultadoRanking) {
                         <h3>Ranking</h3>
                     </div>
 
-                    <a href="login.php">Ver todos</a>
+                    <a href="<?php echo $clubLanding !== null ? 'ranking_publico.php?club=' . (int) $clubLanding : 'ranking_publico.php'; ?>">Ver todos</a>
 
                 </div>
+
+                <?php if (!empty($clubesLanding)) { ?>
+                    <nav class="landing-clubes" aria-label="Elegir club">
+                        <?php foreach ($clubesLanding as $clubL) { $activoL = ($clubLanding === (int) $clubL['id_club']); ?>
+                            <a href="panel_principal.php?club=<?php echo (int) $clubL['id_club']; ?>#ranking"
+                               class="landing-club <?php echo $activoL ? 'activo' : ''; ?>"
+                               <?php echo $activoL ? 'aria-current="page"' : ''; ?>>
+                                <?php echo htmlspecialchars($clubL['nombre'], ENT_QUOTES, 'UTF-8'); ?>
+                            </a>
+                        <?php } ?>
+                    </nav>
+                <?php } ?>
 
                 <?php if (count($ranking) > 0) { ?>
 
@@ -213,7 +219,7 @@ if ($resultadoRanking) {
                         <div class="landing-ranking-item">
 
                             <span class="landing-ranking-puesto">
-                                <?php echo $indice + 1; ?>
+                                <?php echo (int) $jugador['posicion']; ?>
                             </span>
 
                             <div class="landing-ranking-avatar">
@@ -246,6 +252,7 @@ if ($resultadoRanking) {
                                             'UTF-8'
                                         );
                                     ?>
+                                    · <?php echo number_format((int) $jugador['puntos'], 0, ',', '.'); ?> pts
                                 </span>
 
                             </div>
@@ -257,7 +264,13 @@ if ($resultadoRanking) {
                 <?php } else { ?>
 
                     <p class="landing-ranking-vacio">
-                        Todavía no hay jugadores para mostrar.
+                        <?php if (empty($clubesLanding)) { ?>
+                            Todavía no hay clubes registrados.
+                        <?php } elseif ($clubLanding === null) { ?>
+                            Elegí un club para ver su top 3.
+                        <?php } else { ?>
+                            Todavía no hay resultados en <?php echo htmlspecialchars($nombreClubLanding, ENT_QUOTES, 'UTF-8'); ?>.
+                        <?php } ?>
                     </p>
 
                 <?php } ?>
@@ -276,7 +289,7 @@ if ($resultadoRanking) {
         </div>
 
     </header>
-    <script src="js/padel.js?v=9"></script>
+    <script src="js/padel.js?v=17"></script>
 </body>
 
 </html>

@@ -3,7 +3,9 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("club_categoria.php");
 require_once("enviar_invitacion.php");
+require_once("error_flujo.php");
 
 
 // ==========================================
@@ -35,9 +37,50 @@ if ($id_invitacion <= 0 || !in_array($accion, ['aceptar', 'rechazar'], true)) {
 }
 
 
-mysqli_begin_transaction($conexion);
+// Códigos propios que este flujo puede mostrar (lista blanca). Cualquier otro error se registra y sale como error_bd.
+$codigosPermitidosResponder = [
+    'no_existe', 'no_autorizado', 'invitacion_no_pendiente', 'invitacion_cancelada', 'cerrado',
+    'categoria_incompatible', 'no_pertenece_club', 'sin_categoria', 'ya_inscripto', 'cupo_completo',
+    'pareja_incompatible', 'error_bd',
+];
+$contextoResponder = "responder_invitacion invitacion=$id_invitacion usuario=$id_usuario_actual";
 
 try {
+
+    // El torneo de la invitación se averigua FUERA de la transacción (lectura simple, sin bloqueo): si fuera la primera lectura de la
+    // transacción fijaría la instantánea antes de esperar el bloqueo y el recuento de cupo vería datos viejos.
+    $stmtTorneoDeInv = mysqli_prepare($conexion, "SELECT id_torneo FROM invitacion WHERE id_invitacion = ?");
+    mysqli_stmt_bind_param($stmtTorneoDeInv, "i", $id_invitacion);
+    mysqli_stmt_execute($stmtTorneoDeInv);
+    $filaTorneoDeInv = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtTorneoDeInv));
+    mysqli_stmt_close($stmtTorneoDeInv);
+
+    mysqli_begin_transaction($conexion);
+
+} catch (Throwable $e) {
+
+    // La lectura previa también está cubierta: un error de SQL acá no puede quedar sin manejar ni mostrar nada interno.
+    rollbackSeguro($conexion, $contextoResponder . ' (lectura previa)');
+
+    $motivo = codigoDeErrorSeguro($e, $codigosPermitidosResponder, $contextoResponder . ' (lectura previa)');
+
+    header("Location: ../paneles.php?seccion=notificaciones&error=" . urlencode($motivo));
+    exit;
+
+}
+
+try {
+
+    // El torneo se bloquea PRIMERO (mismo orden que invitar_companero.php e inscribir_torneo.php): así aceptar/rechazar una
+    // invitación y que el titular la reemplace al mismo tiempo se atienden de a uno, sin interbloqueos.
+    if ($filaTorneoDeInv) {
+        $stmtBloqueoTorneo = mysqli_prepare($conexion, "SELECT id_torneo FROM torneos WHERE id_torneo = ? FOR UPDATE");
+        $idTorneoDeInv = (int) $filaTorneoDeInv['id_torneo'];
+        mysqli_stmt_bind_param($stmtBloqueoTorneo, "i", $idTorneoDeInv);
+        mysqli_stmt_execute($stmtBloqueoTorneo);
+        mysqli_stmt_get_result($stmtBloqueoTorneo);
+        mysqli_stmt_close($stmtBloqueoTorneo);
+    }
 
     // ==========================================
     // BLOQUEAR LA INVITACIÓN Y VERIFICAR QUE SEA
@@ -50,7 +93,8 @@ try {
                 i.id_usuario_invitado,
                 insc.id_usuario AS id_usuario_titular,
                 t.nombre AS nombre_torneo, t.estado AS estado_torneo,
-                t.id_categoria, t.max_participantes
+                t.id_categoria, t.id_club, t.max_participantes,
+                (i.fecha_vencimiento < NOW()) AS vencida
          FROM invitacion i
          INNER JOIN inscripcion insc ON insc.id_inscripcion = i.id_inscripcion_invita
          INNER JOIN torneos t ON t.id_torneo = i.id_torneo
@@ -70,11 +114,17 @@ try {
         throw new Exception("no_autorizado");
     }
 
+    // Cancelada por quien invitó (eligió otro compañero): no se puede aceptar ni rechazar como si siguiera vigente.
+    if ($invitacion['estado'] === 'Cancelada') {
+        throw new Exception("invitacion_cancelada");
+    }
+
     if ($invitacion['estado'] !== 'Pendiente') {
         throw new Exception("invitacion_no_pendiente");
     }
 
-    if (strtotime($invitacion['fecha_vencimiento']) < time()) {
+    // El vencimiento se compara en MySQL (NOW()): fecha_vencimiento se guardó con la hora de Argentina y PHP trabaja en UTC.
+    if ((int) $invitacion['vencida'] === 1) {
 
         $stmtVencer = mysqli_prepare(
             $conexion,
@@ -152,13 +202,18 @@ try {
 
         mysqli_commit($conexion);
 
+        // El rechazo ya está confirmado: un fallo al avisar por mail no puede convertirse en un mensaje de error.
         if ($datosTitular) {
-            enviarAvisoRespuestaInvitacion(
-                $datosTitular['email'],
-                $miNombre['nombre'] . ' ' . $miNombre['apellido'],
-                $invitacion['nombre_torneo'],
-                false
-            );
+            try {
+                enviarAvisoRespuestaInvitacion(
+                    $datosTitular['email'],
+                    $miNombre['nombre'] . ' ' . $miNombre['apellido'],
+                    $invitacion['nombre_torneo'],
+                    false
+                );
+            } catch (Throwable $eMail) {
+                error_log("[$contextoResponder] Falló el aviso por mail del rechazo: " . $eMail->getMessage());
+            }
         }
 
         header("Location: ../paneles.php?seccion=notificaciones&invitacion=rechazada");
@@ -175,22 +230,19 @@ try {
         throw new Exception("cerrado");
     }
 
-    $stmtMiCategoria = mysqli_prepare($conexion, "SELECT id_categoria, categoria_estado FROM usuario WHERE id_usuario = ?");
-    mysqli_stmt_bind_param($stmtMiCategoria, "i", $id_usuario_actual);
-    mysqli_stmt_execute($stmtMiCategoria);
-    $miCategoria = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtMiCategoria));
+    // Quien acepta debe pertenecer al club del torneo y tener allí la categoría del torneo (confirmada).
+    $motivoMiCategoria = motivoSinCategoriaEnClub(
+        membresiaEnClub($conexion, $id_usuario_actual, (int) $invitacion['id_club'], true),
+        (int) $invitacion['id_categoria']
+    );
 
-    if ($miCategoria['categoria_estado'] === 'Pendiente') {
-        throw new Exception("categoria_pendiente");
-    }
-
-    if ((int) $miCategoria['id_categoria'] !== (int) $invitacion['id_categoria']) {
-        throw new Exception("categoria_incompatible");
+    if ($motivoMiCategoria !== '') {
+        throw new Exception($motivoMiCategoria);
     }
 
     $stmtYaInscripto = mysqli_prepare(
         $conexion,
-        "SELECT id_inscripcion FROM inscripcion WHERE id_torneo = ? AND id_usuario = ?"
+        "SELECT id_inscripcion FROM inscripcion WHERE id_torneo = ? AND id_usuario = ? AND estado <> 'Retirada'"
     );
     mysqli_stmt_bind_param($stmtYaInscripto, "ii", $invitacion['id_torneo'], $id_usuario_actual);
     mysqli_stmt_execute($stmtYaInscripto);
@@ -211,14 +263,34 @@ try {
         throw new Exception("cupo_completo");
     }
 
-    // Crear la inscripción del que acepta, ya confirmada.
-    $stmtInsc = mysqli_prepare(
+    // Si el que acepta había sido retirado antes, se reutiliza su inscripción (hay una sola por torneo y usuario).
+    $stmtRetirada = mysqli_prepare(
         $conexion,
-        "INSERT INTO inscripcion (id_torneo, id_usuario, estado) VALUES (?, ?, 'Confirmada')"
+        "SELECT id_inscripcion FROM inscripcion WHERE id_torneo = ? AND id_usuario = ? AND estado = 'Retirada' FOR UPDATE"
     );
-    mysqli_stmt_bind_param($stmtInsc, "ii", $invitacion['id_torneo'], $id_usuario_actual);
-    mysqli_stmt_execute($stmtInsc);
-    $id_inscripcion_acepta = mysqli_insert_id($conexion);
+    mysqli_stmt_bind_param($stmtRetirada, "ii", $invitacion['id_torneo'], $id_usuario_actual);
+    mysqli_stmt_execute($stmtRetirada);
+    $filaRetirada = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtRetirada));
+
+    if ($filaRetirada) {
+
+        $id_inscripcion_acepta = (int) $filaRetirada['id_inscripcion'];
+        $stmtReconfirmar = mysqli_prepare($conexion, "UPDATE inscripcion SET estado = 'Confirmada', fecha_inscripcion = NOW() WHERE id_inscripcion = ?");
+        mysqli_stmt_bind_param($stmtReconfirmar, "i", $id_inscripcion_acepta);
+        mysqli_stmt_execute($stmtReconfirmar);
+
+    } else {
+
+        // Crear la inscripción del que acepta, ya confirmada.
+        $stmtInsc = mysqli_prepare(
+            $conexion,
+            "INSERT INTO inscripcion (id_torneo, id_usuario, estado) VALUES (?, ?, 'Confirmada')"
+        );
+        mysqli_stmt_bind_param($stmtInsc, "ii", $invitacion['id_torneo'], $id_usuario_actual);
+        mysqli_stmt_execute($stmtInsc);
+        $id_inscripcion_acepta = mysqli_insert_id($conexion);
+
+    }
 
     // Confirmar la inscripción del titular.
     $stmtConfirmarTitular = mysqli_prepare(
@@ -241,7 +313,20 @@ try {
         $id_inscripcion_acepta
     );
 
-    if (!mysqli_stmt_execute($stmtPareja)) {
+    // El trigger de pareja corta con SQLSTATE 45000 cuando las inscripciones no son válidas para formar una pareja: eso es
+    // pareja_incompatible. Cualquier otro error de SQL sigue hacia el manejo general (error_bd / conflicto_temporal).
+    $parejaCreada = false;
+
+    try {
+        $parejaCreada = mysqli_stmt_execute($stmtPareja);
+    } catch (mysqli_sql_exception $eTrigger) {
+        if ($eTrigger->getSqlState() !== '45000') {
+            throw $eTrigger;
+        }
+        error_log("[$contextoResponder] Pareja rechazada por la base de datos (SQLSTATE 45000): " . $eTrigger->getMessage());
+    }
+
+    if (!$parejaCreada) {
         throw new Exception("pareja_incompatible");
     }
 
@@ -296,29 +381,34 @@ try {
     mysqli_stmt_bind_param($stmtMarcarLeida, "ii", $id_usuario_actual, $id_invitacion);
     mysqli_stmt_execute($stmtMarcarLeida);
 
+    actividadParejaFormada($conexion, $invitacion['id_torneo'], $id_usuario_actual, $invitacion['id_usuario_titular']);
+
     mysqli_commit($conexion);
 
+    // La aceptación ya está confirmada (commit): un fallo al avisar por mail no puede mostrarse como si la operación hubiera fallado.
     if ($datosTitular) {
-        enviarAvisoRespuestaInvitacion(
-            $datosTitular['email'],
-            $miNombre['nombre'] . ' ' . $miNombre['apellido'],
-            $invitacion['nombre_torneo'],
-            true
-        );
+        try {
+            enviarAvisoRespuestaInvitacion(
+                $datosTitular['email'],
+                $miNombre['nombre'] . ' ' . $miNombre['apellido'],
+                $invitacion['nombre_torneo'],
+                true
+            );
+        } catch (Throwable $eMail) {
+            error_log("[$contextoResponder] Falló el aviso por mail de la aceptación: " . $eMail->getMessage());
+        }
     }
 
     header("Location: ../paneles.php?seccion=notificaciones&invitacion=aceptada");
     exit;
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
 
-    mysqli_rollback($conexion);
+    rollbackSeguro($conexion, $contextoResponder);
 
-    $motivo = $e->getMessage();
-
-    if ($motivo === 'error_bd' || $motivo === 'no_existe') {
-        error_log("Error al responder invitacion $id_invitacion: " . $motivo);
-    }
+    // Solo viajan códigos propios de la lista blanca; los errores de MySQL o inesperados se registran completos (error_log)
+    // y salen como error_bd (o conflicto_temporal ante interbloqueo / tiempo de espera). Nunca el mensaje original.
+    $motivo = codigoDeErrorSeguro($e, $codigosPermitidosResponder, $contextoResponder);
 
     header("Location: ../paneles.php?seccion=notificaciones&error=" . urlencode($motivo));
     exit;

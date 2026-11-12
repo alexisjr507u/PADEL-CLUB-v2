@@ -3,6 +3,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
 
 
 // ==========================================
@@ -58,6 +59,9 @@ try {
     if (!$esAdmin && (int) $torneo['id_organizador'] !== (int) $_SESSION['id_usuario']) {
         throw new Exception("sin_permiso");
     }
+
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'estructura');
 
     $stmtOrden = mysqli_prepare(
         $conexion,

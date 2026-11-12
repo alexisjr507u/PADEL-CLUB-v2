@@ -3,6 +3,7 @@
 include("../config/no_cache.php");
 include("../config/conexion.php");
 require_once("csrf.php");
+require_once("estado_grupos.php");
 
 
 if (!isset($_SESSION['id_usuario']) || !in_array($_SESSION['id_rol'], [1, 2], true)) {
@@ -55,6 +56,9 @@ try {
     if (!$esAdmin && (int) $torneo['id_organizador'] !== (int) $_SESSION['id_usuario']) {
         throw new Exception("sin_permiso");
     }
+
+    // El estado del torneo se lee de la base: según el estado hay acciones que ya no corresponden.
+    $estadoTorneoActual = exigirEstadoParaGrupos($conexion, $id_torneo, 'estructura');
 
     if ($tipo === 'inscripcion') {
 
@@ -124,7 +128,7 @@ try {
 
     if ($e->getCode() === 1451 || mysqli_errno($conexion) === 1451) {
         $motivo = 'tiene_partidos';
-    } elseif (!in_array($motivo, ['no_existe', 'sin_permiso', 'elemento_no_asignado'], true)) {
+    } elseif (!in_array($motivo, ['no_existe', 'sin_permiso', 'elemento_no_asignado', 'torneo_finalizado_grupos', 'grupos_ya_generados'], true)) {
         error_log("Error al quitar $tipo $id_elemento de su grupo: " . mysqli_error($conexion));
         $motivo = 'error_bd';
     }

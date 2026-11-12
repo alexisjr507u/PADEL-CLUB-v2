@@ -4,26 +4,24 @@ include("config/no_cache.php");
 include("config/conexion.php");
 require_once("funciones/standings.php");
 require_once("funciones/ranking_torneo.php");
+require_once("funciones/publico_datos.php");
+require_once("funciones/publico_componentes.php");
 
 
 /* =========================================================
    SEGURIDAD
    ========================================================= */
 
-if (!isset($_SESSION['id_usuario'])) {
+// MODO PÚBLICO: un visitante sin sesión puede CONSULTAR el torneo (solo lectura). En ese modo no se
+// muestra el menú del panel ni ninguna herramienta del organizador, y ninguna acción de escritura
+// está disponible desde esta página. Con sesión, todo funciona como siempre.
+$modoPublico = !isset($_SESSION['id_usuario']);
 
-    header("Location: login.php");
-    exit();
-
-}
-
-
-
-  if (
+if (!$modoPublico && (
     $_SESSION['id_rol'] != 1 &&
     $_SESSION['id_rol'] != 2 &&
     $_SESSION['id_rol'] != 3
-) {
+)) {
     header("Location: paneles.php");
     exit();
 }
@@ -41,12 +39,12 @@ $id_torneo = filter_input(
 
 if (!$id_torneo) {
 
-    header("Location: paneles.php?seccion=torneos&error=torneo_invalido");
+    header("Location: " . ($modoPublico ? "torneos_publicos.php" : "paneles.php?seccion=torneos&error=torneo_invalido"));
     exit();
 
 }
 
-$id_usuario = $_SESSION['id_usuario'];
+$id_usuario = $_SESSION['id_usuario'] ?? 0;
 
 $sqlTorneo = "
     SELECT
@@ -57,10 +55,14 @@ $sqlTorneo = "
         torneos.tipo,
         torneos.estado,
         torneos.max_participantes,
-        categoria.nombre AS categoria
+        torneos.lugar,
+        categoria.nombre AS categoria,
+        club.nombre AS club
     FROM torneos
     INNER JOIN categoria
         ON torneos.id_categoria = categoria.id_categoria
+    INNER JOIN club
+        ON club.id_club = torneos.id_club
     WHERE torneos.id_torneo = ?
     LIMIT 1
 ";
@@ -83,7 +85,7 @@ mysqli_stmt_close($stmtTorneo);
 
 if (!$torneo) {
 
-    header("Location: paneles.php?seccion=torneos&error=sin_permiso");
+    header("Location: " . ($modoPublico ? "torneos_publicos.php" : "paneles.php?seccion=torneos&error=sin_permiso"));
     exit();
 
 }
@@ -274,7 +276,7 @@ if (count($filasGruposGuardados) > 0) {
             if ($esIndividualGrupo) {
 
                 $miembrosGrupo[] = [
-                    'nombre' => trim($m['nombre'] . ' ' . $m['apellido']),
+                    'nombre' => trim($m['nombre'] . ' ' . $m['apellido']) . (!empty($m['descalificado']) ? ' (descalificado)' : ''),
                     'pj' => $fila['pj'],
                     'pg' => $fila['pg'],
                     'pp' => $fila['pp'],
@@ -288,7 +290,7 @@ if (count($filasGruposGuardados) > 0) {
                 $miembrosGrupo[] = [
                     'nombres' => [
                         trim($m['nombre1'] . ' ' . $m['apellido1']),
-                        trim($m['nombre2'] . ' ' . $m['apellido2']),
+                        trim($m['nombre2'] . ' ' . $m['apellido2']) . (!empty($m['descalificado']) ? ' (descalificado)' : ''),
                     ],
                     'apellidos' => [
                         trim($m['apellido1']),
@@ -365,6 +367,26 @@ if (count($filasGruposGuardados) > 0) {
    ========================================================= */
 
 $rankingTorneo = calcularRankingTorneo($conexion, $id_torneo, $torneo['tipo'] === 'Individual');
+
+// Consulta pública: partidos y resultados de la fase de grupos (solo nombres y marcador, nada privado)
+$partidosPublicos = $modoPublico
+    ? publicoPartidosDeGrupos($conexion, $id_torneo, $torneo['tipo'] === 'Individual')
+    : [];
+
+$confirmadosTorneo = 0;
+
+if ($modoPublico || (int) ($_SESSION['id_rol'] ?? 0) === 3) {
+
+    $filaConfirmados = publicoConsulta(
+        $conexion,
+        "SELECT COUNT(*) AS n FROM inscripcion WHERE id_torneo = ? AND estado = 'Confirmada'",
+        'i',
+        [(int) $id_torneo]
+    );
+
+    $confirmadosTorneo = (int) ($filaConfirmados[0]['n'] ?? 0);
+
+}
 $semis = [];
 $final = null;
 $rondasPrevias = [];   // Octavos / Cuartos (torneos con 4 u 8 grupos)
@@ -404,7 +426,8 @@ if (!empty($filasBracket)) {
     $tiposBind = str_repeat('i', count($idsEntrantes));
 
     if ($esIndividualTorneo) {
-        $sqlNombresEntrantes = "SELECT gi.id_grupo_inscripcion AS id_entrante, u.nombre, u.apellido
+        $sqlNombresEntrantes = "SELECT gi.id_grupo_inscripcion AS id_entrante, u.nombre, u.apellido,
+                                        (insc.estado = 'Descalificada') AS descalificado
                                  FROM grupo_inscripcion gi
                                  INNER JOIN inscripcion insc ON insc.id_inscripcion = gi.id_inscripcion
                                  INNER JOIN usuario u ON u.id_usuario = insc.id_usuario
@@ -412,7 +435,8 @@ if (!empty($filasBracket)) {
     } else {
         $sqlNombresEntrantes = "SELECT gp.id_grupo_pareja AS id_entrante,
                                         u1.nombre AS nombre1, u1.apellido AS apellido1,
-                                        u2.nombre AS nombre2, u2.apellido AS apellido2
+                                        u2.nombre AS nombre2, u2.apellido AS apellido2,
+                                        (i1.estado = 'Descalificada' OR i2.estado = 'Descalificada') AS descalificado
                                  FROM grupo_pareja gp
                                  INNER JOIN pareja p ON p.id_pareja = gp.id_pareja
                                  INNER JOIN inscripcion i1 ON i1.id_inscripcion = p.id_inscripcion_1
@@ -428,9 +452,10 @@ if (!empty($filasBracket)) {
     $filasNombresEntrantes = mysqli_fetch_all(mysqli_stmt_get_result($stmtNombresEntrantes), MYSQLI_ASSOC);
 
     foreach ($filasNombresEntrantes as $fn) {
-        $nombresEntrantesTorneoVT[(int) $fn['id_entrante']] = $esIndividualTorneo
+        $nombresEntrantesTorneoVT[(int) $fn['id_entrante']] = ($esIndividualTorneo
             ? trim($fn['nombre'] . ' ' . $fn['apellido'])
-            : trim($fn['nombre1'] . ' ' . $fn['apellido1']) . ' / ' . trim($fn['nombre2'] . ' ' . $fn['apellido2']);
+            : trim($fn['nombre1'] . ' ' . $fn['apellido1']) . ' / ' . trim($fn['nombre2'] . ' ' . $fn['apellido2']))
+            . ((int) $fn['descalificado'] === 1 ? ' (descalificado)' : '');
     }
 
 }
@@ -485,10 +510,11 @@ function renderCuadroSimetrico(array $rondasPrevias, array $semis, ?array $final
     $e = fn($t) => htmlspecialchars((string) $t, ENT_QUOTES, 'UTF-8');
 
     // Niveles desde la primera ronda hasta las semifinales: [titulo => partidos]
-    $primera = !empty($rondasPrevias['Octavos']) ? 'Octavos' : 'Cuartos';
+    // Con 2 grupos no hay rondas previas: el cuadro empieza en las semifinales (SEMIFINAL · FINAL · SEMIFINAL).
+    $primera = !empty($rondasPrevias['Octavos']) ? 'Octavos' : (!empty($rondasPrevias['Cuartos']) ? 'Cuartos' : 'Semifinal');
     $nombresNivel = ['Octavos' => 'OCTAVOS', 'Cuartos' => 'CUARTOS', 'Semifinal' => 'SEMIFINAL'];
     $tamanio = ['Octavos' => 8, 'Cuartos' => 4, 'Semifinal' => 2];
-    $secuencia = $primera === 'Octavos' ? ['Octavos', 'Cuartos', 'Semifinal'] : ['Cuartos', 'Semifinal'];
+    $secuencia = $primera === 'Octavos' ? ['Octavos', 'Cuartos', 'Semifinal'] : ($primera === 'Cuartos' ? ['Cuartos', 'Semifinal'] : ['Semifinal']);
 
     $niveles = [];
 
@@ -553,7 +579,7 @@ function renderCuadroSimetrico(array $rondasPrevias, array $semis, ?array $final
             </div>
         </div>
         <div class="br-scroll">
-        <div class="br-cuadro">';
+        <div class="br-cuadro' . (count($secuencia) === 1 ? ' br-corto' : '') . '">';
 
     // Títulos de cada columna, alineados con el cuadro.
     $html .= '<div class="br-titulos">';
@@ -574,6 +600,9 @@ function renderCuadroSimetrico(array $rondasPrevias, array $semis, ?array $final
     if ($final && $final['jugado']) {
         $campeon = $final['gano1'] ? $final['nombre1'] : $final['nombre2'];
         $html .= '<div class="br-campeon"><i class="bi bi-trophy-fill"></i><span>CAMPEÓN</span><strong>' . $e($campeon) . '</strong></div>';
+    } else {
+        // Todavía no hay campeón: la copa se muestra igual, atenuada y con «Por definir».
+        $html .= '<div class="br-campeon br-campeon-pendiente"><i class="bi bi-trophy-fill"></i><span>CAMPEÓN</span><strong>Por definir</strong></div>';
     }
 
     $html .= $tarjeta($final, 'br-final') . '</div>';
@@ -592,8 +621,9 @@ function renderCuadroSimetrico(array $rondasPrevias, array $semis, ?array $final
  */
 function renderBracketTorneo(array $semis, ?array $final, array $rondasPrevias = []) {
 
-    // Con octavos o cuartos (4 u 8 grupos) se dibuja el cuadro simétrico.
-    if (!empty($rondasPrevias['Octavos']) || !empty($rondasPrevias['Cuartos'])) {
+    // Cuadro simétrico («hoja de torneo») para todos los torneos con cruces: con octavos o cuartos (4 u 8 grupos) y también
+    // con 2 grupos (solo semifinales y final).
+    if (!empty($rondasPrevias['Octavos']) || !empty($rondasPrevias['Cuartos']) || !empty($semis)) {
         return renderCuadroSimetrico($rondasPrevias, $semis, $final);
     }
 
@@ -741,7 +771,7 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
     $html .= '<table class="vt-tabla-grupo vt-tabla-ranking"><thead><tr>
         <th>#</th>
         <th style="text-align:left;">' . ($esIndividual ? 'Participante' : 'Pareja') . '</th>
-        <th>Etapa</th><th>Grupo</th><th>PJ</th><th>PG</th><th>PP</th><th>Sets</th><th>Dif</th><th>PTS</th>
+        <th>Etapa</th><th>Grupo</th><th>PJ</th><th>PG</th><th>PP</th><th>Sets</th><th>Dif</th><th title="Puntos que este torneo le da a cada jugador en el ranking de su categoría">PTS</th>
     </tr></thead><tbody>';
 
     foreach ($r['filas'] as $f) {
@@ -759,13 +789,13 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
             <td>' . (int) $f['pp'] . '</td>
             <td>' . (int) $f['sets_favor'] . '-' . (int) $f['sets_contra'] . '</td>
             <td>' . ($dif > 0 ? '+' : '') . $dif . '</td>
-            <td><strong>' . (int) $f['pts'] . '</strong></td>
+            <td><strong>' . (int) $f['puntos_ranking'] . '</strong></td>
         </tr>';
 
     }
 
     $html .= '</tbody></table>
-        <p class="vt-nota-datos">Cuentan solo partidos finalizados. Llegar a una ronda posterior pesa más que el rendimiento en grupos; entre eliminados en grupos se ordena por puesto en el grupo y luego por rendimiento promedio por partido.</p>
+        <p class="vt-nota-datos">Cuentan solo partidos finalizados. Llegar a una ronda posterior pesa más que el rendimiento en grupos; entre eliminados en grupos se ordena por puesto en el grupo y luego por rendimiento promedio por partido. PTS son los puntos que este torneo le da a cada jugador en el ranking de su categoría (fase de grupos + cruces); en torneos de parejas, cada integrante recibe los de su pareja.</p>
     </div>';
 
     return $html;
@@ -790,13 +820,16 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
 
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/canchas.css">
-    <link rel="stylesheet" href="css/ver_torneo.css?v=15">
+    <link rel="stylesheet" href="css/ver_torneo.css?v=17">
     <link rel="stylesheet" href="css/grupos.css?v=27">
+    <?php if ($modoPublico) { ?>
+    <link rel="stylesheet" href="css/publico.css?v=3">
+    <?php } ?>
 
 </head>
 
 <body
-    class="panel-body"
+    class="panel-body<?php echo $modoPublico ? ' pub-detalle' : ''; ?>"
     data-tipo-torneo="<?php echo htmlspecialchars(
         $torneo['tipo'],
         ENT_QUOTES,
@@ -804,7 +837,11 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
     ); ?>"
 >
 
-    <div class="panel vt-panel-oscuro">
+    <?php if ($modoPublico) { echo renderNavbarPublica('torneos'); } ?>
+
+    <div class="panel vt-panel-oscuro<?php echo $modoPublico ? ' pub-panel' : ''; ?>">
+
+        <?php if (!$modoPublico) { ?>
 
         <!-- SIDEBAR (igual al panel del organizador) -->
 
@@ -820,9 +857,48 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
 
                 <h2>The Bull</h2>
 
-                <span><?php echo ($_SESSION['id_rol'] == 1) ? 'Administrador' : 'Organizador'; ?></span>
+                <span><?php echo ($_SESSION['id_rol'] == 1) ? 'Administrador' : (($_SESSION['id_rol'] == 3) ? 'Participante' : 'Organizador'); ?></span>
 
             </div>
+
+            <?php if ($_SESSION['id_rol'] == 3) { ?>
+
+            <!-- Menú del participante (el mismo de su panel) -->
+            <ul class="menu">
+
+                <li class="activo">
+                    <a href="paneles.php">
+                        <i class="bi bi-trophy-fill"></i> Torneos
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=mis_inscripciones">
+                        <i class="bi bi-clipboard-check-fill"></i> Mis inscripciones
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=ranking">
+                        <i class="bi bi-bar-chart-fill"></i> Ranking
+                    </a>
+                </li>
+
+                <li>
+                    <a href="paneles.php?seccion=notificaciones">
+                        <i class="bi bi-bell-fill"></i> Notificaciones
+                    </a>
+                </li>
+
+                <li>
+                    <a href="funciones/logout.php">
+                        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+                    </a>
+                </li>
+
+            </ul>
+
+            <?php } else { ?>
 
             <ul class="menu">
 
@@ -870,13 +946,17 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
 
             </ul>
 
+            <?php } ?>
+
         </aside>
+
+        <?php } ?>
 
 
         <!-- CONTENIDO -->
 
         <main class="contenido">
-            <?php if ($_SESSION['id_rol'] == 1 || $_SESSION['id_rol'] == 2) { ?>
+            <?php if ($modoPublico || $_SESSION['id_rol'] == 1 || $_SESSION['id_rol'] == 2) { ?>
 
     <!-- =========================================
          VISTA DEL ORGANIZADOR
@@ -893,6 +973,10 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
 
                     <h1><?php echo htmlspecialchars($torneo['nombre'], ENT_QUOTES, 'UTF-8'); ?></h1>
 
+                    <?php if ($modoPublico) { ?>
+                        <p class="pub-club-linea"><i class="bi bi-buildings-fill"></i> <?php echo htmlspecialchars($torneo['club'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <?php } ?>
+
                     <p>
                         Campeonato de pádel ·
                         <?php echo htmlspecialchars($torneo['tipo'], ENT_QUOTES, 'UTF-8'); ?>
@@ -901,6 +985,14 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
                 </div>
 
                 <div class="vt-topbar-acciones">
+
+                    <?php if ($modoPublico) { ?>
+
+                        <a href="torneos_publicos.php" class="vt-volver">
+                            <i class="bi bi-arrow-left"></i> Volver al listado de torneos
+                        </a>
+
+                    <?php } else { ?>
 
                     <a
                         href="gestionar_grupos.php?id_torneo=<?php echo (int) $id_torneo; ?>"
@@ -913,10 +1005,37 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
                         <i class="bi bi-arrow-left"></i> Volver a torneos
                     </a>
 
+                    <?php } ?>
+
                 </div>
 
             </div>
 
+
+            <?php if ($modoPublico) { ?>
+
+                <?php if ($torneo['estado'] === 'Abierto') { ?>
+
+                    <div class="pub-cta">
+                        <p><strong>Las inscripciones están abiertas.</strong> Para inscribirte necesitás una cuenta; después volvés acá y confirmás tu inscripción.</p>
+                        <?php echo publicoBotonInscribirme($id_torneo, $torneo['nombre']); ?>
+                    </div>
+
+                <?php } else { ?>
+
+                    <div class="pub-cta pub-cta-aviso">
+                        <p><i class="bi bi-info-circle-fill"></i>
+                            <?php echo $torneo['estado'] === 'Cerrado'
+                                ? 'Las inscripciones de este torneo están cerradas.'
+                                : ($torneo['estado'] === 'En curso'
+                                    ? 'Este torneo ya está en curso: las inscripciones están cerradas.'
+                                    : 'Este torneo ya finalizó: las inscripciones están cerradas.'); ?>
+                        </p>
+                    </div>
+
+                <?php } ?>
+
+            <?php } ?>
 
             <!-- TARJETAS DE INFO -->
 
@@ -957,11 +1076,54 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
             </div>
 
 
+            <?php if ($modoPublico) { ?>
+
+            <div class="vt-info-cards">
+
+                <div class="vt-info-card">
+                    <div class="vt-info-icono categoria"><i class="bi bi-buildings-fill"></i></div>
+                    <div>
+                        <span>Club</span>
+                        <strong><?php echo htmlspecialchars($torneo['club'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                    </div>
+                </div>
+
+                <div class="vt-info-card">
+                    <div class="vt-info-icono fecha"><i class="bi bi-geo-alt-fill"></i></div>
+                    <div>
+                        <span>Lugar</span>
+                        <strong><?php echo htmlspecialchars($torneo['lugar'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                    </div>
+                </div>
+
+                <div class="vt-info-card">
+                    <div class="vt-info-icono horario"><i class="bi bi-people-fill"></i></div>
+                    <div>
+                        <span>Modalidad</span>
+                        <strong><?php echo htmlspecialchars(publicoModalidad($torneo['tipo']), ENT_QUOTES, 'UTF-8'); ?></strong>
+                    </div>
+                </div>
+
+                <div class="vt-info-card">
+                    <div class="vt-info-icono estado"><i class="bi bi-person-check-fill"></i></div>
+                    <div>
+                        <span>Confirmados</span>
+                        <strong><?php echo (int) $confirmadosTorneo; ?> / <?php echo (int) $torneo['max_participantes']; ?></strong>
+                    </div>
+                </div>
+
+            </div>
+
+            <?php } ?>
+
             <!-- FASE DE GRUPOS + RANKING -->
 
             <nav class="grupos-subnav vt-tabs" id="gruposTabs" role="tablist" aria-label="Secciones del torneo" data-torneo="<?php echo (int) $id_torneo; ?>" data-default="<?php echo $rankingTorneo['provisional'] ? 'fase-de-grupos' : 'ranking-torneo'; ?>">
                 <a href="#fase-de-grupos" role="tab" data-tab="fase-de-grupos"><i class="bi bi-people-fill"></i> Fase de grupos</a>
                 <a href="#fase-final" role="tab" data-tab="fase-final"><i class="bi bi-trophy-fill"></i> Fase final</a>
+                <?php if ($modoPublico) { ?>
+                <a href="#partidos-publicos" role="tab" data-tab="partidos-publicos"><i class="bi bi-list-ol"></i> Partidos y resultados</a>
+                <?php } ?>
                 <a href="#ranking-torneo" role="tab" data-tab="ranking-torneo"><i class="bi bi-bar-chart-fill"></i> Ranking del torneo</a>
             </nav>
 
@@ -1076,6 +1238,52 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
 
 </section>
 
+<?php if ($modoPublico) { ?>
+<section id="partidos-publicos" class="grupos-tab-panel">
+
+    <div class="vt-seccion-titulo">
+        <span class="vt-eyebrow">COMPETENCIA</span>
+        <h2>Partidos y resultados</h2>
+        <p>Fase de grupos · la fase final está en la pestaña «Fase final»</p>
+    </div>
+
+    <?php
+    $hayPartidosPublicos = false;
+    foreach ($partidosPublicos as $grupoPub) { if (!empty($grupoPub['partidos'])) { $hayPartidosPublicos = true; } }
+    ?>
+
+    <?php if (!$hayPartidosPublicos) { ?>
+
+        <div class="vt-card vt-estado-vacio">
+            <i class="bi bi-list-ol"></i>
+            <p>Todavía no hay partidos cargados para este torneo.</p>
+        </div>
+
+    <?php } else { foreach ($partidosPublicos as $grupoPub) { if (empty($grupoPub['partidos'])) { continue; } ?>
+
+        <div class="vt-card pub-partidos-grupo">
+
+            <h3><?php echo htmlspecialchars($grupoPub['nombre'], ENT_QUOTES, 'UTF-8'); ?></h3>
+
+            <?php foreach ($grupoPub['partidos'] as $partidoPub) { ?>
+                <div class="pub-partido">
+                    <span class="<?php echo $partidoPub['gano1'] ? 'pub-gano' : ''; ?>"><?php echo htmlspecialchars($partidoPub['n1'], ENT_QUOTES, 'UTF-8'); ?></span>
+                    <span class="pub-marcador">
+                        <?php if ($partidoPub['jugado']) { echo htmlspecialchars($partidoPub['resultado'], ENT_QUOTES, 'UTF-8'); } else { ?><span class="pub-pendiente">Pendiente</span><?php } ?>
+                    </span>
+                    <span class="pub-lado-2 <?php echo $partidoPub['gano2'] ? 'pub-gano' : ''; ?>"><?php echo htmlspecialchars($partidoPub['n2'], ENT_QUOTES, 'UTF-8'); ?></span>
+                </div>
+            <?php } ?>
+
+        </div>
+
+    <?php } } ?>
+
+    <p class="pub-nota">Resultados en games por set. Solo se muestran partidos reales registrados por la organización.</p>
+
+</section>
+<?php } ?>
+
 <section id="ranking-torneo" class="grupos-tab-panel">
 
 <!-- RANKING DEL TORNEO -->
@@ -1128,6 +1336,18 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
     </div>
 
 
+    <div class="vt-topbar-acciones">
+
+    <?php if ($torneo['estado'] === 'Abierto') { ?>
+        <a
+            href="paneles.php?seccion=torneos&amp;inscribirme=<?php echo (int) $id_torneo; ?>"
+            class="vt-volver"
+        >
+            <i class="bi bi-pencil-square"></i>
+            Inscribirme
+        </a>
+    <?php } ?>
+
     <a
         href="paneles.php?seccion=torneos"
         class="vt-volver"
@@ -1135,6 +1355,8 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
         <i class="bi bi-arrow-left"></i>
         Volver a torneos
     </a>
+
+    </div>
 
 </div>
 
@@ -1376,8 +1598,12 @@ function renderRankingTorneo(array $r, bool $esIndividual) {
 
 
     </div>
-    <script src="js/padel.js?v=12"></script>
+    <?php if ($modoPublico) { echo renderModalInscripcionPublica(); } ?>
+    <script src="js/padel.js?v=17"></script>
     <script src="js/pestanas.js?v=1"></script>
+    <?php if ($modoPublico) { ?>
+    <script src="js/publico.js?v=1"></script>
+    <?php } ?>
 </body>
 
 </html>

@@ -1,7 +1,6 @@
 <?php
 
-session_start();
-
+require_once __DIR__ . '/../config/sesion.php';
 require_once "../config/conexion.php";
 require_once "../config/no_cache.php";
 require_once "csrf.php";
@@ -53,6 +52,8 @@ $id_usuario = $_SESSION['id_usuario'];
 $sql = "
     SELECT
         cancha.id_cancha,
+        cancha.nombre,
+        cancha.id_club,
         cancha.imagen
     FROM cancha
     INNER JOIN club
@@ -120,6 +121,8 @@ mysqli_stmt_bind_param(
 if (mysqli_stmt_execute($stmtEliminar)) {
 
     mysqli_stmt_close($stmtEliminar);
+
+    actividadClubModificado($conexion, (int) $cancha['id_club'], 'eliminó la cancha «' . $cancha['nombre'] . '»');
 
     // =========================================
     // ELIMINAR IMAGEN DEL SERVIDOR

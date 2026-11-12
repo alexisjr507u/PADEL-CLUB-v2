@@ -453,275 +453,33 @@
 
 
 /* =========================================================
-   REVISIÓN DE CATEGORÍAS (administrador) y aviso de participante
+   AVISO TRAS UNIRSE A UN CLUB
    ========================================================= */
 
-.badge-categorias {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    margin-left: 8px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: #ef4444;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.rev-lista {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.rev-vacio {
-    padding: 28px;
-    border-radius: 16px;
-    background: rgba(7, 35, 62, 0.62);
-    border: 1px solid rgba(105, 181, 255, 0.18);
-    color: #9fb3c8;
-    text-align: center;
-}
-
-.rev-tarjeta,
-.rev-recientes {
-    padding: 22px;
-    border-radius: 16px;
-    background: rgba(7, 35, 62, 0.62);
-    border: 1px solid rgba(105, 181, 255, 0.18);
-    color: #e7edf5;
-}
-
-.rev-cabecera {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.rev-cabecera h2 {
-    color: #ffffff;
-    font-size: 20px;
-}
-
-.rev-email {
-    color: #9fb3c8;
-    font-size: 13px;
-}
-
-.rev-estimada {
-    text-align: right;
-}
-
-.rev-estimada small {
-    display: block;
-    color: #9fb3c8;
-    font-size: 12px;
-}
-
-.rev-estimada strong {
-    color: #8fb8ff;
-    font-size: 26px;
-}
-
-.rev-motivos {
-    margin-top: 12px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: rgba(245, 166, 35, 0.10);
-    border: 1px solid rgba(245, 166, 35, 0.3);
-    color: #f5c26b;
-    font-size: 13px;
-}
-
-.rev-areas {
-    display: grid;
-    gap: 8px;
-    margin-top: 16px;
-}
-
-.rev-area {
-    display: grid;
-    grid-template-columns: 110px minmax(0, 1fr) 70px;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-}
-
-.rev-area strong {
-    text-align: right;
-}
-
-.rev-barra {
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
-}
-
-.rev-barra i {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: #2f7bff;
-}
-
-.rev-total span,
-.rev-total strong {
-    color: #ffffff;
-    font-weight: 700;
-}
-
-.rev-respuestas {
-    margin-top: 14px;
-    font-size: 14px;
-}
-
-.rev-respuestas summary {
-    cursor: pointer;
-    color: #8fb8ff;
-}
-
-.rev-respuestas ol {
-    margin: 10px 0 0;
-    padding-left: 20px;
-    display: grid;
-    gap: 10px;
-}
-
-.rev-respuestas li span {
-    display: block;
-    color: #9fb3c8;
-}
-
-.rev-respuestas li strong {
-    color: #ffffff;
-}
-
-.rev-respuestas li em {
-    margin-left: 8px;
-    color: #7c8ba0;
-    font-style: normal;
-}
-
-.rev-form {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(105, 181, 255, 0.12);
-}
-
-.rev-o {
-    color: #9fb3c8;
-    font-size: 13px;
-}
-
-body.panel-body .rev-form select {
-    width: auto;
-    min-width: 120px;
-    padding: 9px 12px;
-    border-radius: 10px;
-    background: #031f38;
-    border: 1px solid rgba(105, 181, 255, 0.25);
-    color: #ffffff;
-}
-
-body.panel-body .rev-btn {
-    width: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 16px;
-    border-radius: 10px;
-    background: rgba(47, 123, 255, 0.15);
-    border: 1px solid rgba(105, 181, 255, 0.25);
-    color: #ffffff;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-body.panel-body .rev-btn:hover {
-    background: rgba(47, 123, 255, 0.3);
-}
-
-body.panel-body .rev-btn-confirmar {
-    background: #1d6bff;
-    border-color: #1d6bff;
-}
-
-.rev-recientes {
-    margin-top: 24px;
-    overflow-x: auto;
-}
-
-.rev-recientes h2 {
-    color: #ffffff;
-    font-size: 18px;
-    margin-bottom: 12px;
-}
-
-.rev-recientes table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-.rev-recientes th {
-    text-align: left;
-    color: #7c8ba0;
-    font-size: 12px;
-    padding: 0 8px 8px;
-}
-
-.rev-recientes td {
-    padding: 8px;
-    border-top: 1px solid rgba(105, 181, 255, 0.12);
-}
-
-.aviso-categoria-pendiente {
+.aviso-union-club {
     display: flex;
     align-items: flex-start;
     gap: 14px;
     margin: 0 0 18px;
     padding: 14px 18px;
     border-radius: 14px;
-    background: rgba(245, 166, 35, 0.10);
-    border: 1px solid rgba(245, 166, 35, 0.35);
-    color: #f5c26b;
+    background: rgba(46, 204, 113, 0.10);
+    border: 1px solid rgba(46, 204, 113, 0.35);
+    color: #8fe3b0;
 }
 
-.aviso-categoria-pendiente i {
+.aviso-union-club i {
     font-size: 22px;
 }
 
-.aviso-categoria-pendiente strong {
+.aviso-union-club strong {
     display: block;
-    color: #ffd58a;
+    color: #b8f0cf;
 }
 
-.aviso-categoria-pendiente span {
+.aviso-union-club span {
     font-size: 14px;
 }
-
-@media (max-width: 600px) {
-
-    .rev-area {
-        grid-template-columns: 90px minmax(0, 1fr) 60px;
-        gap: 8px;
-    }
-
-    .rev-estimada {
-        text-align: left;
-    }
-
-}
-
 
 /* =========================================================
    COMPATIBILIDAD DE CATEGORÍA EN LAS TARJETAS DE TORNEO
@@ -768,7 +526,7 @@ body.panel-body .rev-btn-confirmar {
     color: #9fb3c8;
 }
 
-/* El modal de mensajes en modo aviso (categoría pendiente) */
+/* El modal de mensajes en modo aviso */
 .modal-mensaje-exito .icono-aviso {
     display: none;
 }
@@ -811,4 +569,201 @@ body.panel-body:has(.contenido-participante) .torneo-card-participante {
     background: rgba(255, 107, 107, 0.14);
     border-color: rgba(255, 107, 107, 0.4);
     color: #ff9b9b;
+}
+
+
+/* ---------- Tarjetas de resumen del panel del administrador (Torneos) ---------- */
+
+.cards-torneos-admin {
+    margin-bottom: 22px;
+}
+
+.cards-torneos-admin .card small {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.62);
+}
+
+
+/* ---------- Editar torneo: categoría y tipo bloqueados cuando ya hay inscriptos ---------- */
+
+.campo-torneo select.campo-bloqueado {
+    opacity: 0.62;
+    cursor: not-allowed;
+    background-image: none;
+}
+
+.campo-torneo-nota {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.10);
+    color: #fcd34d;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+
+.campo-torneo-nota[hidden] {
+    display: none;
+}
+
+.campo-torneo-nota-animar {
+    animation: campo-torneo-nota-sacudir 0.38s ease;
+}
+
+@keyframes campo-torneo-nota-sacudir {
+    0%   { transform: translateX(0); opacity: 0; }
+    25%  { transform: translateX(-5px); opacity: 1; }
+    50%  { transform: translateX(5px); }
+    75%  { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .campo-torneo-nota-animar {
+        animation: none;
+    }
+}
+
+
+/* ---------- «Unirme al club» (tarjeta de torneo del participante) ----------
+   Mismo aspecto que el botón «Inscribirse»; es un formulario que crea la relación del jugador con el club. */
+body.panel-body:has(.contenido-participante) .form-unirse-club {
+    display: contents;
+}
+
+body.panel-body:has(.contenido-participante) .btn-unirse-club {
+    background: #0D8FE8;
+    border: 1px solid #0D8FE8;
+    color: #FFFFFF;
+    cursor: pointer;
+}
+
+body.panel-body:has(.contenido-participante) .btn-unirse-club:hover {
+    background: #0878C5;
+}
+
+body.panel-body:has(.contenido-participante) .btn-unirse-club i {
+    margin-right: 6px;
+}
+
+
+/* =========================================================
+   BARRA SUPERIOR DEL PARTICIPANTE EN CELULARES
+
+   La barra usaba un ancho y un relleno pensados para escritorio y la lista de categorías por club (más el nombre del usuario)
+   la ensanchaba hasta ~600 px. En pantallas chicas: el botón del menú va primero, las categorías ocupan el espacio que sobra
+   y se deslizan si no entran, y del usuario queda solo el ícono.
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    body.panel-body:has(.contenido-participante)
+    .barra-superior-participante {
+        width: auto;
+        margin-left: -25px;
+        margin-right: -25px;
+        padding: 0 16px;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .barra-superior-participante .btn-menu-movil {
+        /* style.css lo ocultaba en todos los tamaños («Quitar botón hamburguesa»): en celulares la barra lateral queda oculta y sin este
+           botón el participante no podía ir a Mis inscripciones, Ranking ni Notificaciones. Solo se muestra en pantallas chicas. */
+        display: flex !important;
+        order: -1;
+        flex: 0 0 auto;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .categoria-participante-barra {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 8px;
+        scrollbar-width: none;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .categoria-participante-barra::-webkit-scrollbar {
+        display: none;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .categoria-barra-label {
+        display: none;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .categoria-barra-valor {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .usuario-chip-participante {
+        flex: 0 0 auto;
+        margin-left: 0;
+        gap: 0;
+    }
+
+    body.panel-body:has(.contenido-participante)
+    .usuario-chip-datos,
+    body.panel-body:has(.contenido-participante)
+    .usuario-chip-flecha {
+        display: none;
+    }
+}
+
+
+/* =========================================================
+   MENÚ MÓVIL DEL ADMINISTRADOR Y DEL ORGANIZADOR
+
+   En celulares la barra lateral se oculta fuera de la pantalla (style.css) y no había ningún botón para abrirla:
+   quien administraba desde el celular no podía ir de una sección a otra. Este botón (solo en pantallas chicas) la abre.
+   ========================================================= */
+
+.btn-menu-movil-panel {
+    display: none;
+}
+
+@media (max-width: 900px) {
+
+    .btn-menu-movil-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1100;
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        border-radius: 12px;
+        border: 1px solid rgba(105, 181, 255, 0.35);
+        background: rgba(3, 36, 61, 0.92);
+        color: #ffffff;
+        cursor: pointer;
+    }
+
+    .btn-menu-movil-panel svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    /* El título de cada sección no queda tapado por el botón */
+    body.panel-body:has(.btn-menu-movil-panel) .panel .contenido {
+        padding-top: 64px;
+    }
+
+    .panel .sidebar {
+        z-index: 1050;
+    }
 }

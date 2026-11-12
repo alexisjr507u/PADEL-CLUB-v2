@@ -3,6 +3,7 @@
 include("config/no_cache.php");
 include("config/conexion.php");
 require_once("funciones/csrf.php");
+require_once("funciones/estado_grupos.php");
 require_once("funciones/standings.php");
 require_once("funciones/ranking_vista.php");
 
@@ -125,9 +126,10 @@ foreach ($grupos as &$grupo) {
     $grupo['nombres_entrantes'] = [];
     foreach ($datosPartidosGrupo['miembros'] as $m) {
         $idEnt = (int) $m['id_entrante'];
-        $grupo['nombres_entrantes'][$idEnt] = $esIndividual
+        $grupo['nombres_entrantes'][$idEnt] = ($esIndividual
             ? trim($m['nombre'] . ' ' . $m['apellido'])
-            : trim($m['nombre1'] . ' ' . $m['apellido1']) . ' / ' . trim($m['nombre2'] . ' ' . $m['apellido2']);
+            : trim($m['nombre1'] . ' ' . $m['apellido1']) . ' / ' . trim($m['nombre2'] . ' ' . $m['apellido2']))
+            . (!empty($m['descalificado']) ? ' (descalificado)' : '');
     }
 
     $grupo['partidos_pendientes'] = 0;
@@ -161,6 +163,34 @@ foreach ($grupos as $indiceColor => $g) {
 }
 
 $hayAlgunPartido = !empty($partidosGlobal);
+
+/* =========================================================
+   QUÉ SE PUEDE HACER SEGÚN EL ESTADO DEL TORNEO (los endpoints lo vuelven a comprobar en el servidor;
+   ver funciones/estado_grupos.php)
+   - Abierto / Cerrado: todo, como siempre.
+   - En curso con partidos de grupos ya generados: sin crear grupos, sin cambiar la distribución y sin
+     regenerar partidos; sí resultados, fases siguientes y renombrar grupos.
+   - Finalizado: solo consulta.
+   ========================================================= */
+
+$estadoTorneoPagina = $torneo['estado'];
+$esFinalizado = ($estadoTorneoPagina === 'Finalizado');
+$antesDeEmpezar = in_array($estadoTorneoPagina, ESTADOS_ANTES_DE_EMPEZAR, true);
+$estructuraBloqueada = $esFinalizado || ($estadoTorneoPagina === 'En curso' && $hayAlgunPartido);
+$puedeEstructura = !$estructuraBloqueada;
+$puedeRenombrar = !$esFinalizado;
+$puedeRondas = !$esFinalizado;
+
+$algunGrupoSinPartidos = false;
+foreach ($grupos as $grupoRevisado) {
+    if (empty($grupoRevisado['partidos'])) {
+        $algunGrupoSinPartidos = true;
+    }
+}
+
+// «Generar partidos»: antes de empezar siempre; En curso solo para grupos que todavía no tienen partidos.
+$puedeGenerarPartidos = !$esFinalizado && !empty($grupos) && ($antesDeEmpezar || $algunGrupoSinPartidos);
+
 
 
 /* =========================================================
@@ -321,13 +351,7 @@ $mensajesAccion = [
     'no_existe'           => ['tipo' => 'error', 'texto' => 'Ese torneo no existe.'],
     'grupo_no_existe'     => ['tipo' => 'error', 'texto' => 'Ese grupo no existe en este torneo.'],
     'datos_invalidos'     => ['tipo' => 'error', 'texto' => 'Los datos enviados no son válidos.'],
-    'ranking_liquidado'   => ['tipo' => 'exito', 'texto' => 'Puntos otorgados: ya figuran en el ranking de la categoría.'],
-    'ranking_ya_liquidado' => ['tipo' => 'error', 'texto' => 'Los puntos de este torneo ya se habían otorgado.'],
-    'ranking_sin_partidos' => ['tipo' => 'error', 'texto' => 'Todavía no hay partidos en este torneo para otorgar puntos.'],
-    'ranking_partidos_pendientes' => ['tipo' => 'error', 'texto' => 'No se pueden otorgar los puntos: faltan resultados por cargar.'],
-    'ranking_falta_final' => ['tipo' => 'error', 'texto' => 'No se pueden otorgar los puntos: falta jugar la final.'],
-    'ranking_resultado_invalido' => ['tipo' => 'error', 'texto' => 'No se pueden otorgar los puntos: hay un resultado inválido.'],
-    'torneo_liquidado'    => ['tipo' => 'error', 'texto' => 'Los puntos de este torneo ya se otorgaron al ranking: los resultados quedaron fijos.'],
+    'torneo_liquidado'    => ['tipo' => 'error', 'texto' => 'Este torneo ya provocó ascensos de categoría: sus resultados quedaron fijos.'],
     'modalidad_incompatible' => ['tipo' => 'error', 'texto' => 'No se pueden mezclar inscripciones individuales con parejas.'],
     'elemento_no_disponible' => ['tipo' => 'error', 'texto' => 'Ese participante o pareja no está confirmado en este torneo.'],
     'elemento_no_asignado'   => ['tipo' => 'error', 'texto' => 'Ese participante o pareja no está asignado a ningún grupo de este torneo.'],
@@ -337,8 +361,8 @@ $mensajesAccion = [
     'partidos_generados'  => ['tipo' => 'exito', 'texto' => 'Se generaron los partidos del grupo (todos contra todos).'],
     'partidos_con_resultados' => ['tipo' => 'error', 'texto' => 'No se puede regenerar: ya hay resultados cargados en ese grupo.'],
     'miembros_insuficientes'  => ['tipo' => 'error', 'texto' => 'El grupo necesita al menos 2 participantes o parejas para generar partidos.'],
-    'resultado_cargado'   => ['tipo' => 'exito', 'texto' => 'El resultado se cargó correctamente.'],
-    'resultado_wo_cargado' => ['tipo' => 'exito', 'texto' => 'Se registró el W.O.: el partido quedó para quien se presentó, sin sets.'],
+    'resultado_cargado'   => ['tipo' => 'exito', 'texto' => 'El resultado se cargó correctamente y los puntos del ranking ya se sumaron.'],
+    'resultado_wo_cargado' => ['tipo' => 'exito', 'texto' => 'Se registró el W.O.: el partido quedó para quien se presentó, sin sets. Los puntos del ranking ya se sumaron.'],
     'resultado_invalido'  => ['tipo' => 'error', 'texto' => 'El resultado cargado no es válido. Revisá los sets.'],
     'faltan_sets'         => ['tipo' => 'error', 'texto' => 'Completá los games del set 1 y del set 2.'],
     'set_incompleto'      => ['tipo' => 'error', 'texto' => 'El set 3 tiene que tener los games de las dos parejas.'],
@@ -360,6 +384,9 @@ $mensajesAccion = [
     'ronda_ya_generada'      => ['tipo' => 'error', 'texto' => 'Esa ronda ya fue generada.'],
     'cuadro_completo'        => ['tipo' => 'error', 'texto' => 'El cuadro ya llegó a la final.'],
     'cuadro_no_soportado'    => ['tipo' => 'error', 'texto' => 'Los cruces automáticos están disponibles con 2, 4 u 8 grupos.'],
+    'torneo_finalizado_grupos' => ['tipo' => 'error', 'texto' => 'El torneo ya finalizó: queda solo para consulta. No se pueden crear ni modificar grupos, partidos ni resultados.'],
+    'grupos_ya_generados'    => ['tipo' => 'error', 'texto' => 'El torneo ya está en curso y sus grupos y partidos ya fueron generados: no se pueden crear grupos ni cambiar la distribución.'],
+    'partidos_ya_generados'  => ['tipo' => 'error', 'texto' => 'Los partidos de fase de grupos ya fueron generados y el torneo está en curso: no se vuelven a generar.'],
 ];
 
 
@@ -410,6 +437,10 @@ if ($idPartidoAviso && isset($mensajesAccion[$accionActual])) {
  */
 function renderMarcador(array $partido, string $nombre1, string $nombre2, string $etiqueta, bool $esIndividual, string $csrfToken, int $idTorneo, ?array $aviso) {
 
+    // Torneo finalizado: el marcador se ve pero no se puede editar.
+    global $esFinalizado;
+    $soloLectura = !empty($esFinalizado);
+
     $id = (int) $partido['id_partido'];
     $jugado = ($partido['estado'] === 'Jugado');
     $idGanador = $jugado ? (int) $partido['id_ganador'] : 0;
@@ -431,7 +462,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
         method="POST"
         class="marcador <?php echo $jugado ? 'marcador-jugado' : ''; ?> <?php echo $esWo ? 'marcador-es-wo' : ''; ?>"
         id="partido-<?php echo $id; ?>"
-        data-marcador
+        <?php echo $soloLectura ? 'onsubmit="return false;"' : 'data-marcador'; ?>
         novalidate
     >
         <input type="hidden" name="csrf_token" value="<?php echo $e($csrfToken); ?>">
@@ -475,6 +506,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                             max="7"
                             inputmode="numeric"
                             class="marcador-input"
+                            <?php echo $soloLectura ? 'readonly tabindex="-1"' : ''; ?>
                             <?php echo $set === 3 ? 'data-set3 placeholder="–"' : ''; ?>
                             aria-label="Set <?php echo $set; ?>, games de <?php echo $e($nombreLado); ?>"
                         >
@@ -484,16 +516,18 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
             </div>
 
+            <?php if (!$soloLectura) { ?>
             <button type="submit" class="marcador-guardar">
                 <i class="bi bi-check2"></i>
                 <span><?php echo $jugado ? 'Actualizar' : 'Guardar'; ?></span>
             </button>
+            <?php } ?>
 
         </div>
 
         <div class="marcador-wo">
             <label for="wo-<?php echo $id; ?>">Resultado</label>
-            <select name="wo" id="wo-<?php echo $id; ?>" class="marcador-wo-select">
+            <select name="wo" id="wo-<?php echo $id; ?>" class="marcador-wo-select" <?php echo $soloLectura ? 'disabled' : ''; ?>>
                 <option value="">Se jugó (cargar sets)</option>
                 <option value="1" <?php echo $woPerdedor === '1' ? 'selected' : ''; ?>>W.O.: no se presentó <?php echo $e($nombre1); ?></option>
                 <option value="2" <?php echo $woPerdedor === '2' ? 'selected' : ''; ?>>W.O.: no se presentó <?php echo $e($nombre2); ?></option>
@@ -527,8 +561,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/ver_torneo.css?v=15">
-    <link rel="stylesheet" href="css/grupos.css?v=28">
-    <link rel="stylesheet" href="css/ranking.css?v=2">
+    <link rel="stylesheet" href="css/grupos.css?v=29">
+    <link rel="stylesheet" href="css/ranking.css?v=8">
+    <link rel="stylesheet" href="css/confirmar.css?v=1">
 
 </head>
 
@@ -675,6 +710,24 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
 
 
+            <?php if ($esFinalizado) { ?>
+                <div class="rk-estado rk-estado-espera" style="margin-top:16px;">
+                    <i class="bi bi-lock-fill"></i>
+                    <div>
+                        <strong>Torneo finalizado: solo consulta</strong>
+                        <span>Los grupos, las posiciones y los resultados quedan como historial. Ya no se pueden crear ni modificar grupos, generar partidos ni cargar resultados.</span>
+                    </div>
+                </div>
+            <?php } elseif ($estadoTorneoPagina === 'En curso' && $hayAlgunPartido) { ?>
+                <div class="rk-estado rk-estado-espera" style="margin-top:16px;">
+                    <i class="bi bi-lock-fill"></i>
+                    <div>
+                        <strong>Torneo en curso: grupos y partidos ya generados</strong>
+                        <span>No se pueden crear grupos, cambiar la distribución ni volver a generar los partidos de grupos. Podés cargar resultados y generar las fases siguientes.</span>
+                    </div>
+                </div>
+            <?php } ?>
+
             <!-- ========================================= -->
             <!-- 1. POSICIONES Y RESULTADOS -->
             <!-- ========================================= -->
@@ -689,7 +742,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                         <p>Cargá los games de cada set directamente en el partido; la tabla se actualiza al guardar.</p>
                     </div>
 
-                    <?php if (!empty($grupos)) { ?>
+                    <?php if ($puedeGenerarPartidos) { ?>
                         <form action="funciones/grupos_generar_partidos_torneo.php" method="POST">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                             <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -699,7 +752,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                 title="Arma todos los cruces de cada grupo. Los grupos que ya tienen resultados cargados no se tocan."
                             >
                                 <i class="bi bi-shuffle"></i>
-                                <span><?php echo $hayAlgunPartido ? 'Regenerar partidos' : 'Generar partidos'; ?></span>
+                                <span><?php echo ($hayAlgunPartido && $antesDeEmpezar) ? 'Regenerar partidos' : 'Generar partidos'; ?></span>
                             </button>
                         </form>
                     <?php } ?>
@@ -1013,6 +1066,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                                 <?php if ($anteriorCompleta) { ?>
 
+                                    <?php if ($puedeRondas) { ?>
                                     <form action="funciones/grupos_generar_ronda.php" method="POST" style="margin-top:16px;">
                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                         <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -1021,6 +1075,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                             <span><?php echo htmlspecialchars($etiquetasBoton[$proximaRonda], ENT_QUOTES, 'UTF-8'); ?></span>
                                         </button>
                                     </form>
+                                    <?php } else { ?>
+                                        <p class="grupos-tarjeta-vacio" style="margin-top:16px;">Torneo finalizado: ya no se generan rondas.</p>
+                                    <?php } ?>
 
                                 <?php } else { ?>
 
@@ -1034,6 +1091,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                             <?php if ($gruposCompletosParaSemis) { ?>
 
+                                <?php if ($puedeRondas) { ?>
                                 <form action="funciones/grupos_generar_semifinales.php" method="POST">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                     <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -1042,6 +1100,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                         <span>Generar semifinales</span>
                                     </button>
                                 </form>
+                                <?php } else { ?>
+                                    <p class="grupos-tarjeta-vacio">Torneo finalizado: ya no se generan rondas.</p>
+                                <?php } ?>
 
                             <?php } else { ?>
 
@@ -1087,6 +1148,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                                 <?php if ($semifinalesCompletas) { ?>
 
+                                    <?php if ($puedeRondas) { ?>
                                     <form action="funciones/grupos_generar_final.php" method="POST" style="margin-top:16px;">
                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                         <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -1095,6 +1157,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                             <span>Generar final</span>
                                         </button>
                                     </form>
+                                    <?php } else { ?>
+                                        <p class="grupos-tarjeta-vacio" style="margin-top:16px;">Torneo finalizado: ya no se generan rondas.</p>
+                                    <?php } ?>
 
                                 <?php } else { ?>
 
@@ -1143,7 +1208,11 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                     <div class="vt-seccion-titulo" style="margin:0;">
                         <span class="vt-eyebrow">ORGANIZACIÓN</span>
                         <h2>Administrar grupos</h2>
-                        <p>Creá grupos y asigná, mové o quitá <?php echo $etiquetaMiembroPlural; ?>.</p>
+                        <p><?php echo $puedeEstructura
+                            ? 'Creá grupos y asigná, mové o quitá ' . $etiquetaMiembroPlural . '.'
+                            : ($esFinalizado
+                                ? 'Los grupos quedaron como historial del torneo: solo se pueden consultar.'
+                                : 'Los grupos y sus partidos ya fueron generados: la distribución quedó fija mientras el torneo está en curso.'); ?></p>
                     </div>
 
                     <?php if (!empty($grupos)) { ?>
@@ -1154,6 +1223,19 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                     <?php } ?>
 
                 </div>
+
+                <?php if (!$puedeEstructura) { ?>
+
+                    <div class="vt-card grupos-crear-card">
+                        <p class="grupos-tarjeta-vacio" style="margin:0;">
+                            <i class="bi bi-lock-fill"></i>
+                            <?php echo $esFinalizado
+                                ? 'Torneo finalizado: no se pueden crear ni modificar grupos.'
+                                : 'Torneo en curso con los grupos y partidos ya generados: no se pueden crear grupos ni cambiar la distribución.'; ?>
+                        </p>
+                    </div>
+
+                <?php } else { ?>
 
                 <div class="vt-card grupos-crear-card">
 
@@ -1182,6 +1264,8 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                 </div>
 
+                <?php } ?>
+
                 <?php if (!empty($grupos)) { ?>
 
                     <div class="grupos-grid">
@@ -1200,6 +1284,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                                     <div class="grupos-tarjeta-titulo">
 
+                                        <?php if (!$puedeRenombrar) { ?>
+                                            <strong class="grupos-nombre-estatico"><?php echo htmlspecialchars($grupo['nombre'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                                        <?php } else { ?>
                                         <form action="funciones/grupos_renombrar.php" method="POST" class="grupos-form-renombrar">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -1221,6 +1308,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                                 <i class="bi bi-check-lg"></i>
                                             </button>
                                         </form>
+                                        <?php } ?>
 
                                         <span class="grupos-pill">
                                             <?php echo count($grupo['miembros']); ?>
@@ -1231,6 +1319,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                                     <div class="grupos-tarjeta-acciones">
 
+                                        <?php if ($puedeEstructura) { ?>
                                         <form action="funciones/grupos_reordenar.php" method="POST">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -1250,7 +1339,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                                 <i class="bi bi-arrow-down"></i>
                                             </button>
                                         </form>
+                                        <?php } ?>
 
+                                        <?php if ($puedeRenombrar) { ?>
                                         <button
                                             type="button"
                                             class="grupos-icono-btn grupos-btn-editar-nombre"
@@ -1259,7 +1350,9 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                         >
                                             <i class="bi bi-pencil"></i>
                                         </button>
+                                        <?php } ?>
 
+                                        <?php if ($puedeEstructura) { ?>
                                         <button
                                             type="button"
                                             class="grupos-icono-btn grupos-icono-btn-peligro btn-eliminar-grupo"
@@ -1269,6 +1362,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                         >
                                             <i class="bi bi-trash3"></i>
                                         </button>
+                                        <?php } ?>
 
                                     </div>
 
@@ -1307,7 +1401,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                                                         <div class="grupos-miembro-acciones">
 
-                                                            <?php if (count($grupos) > 1) { ?>
+                                                            <?php if (count($grupos) > 1 && $puedeEstructura) { ?>
                                                                 <button
                                                                     type="button"
                                                                     class="grupos-icono-btn grupos-icono-btn-sm grupos-miembro-mover"
@@ -1318,6 +1412,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                                                 </button>
                                                             <?php } ?>
 
+                                                            <?php if ($puedeEstructura) { ?>
                                                             <form action="funciones/grupos_quitar.php" method="POST">
                                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                                 <input type="hidden" name="id_torneo" value="<?php echo (int) $id_torneo; ?>">
@@ -1328,12 +1423,13 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                                                     <i class="bi bi-x-lg"></i>
                                                                 </button>
                                                             </form>
+                                                            <?php } ?>
 
                                                         </div>
 
                                                     </div>
 
-                                                    <?php if (count($grupos) > 1) { ?>
+                                                    <?php if (count($grupos) > 1 && $puedeEstructura) { ?>
 
                                                         <form
                                                             action="funciones/grupos_mover.php"
@@ -1373,7 +1469,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
                                     <?php } ?>
 
-                                    <?php if (!empty($sinAsignar)) { ?>
+                                    <?php if (!empty($sinAsignar) && $puedeEstructura) { ?>
 
                                         <button
                                             type="button"
@@ -1413,7 +1509,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
                                             <button type="submit" class="grupos-btn-confirmar">Agregar</button>
                                         </form>
 
-                                    <?php } elseif ($grupoVacio) { ?>
+                                    <?php } elseif ($grupoVacio && $puedeEstructura) { ?>
 
                                         <p class="grupos-tarjeta-vacio">No hay <?php echo $etiquetaMiembroPlural; ?> <?php echo $esIndividual ? 'confirmados' : 'confirmadas'; ?> sin asignar.</p>
 
@@ -1482,6 +1578,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
 
     <script src="js/pestanas.js?v=1"></script>
+    <script src="js/confirmar.js?v=1"></script>
     <script src="js/partidos_carrusel.js?v=1"></script>
     <script src="js/grupos_carrusel.js?v=2"></script>
     <script src="js/rondas_tabs.js?v=1"></script>
@@ -1732,7 +1829,7 @@ function renderMarcador(array $partido, string $nombre1, string $nombre2, string
 
     </script>
 
-    <script src="js/padel.js?v=12"></script>
+    <script src="js/padel.js?v=17"></script>
 
 </body>
 

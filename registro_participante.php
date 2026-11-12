@@ -4,6 +4,18 @@ include("config/conexion.php");
 require_once("funciones/csrf.php");
 
 $csrf_token = generar_csrf_token();
+
+// Torneo de origen (consulta pública): se guarda en la sesión de registro para volver a él al terminar.
+// Una visita sin ?torneo= (y sin error de validación) lo borra; así un valor viejo no se arrastra.
+$idTorneoGet = filter_input(INPUT_GET, 'torneo', FILTER_VALIDATE_INT);
+
+if ($idTorneoGet && $idTorneoGet > 0) {
+    $_SESSION['torneo_destino'] = (int) $idTorneoGet;
+} elseif (!isset($_GET['error'])) {
+    unset($_SESSION['torneo_destino']);
+}
+
+$paramTorneoLogin = !empty($_SESSION['torneo_destino']) ? '?torneo=' . (int) $_SESSION['torneo_destino'] : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -130,7 +142,7 @@ $csrf_token = generar_csrf_token();
 
             <div class="links">
 
-                <a href="login.php">
+                <a href="login.php<?php echo $paramTorneoLogin; ?>">
                     ¿Ya tienes cuenta? Iniciar sesión
                 </a>
 
@@ -139,7 +151,7 @@ $csrf_token = generar_csrf_token();
         </div>
 
     </div>
-<script src="js/padel.js?v=9"></script>
+<script src="js/padel.js?v=17"></script>
 </body>
 
 </html>

@@ -475,6 +475,8 @@ if (!mysqli_stmt_execute($stmtCancha)) {
 
 mysqli_stmt_close($stmtCancha);
 
+actividadClubModificado($conexion, $id_club, 'agregó la cancha «' . $nombre . '»');
+
 
 // ==========================================
 // TODO CORRECTO
